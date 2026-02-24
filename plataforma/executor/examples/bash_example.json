@@ -1,0 +1,17 @@
+{
+  "code": "#!/bin/bash\n\necho \"Current user: $(whoami)\"\necho \"Working directory: $(pwd)\"\necho \"Date: $(date +%Y-%m-%d)\"\n\nfor i in {1..5}; do\n  echo \"Count: $i\"\ndone",
+  "language": "bash",
+  "tests": [
+    {
+      "expectedOutput": "Current user: sandbox",
+      "type": "contains",
+      "description": "Should run as sandbox user"
+    },
+    {
+      "expectedOutput": "Count: [1-5]",
+      "type": "regex",
+      "description": "Should count from 1 to 5"
+    }
+  ],
+  "timeout": 5000
+}

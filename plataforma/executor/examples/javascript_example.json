@@ -1,0 +1,17 @@
+{
+  "code": "const numbers = [1, 2, 3, 4, 5];\nconst sum = numbers.reduce((acc, curr) => acc + curr, 0);\nconsole.log(`Sum: ${sum}`);\nconsole.log(`Average: ${sum / numbers.length}`);",
+  "language": "javascript",
+  "tests": [
+    {
+      "expectedOutput": "Sum: 15",
+      "type": "contains",
+      "description": "Should calculate sum correctly"
+    },
+    {
+      "expectedOutput": "Average: 3",
+      "type": "contains",
+      "description": "Should calculate average correctly"
+    }
+  ],
+  "timeout": 5000
+}

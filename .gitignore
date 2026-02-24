@@ -1,0 +1,64 @@
+# Node modules
+**/node_modules/
+**/dist/
+**/build/
+
+# Logs
+**/logs/
+**/*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment variables
+**/.env
+**/.env.local
+**/.env.*.local
+
+# Database
+**/postgres_data/
+**/redis_data/
+
+# Uploads
+**/uploads/
+**/certificates/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker volumes
+**/backend_uploads/
+**/backend_logs/
+**/nginx_logs/
+
+# Prisma
+**/prisma/.env
+
+# Test coverage
+**/coverage/
+**/.nyc_output/
+
+# Temporary files
+*.tmp
+*.temp
+backend_live.log
+temp_frontend.html
+nul
+
+# Scripts temporales
+start_visualizador.*
+verificar_*.sh
+generar_bundle.py
+completar_lab04.py
+contenido_bundle.js
+*.txt
+!requirements.txt
+!package-lock.txt

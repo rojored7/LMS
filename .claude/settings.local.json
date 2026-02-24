@@ -1,0 +1,38 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cat:*)",
+      "Bash(for i in {01..10})",
+      "Bash(python completar_lab04.py:*)",
+      "Bash(dir:*)",
+      "Bash(find:*)",
+      "Bash(echo:*)",
+      "Bash(node contenido_bundle.js:*)",
+      "Bash(python generar_bundle.py:*)",
+      "Bash(node generar-historias.js:*)",
+      "Bash(tree:*)",
+      "Bash(npm test:*)",
+      "Bash(npx tsc:*)",
+      "Bash(NODE_ENV=test npm test:*)",
+      "Bash(npx prisma generate:*)",
+      "Bash(findstr:*)",
+      "Bash(npm run prisma:generate:*)",
+      "Bash(npx prisma migrate dev:*)",
+      "Bash(docker:*)",
+      "Bash(docker-compose:*)",
+      "Bash(npm install:*)",
+      "Bash(curl:*)",
+      "mcp__n8n-mcp__search_workflows",
+      "Bash(netstat:*)",
+      "Bash(ipconfig:*)",
+      "Bash(timeout:*)",
+      "Bash(git init:*)",
+      "Bash(git config:*)",
+      "Bash(git remote add:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

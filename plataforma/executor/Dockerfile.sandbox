@@ -1,0 +1,33 @@
+FROM alpine:3.18
+
+LABEL maintainer="Ciber Platform"
+LABEL description="Secure sandbox environment for executing user code"
+
+# Install runtime environments
+RUN apk add --no-cache \
+    python3 \
+    py3-pip \
+    nodejs \
+    npm \
+    bash \
+    curl \
+    ca-certificates
+
+# Create non-root user for sandbox execution
+RUN addgroup -g 1000 sandbox && \
+    adduser -D -u 1000 -G sandbox sandbox
+
+# Create working directory with proper permissions
+RUN mkdir -p /sandbox && \
+    chown -R sandbox:sandbox /sandbox
+
+# Switch to non-root user
+USER sandbox
+WORKDIR /sandbox
+
+# Set secure environment
+ENV HOME=/sandbox
+ENV PATH=/sandbox/.local/bin:$PATH
+
+# Default command
+CMD ["/bin/sh"]

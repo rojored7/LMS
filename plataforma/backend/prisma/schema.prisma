@@ -1,0 +1,449 @@
+// Prisma Schema - Plataforma Multi-Curso de Ciberseguridad
+// Versión: 1.0
+// Generador: TypeScript client para Prisma ORM
+
+generator client {
+  provider = "prisma-client-js"
+  // Genera tipos TypeScript optimizados
+  previewFeatures = ["fullTextSearch", "fullTextIndex"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// USUARIOS Y AUTENTICACIÓN
+// ============================================================================
+
+enum UserRole {
+  ADMIN       // Administrador completo del sistema
+  INSTRUCTOR  // Creador y gestor de contenido educativo
+  STUDENT     // Usuario final que consume cursos
+}
+
+model User {
+  id                 String    @id @default(cuid())
+  email              String    @unique
+  passwordHash       String
+  name               String
+  avatar             String?   // URL del avatar del usuario
+  role               UserRole  @default(STUDENT)
+
+  // Relación con perfil de entrenamiento
+  trainingProfileId  String?
+  trainingProfile    TrainingProfile? @relation(fields: [trainingProfileId], references: [id])
+
+  // Timestamps
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  lastLoginAt        DateTime?
+
+  // Relaciones
+  enrollments        Enrollment[]
+  quizAttempts       QuizAttempt[]
+  labSubmissions     LabSubmission[]
+  projectSubmissions ProjectSubmission[]
+  userProgress       UserProgress[]
+  certificates       Certificate[]
+  refreshTokens      RefreshToken[]
+  passwordResetTokens PasswordResetToken[]
+
+  // Índices para búsquedas frecuentes
+  @@index([email])
+  @@index([role])
+  @@index([trainingProfileId])
+  @@map("users")
+}
+
+model RefreshToken {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token      String   @unique
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([token])
+  @@map("refresh_tokens")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([token, expiresAt])
+  @@index([userId])
+  @@map("password_reset_tokens")
+}
+
+// ============================================================================
+// PERFILES DE ENTRENAMIENTO
+// ============================================================================
+
+model TrainingProfile {
+  id          String   @id @default(cuid())
+  name        String   @unique // Ej: "SOC Analyst", "Pentester", "Incident Response"
+  slug        String   @unique // URL-friendly: "soc-analyst", "pentester"
+  description String
+  icon        String?  // Nombre del icono o emoji
+  color       String?  // Código hexadecimal para theming
+  createdAt   DateTime @default(now())
+
+  // Relaciones
+  users         User[]
+  courseProfiles CourseProfile[]
+
+  @@index([slug])
+  @@map("training_profiles")
+}
+
+// ============================================================================
+// CURSOS
+// ============================================================================
+
+enum CourseLevel {
+  BEGINNER       // Principiante
+  INTERMEDIATE   // Intermedio
+  ADVANCED       // Avanzado
+  EXPERT         // Experto
+}
+
+model Course {
+  id          String      @id @default(cuid())
+  slug        String      @unique // URL-friendly identifier
+  title       String
+  description String      @db.Text
+  thumbnail   String?     // URL de imagen de portada
+  duration    Int         // Duración estimada en minutos
+  level       CourseLevel
+  tags        String[]    // Array de tags para categorización
+  isPublished Boolean     @default(false)
+  author      String      // Nombre del autor/instructor
+  version     String      @default("1.0")
+
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  // Relaciones
+  modules         Module[]
+  courseProfiles  CourseProfile[]
+  enrollments     Enrollment[]
+  projects        Project[]
+  certificates    Certificate[]
+
+  @@index([slug])
+  @@index([isPublished])
+  @@index([level])
+  @@map("courses")
+}
+
+// Tabla pivot: Relación muchos-a-muchos entre Course y TrainingProfile
+model CourseProfile {
+  courseId  String
+  course    Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  profileId String
+  profile   TrainingProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  required  Boolean @default(false) // ¿Es obligatorio para este perfil?
+  order     Int     @default(0)     // Orden recomendado en el perfil
+
+  @@id([courseId, profileId])
+  @@index([profileId])
+  @@map("course_profiles")
+}
+
+// ============================================================================
+// MÓDULOS
+// ============================================================================
+
+model Module {
+  id          String   @id @default(cuid())
+  courseId    String
+  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  order       Int      // Orden del módulo dentro del curso
+  title       String
+  description String   @db.Text
+  duration    Int      // Duración estimada en minutos
+  isPublished Boolean  @default(false)
+
+  // Relaciones
+  lessons      Lesson[]
+  quizzes      Quiz[]
+  labs         Lab[]
+  userProgress UserProgress[]
+
+  @@unique([courseId, order])
+  @@index([courseId])
+  @@map("modules")
+}
+
+// ============================================================================
+// LECCIONES
+// ============================================================================
+
+enum LessonType {
+  TEXT       // Contenido de texto/markdown
+  VIDEO      // Video embebido
+  INTERACTIVE // Contenido interactivo
+  READING    // Material de lectura externa
+}
+
+model Lesson {
+  id            String     @id @default(cuid())
+  moduleId      String
+  module        Module     @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  order         Int        // Orden dentro del módulo
+  title         String
+  content       String     @db.Text // Markdown o HTML
+  type          LessonType @default(TEXT)
+  estimatedTime Int        // Tiempo estimado en minutos
+
+  // Relaciones
+  userProgress  UserProgress[]
+
+  @@unique([moduleId, order])
+  @@index([moduleId])
+  @@map("lessons")
+}
+
+// ============================================================================
+// QUIZZES Y EVALUACIONES
+// ============================================================================
+
+enum QuestionType {
+  MULTIPLE_CHOICE // Una sola respuesta correcta
+  MULTIPLE_SELECT // Múltiples respuestas correctas
+  TRUE_FALSE      // Verdadero o Falso
+  SHORT_ANSWER    // Respuesta corta de texto
+}
+
+model Quiz {
+  id           String   @id @default(cuid())
+  moduleId     String
+  module       Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  title        String
+  description  String   @db.Text
+  passingScore Int      // Puntuación mínima para aprobar (%)
+  timeLimit    Int?     // Límite de tiempo en minutos (null = sin límite)
+  attempts     Int      @default(3) // Número máximo de intentos permitidos
+
+  // Relaciones
+  questions    Question[]
+  quizAttempts QuizAttempt[]
+
+  @@index([moduleId])
+  @@map("quizzes")
+}
+
+model Question {
+  id             String       @id @default(cuid())
+  quizId         String
+  quiz           Quiz         @relation(fields: [quizId], references: [id], onDelete: Cascade)
+
+  order          Int          // Orden de la pregunta en el quiz
+  type           QuestionType
+  question       String       @db.Text
+  options        Json?        // Array de opciones para multiple choice/select
+  correctAnswer  Json         // Respuesta(s) correcta(s)
+  explanation    String?      @db.Text // Explicación de la respuesta correcta
+
+  @@unique([quizId, order])
+  @@index([quizId])
+  @@map("questions")
+}
+
+model QuizAttempt {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  quizId      String
+  quiz        Quiz      @relation(fields: [quizId], references: [id], onDelete: Cascade)
+
+  answers     Json      // Object con las respuestas del usuario
+  score       Int       // Puntuación obtenida (%)
+  passed      Boolean   // ¿Aprobó el quiz?
+
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  @@index([userId])
+  @@index([quizId])
+  @@index([userId, quizId])
+  @@map("quiz_attempts")
+}
+
+// ============================================================================
+// LABORATORIOS PRÁCTICOS
+// ============================================================================
+
+model Lab {
+  id          String   @id @default(cuid())
+  moduleId    String
+  module      Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  title       String
+  description String   @db.Text
+  language    String   // Lenguaje de programación: "python", "javascript", "bash"
+  starterCode String   @db.Text // Código inicial proporcionado
+  solution    String   @db.Text // Solución de referencia (solo visible para instructores)
+  tests       Json     // Test cases para validar la solución
+  hints       Json?    // Array de pistas opcionales
+
+  // Relaciones
+  submissions LabSubmission[]
+
+  @@index([moduleId])
+  @@map("labs")
+}
+
+model LabSubmission {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  labId       String
+  lab         Lab       @relation(fields: [labId], references: [id], onDelete: Cascade)
+
+  code        String    @db.Text // Código enviado por el estudiante
+  output      String?   @db.Text // Output de la ejecución
+  passed      Boolean   @default(false) // ¿Pasó todos los tests?
+  attempts    Int       @default(1)     // Número de intentos
+
+  submittedAt DateTime  @default(now())
+
+  @@index([userId])
+  @@index([labId])
+  @@index([userId, labId])
+  @@map("lab_submissions")
+}
+
+// ============================================================================
+// PROYECTOS FINALES
+// ============================================================================
+
+enum ProjectStatus {
+  PENDING    // Enviado, esperando revisión
+  REVIEWING  // En proceso de revisión
+  APPROVED   // Aprobado
+  REJECTED   // Rechazado, requiere cambios
+}
+
+model Project {
+  id           String   @id @default(cuid())
+  courseId     String
+  course       Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  title        String
+  description  String   @db.Text
+  requirements Json     // Requisitos del proyecto
+  rubric       Json     // Rúbrica de evaluación
+  dueDate      DateTime?
+
+  // Relaciones
+  submissions  ProjectSubmission[]
+
+  @@index([courseId])
+  @@map("projects")
+}
+
+model ProjectSubmission {
+  id            String        @id @default(cuid())
+  userId        String
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  projectId     String
+  project       Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  repositoryUrl String?       // URL del repositorio (GitHub, GitLab)
+  files         Json?         // Metadata de archivos subidos
+  status        ProjectStatus @default(PENDING)
+  grade         Int?          // Calificación (0-100)
+  feedback      String?       @db.Text // Feedback del instructor
+
+  submittedAt   DateTime      @default(now())
+  gradedAt      DateTime?
+
+  @@index([userId])
+  @@index([projectId])
+  @@index([status])
+  @@map("project_submissions")
+}
+
+// ============================================================================
+// INSCRIPCIONES Y PROGRESO
+// ============================================================================
+
+model Enrollment {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  courseId    String
+  course      Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  enrolledAt  DateTime  @default(now())
+  completedAt DateTime? // Fecha de finalización del curso
+  certificate String?   // ID del certificado emitido
+
+  @@unique([userId, courseId]) // Un usuario no puede inscribirse dos veces al mismo curso
+  @@index([userId])
+  @@index([courseId])
+  @@map("enrollments")
+}
+
+model UserProgress {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  moduleId   String
+  module     Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  lessonId   String?
+  lesson     Lesson?  @relation(fields: [lessonId], references: [id], onDelete: SetNull)
+
+  completed  Boolean  @default(false)
+  progress   Int      @default(0)    // Porcentaje de progreso (0-100)
+  lastAccess DateTime @default(now())
+
+  @@unique([userId, moduleId, lessonId])
+  @@index([userId])
+  @@index([moduleId])
+  @@map("user_progress")
+}
+
+// ============================================================================
+// CERTIFICADOS
+// ============================================================================
+
+model Certificate {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  courseId         String
+  course           Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  issuedAt         DateTime @default(now())
+  certificateUrl   String   // URL del PDF del certificado
+  verificationCode String   @unique // Código único para verificar autenticidad
+
+  @@unique([userId, courseId]) // Un usuario solo puede tener un certificado por curso
+  @@index([userId])
+  @@index([courseId])
+  @@index([verificationCode])
+  @@map("certificates")
+}
