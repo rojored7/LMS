@@ -113,12 +113,15 @@ export const enrollInCourse = async (
       });
     }
 
-    const enrollment = await courseService.enrollUser(userId, courseId);
+    const result = await courseService.enrollUser(userId, courseId);
 
-    res.status(201).json({
+    // Check if enrollment already existed
+    const isNewEnrollment = result.enrolledAt.getTime() > Date.now() - 5000; // Created in last 5 seconds
+
+    res.status(isNewEnrollment ? 201 : 200).json({
       success: true,
-      message: 'Inscripción exitosa',
-      data: enrollment,
+      message: isNewEnrollment ? 'Inscripción exitosa' : 'Ya estabas inscrito en este curso',
+      data: result,
     });
   } catch (error) {
     next(error);

@@ -231,7 +231,29 @@ class CourseService {
     });
 
     if (existingEnrollment) {
-      throw new Error('Ya estás inscrito en este curso');
+      // Return existing enrollment instead of throwing error
+      const enrollmentWithCourse = await prisma.enrollment.findUnique({
+        where: {
+          userId_courseId: {
+            userId,
+            courseId: course.id,
+          },
+        },
+        include: {
+          course: {
+            select: {
+              id: true,
+              slug: true,
+              title: true,
+              thumbnail: true,
+              level: true,
+              duration: true,
+            },
+          },
+        },
+      });
+
+      return enrollmentWithCourse!;
     }
 
     // Create enrollment
