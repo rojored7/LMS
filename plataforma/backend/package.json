@@ -14,6 +14,7 @@
     "migrate:deploy": "prisma migrate deploy",
     "migrate:reset": "prisma migrate reset",
     "seed": "ts-node prisma/seed.ts",
+    "seed:curso": "ts-node prisma/seed-ciberseguridad.ts",
     "prisma:generate": "prisma generate",
     "prisma:studio": "prisma studio",
     "lint": "eslint . --ext .ts",
