@@ -201,10 +201,15 @@ class CourseService {
   /**
    * Enroll a user in a course
    */
-  async enrollUser(userId: string, courseId: string) {
-    // Check if course exists and is published
-    const course = await prisma.course.findUnique({
-      where: { id: courseId },
+  async enrollUser(userId: string, courseIdOrSlug: string) {
+    // Check if course exists and is published (accept both ID and slug)
+    const course = await prisma.course.findFirst({
+      where: {
+        OR: [
+          { id: courseIdOrSlug },
+          { slug: courseIdOrSlug }
+        ]
+      },
     });
 
     if (!course) {
@@ -220,7 +225,7 @@ class CourseService {
       where: {
         userId_courseId: {
           userId,
-          courseId,
+          courseId: course.id,
         },
       },
     });
@@ -233,7 +238,7 @@ class CourseService {
     const enrollment = await prisma.enrollment.create({
       data: {
         userId,
-        courseId,
+        courseId: course.id,
       },
       include: {
         course: {

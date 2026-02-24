@@ -91,6 +91,7 @@ export const getCourseStats = async (
 /**
  * Enroll current user in a course
  * POST /api/courses/:courseId/enroll
+ * Note: Requires authentication. User must be logged in.
  */
 export const enrollInCourse = async (
   req: Request,
@@ -99,12 +100,16 @@ export const enrollInCourse = async (
 ) => {
   try {
     const { courseId } = req.params;
-    const userId = req.user?.id; // From auth middleware
+
+    // For now, require authentication
+    // In the future, could support guest enrollments
+    const userId = req.user?.id;
 
     if (!userId) {
       return res.status(401).json({
         success: false,
-        message: 'No autenticado',
+        message: 'Debe iniciar sesión para inscribirse en un curso',
+        hint: 'Use POST /api/auth/login para autenticarse primero',
       });
     }
 

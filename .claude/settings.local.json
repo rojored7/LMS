@@ -31,7 +31,9 @@
       "Bash(git remote add:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(bash:*)",
+      "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJjbW0xNDUxbnIwMDAycTY1cnVhcnowbWg0IiwiZW1haWwiOiJzdHVkZW50QGNpYmVycGxhdGZvcm0uY29tIiwicm9sZSI6IlNUVURFTlQiLCJpYXQiOjE3NzE5NzMzODQsImV4cCI6MTc3MTk3NDI4NH0.PPNNYjMg6qPT4Q44P88B8HWq4GmVKeFz_QAjIZnF_ko\")"
     ],
     "deny": [],
     "ask": []
