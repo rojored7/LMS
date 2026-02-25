@@ -45,6 +45,7 @@ export const getCourses = async (
 /**
  * Get a single course by ID or slug
  * GET /api/courses/:idOrSlug
+ * Supports optional authentication to check if user is enrolled
  */
 export const getCourse = async (
   req: Request,
@@ -53,8 +54,10 @@ export const getCourse = async (
 ) => {
   try {
     const { idOrSlug } = req.params;
+    // Extract userId from optionalAuth middleware (if user is authenticated)
+    const userId = req.user?.userId;
 
-    const course = await courseService.getCourse(idOrSlug);
+    const course = await courseService.getCourse(idOrSlug, userId);
 
     res.json({
       success: true,
@@ -138,7 +141,7 @@ export const getMyEnrollments = async (
   next: NextFunction
 ) => {
   try {
-    const userId = req.user?.id; // From auth middleware
+    const userId = req.user?.userId; // From authenticate middleware
 
     if (!userId) {
       return res.status(401).json({

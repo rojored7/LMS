@@ -47,9 +47,9 @@ export async function optionalAuth(req: Request, _res: Response, next: NextFunct
       });
 
       if (user) {
-        // Attach user to request
+        // Attach user to request (usando userId para consistencia con authenticate middleware)
         req.user = {
-          id: user.id,
+          userId: user.id,
           email: user.email,
           name: user.name,
           role: user.role,

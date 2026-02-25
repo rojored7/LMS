@@ -103,8 +103,10 @@ class CourseService {
 
   /**
    * Get a single course by ID or slug
+   * @param idOrSlug - Course ID or slug
+   * @param userId - Optional user ID to check enrollment status
    */
-  async getCourse(idOrSlug: string) {
+  async getCourse(idOrSlug: string, userId?: string) {
     const course = await prisma.course.findFirst({
       where: {
         OR: [{ id: idOrSlug }, { slug: idOrSlug }],
@@ -159,7 +161,24 @@ class CourseService {
       throw new Error('Curso no encontrado');
     }
 
-    return course;
+    // Verificar si el usuario está inscrito (si userId está presente)
+    let isEnrolled = false;
+    if (userId) {
+      const enrollment = await prisma.enrollment.findUnique({
+        where: {
+          userId_courseId: {
+            userId,
+            courseId: course.id,
+          },
+        },
+      });
+      isEnrolled = !!enrollment;
+    }
+
+    return {
+      ...course,
+      isEnrolled,
+    };
   }
 
   /**
