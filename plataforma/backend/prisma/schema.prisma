@@ -3,7 +3,7 @@
 // Generador: TypeScript client para Prisma ORM
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
   // Genera tipos TypeScript optimizados
   previewFeatures = ["fullTextSearch", "fullTextIndex"]
 }
@@ -18,37 +18,41 @@ datasource db {
 // ============================================================================
 
 enum UserRole {
-  ADMIN       // Administrador completo del sistema
-  INSTRUCTOR  // Creador y gestor de contenido educativo
-  STUDENT     // Usuario final que consume cursos
+  ADMIN // Administrador completo del sistema
+  INSTRUCTOR // Creador y gestor de contenido educativo
+  STUDENT // Usuario final que consume cursos
 }
 
 model User {
-  id                 String    @id @default(cuid())
-  email              String    @unique
-  passwordHash       String
-  name               String
-  avatar             String?   // URL del avatar del usuario
-  role               UserRole  @default(STUDENT)
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  avatar       String? // URL del avatar del usuario
+  role         UserRole @default(STUDENT)
+  xp           Int      @default(0) // Puntos de experiencia para gamificación
 
   // Relación con perfil de entrenamiento
-  trainingProfileId  String?
-  trainingProfile    TrainingProfile? @relation(fields: [trainingProfileId], references: [id])
+  trainingProfileId String?
+  trainingProfile   TrainingProfile? @relation(fields: [trainingProfileId], references: [id])
 
   // Timestamps
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
-  lastLoginAt        DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  lastLoginAt DateTime?
 
   // Relaciones
-  enrollments        Enrollment[]
-  quizAttempts       QuizAttempt[]
-  labSubmissions     LabSubmission[]
-  projectSubmissions ProjectSubmission[]
-  userProgress       UserProgress[]
-  certificates       Certificate[]
-  refreshTokens      RefreshToken[]
+  enrollments         Enrollment[]
+  quizAttempts        QuizAttempt[]
+  labSubmissions      LabSubmission[]
+  projectSubmissions  ProjectSubmission[]
+  reviewedProjects    ProjectSubmission[]  @relation("ReviewedProjects")
+  userProgress        UserProgress[]
+  certificates        Certificate[]
+  refreshTokens       RefreshToken[]
   passwordResetTokens PasswordResetToken[]
+  badges              UserBadge[]
+  notifications       Notification[]
 
   // Índices para búsquedas frecuentes
   @@index([email])
@@ -58,12 +62,12 @@ model User {
 }
 
 model RefreshToken {
-  id         String   @id @default(cuid())
-  userId     String
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  token      String   @unique
-  expiresAt  DateTime
-  createdAt  DateTime @default(now())
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
 
   @@index([userId])
   @@index([token])
@@ -93,12 +97,12 @@ model TrainingProfile {
   name        String   @unique // Ej: "SOC Analyst", "Pentester", "Incident Response"
   slug        String   @unique // URL-friendly: "soc-analyst", "pentester"
   description String
-  icon        String?  // Nombre del icono o emoji
-  color       String?  // Código hexadecimal para theming
+  icon        String? // Nombre del icono o emoji
+  color       String? // Código hexadecimal para theming
   createdAt   DateTime @default(now())
 
   // Relaciones
-  users         User[]
+  users          User[]
   courseProfiles CourseProfile[]
 
   @@index([slug])
@@ -110,10 +114,10 @@ model TrainingProfile {
 // ============================================================================
 
 enum CourseLevel {
-  BEGINNER       // Principiante
-  INTERMEDIATE   // Intermedio
-  ADVANCED       // Avanzado
-  EXPERT         // Experto
+  BEGINNER // Principiante
+  INTERMEDIATE // Intermedio
+  ADVANCED // Avanzado
+  EXPERT // Experto
 }
 
 model Course {
@@ -121,23 +125,23 @@ model Course {
   slug        String      @unique // URL-friendly identifier
   title       String
   description String      @db.Text
-  thumbnail   String?     // URL de imagen de portada
-  duration    Int         // Duración estimada en minutos
+  thumbnail   String? // URL de imagen de portada
+  duration    Int // Duración estimada en minutos
   level       CourseLevel
-  tags        String[]    // Array de tags para categorización
+  tags        String[] // Array de tags para categorización
   isPublished Boolean     @default(false)
-  author      String      // Nombre del autor/instructor
+  author      String // Nombre del autor/instructor
   version     String      @default("1.0")
 
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relaciones
-  modules         Module[]
-  courseProfiles  CourseProfile[]
-  enrollments     Enrollment[]
-  projects        Project[]
-  certificates    Certificate[]
+  modules        Module[]
+  courseProfiles CourseProfile[]
+  enrollments    Enrollment[]
+  projects       Project[]
+  certificates   Certificate[]
 
   @@index([slug])
   @@index([isPublished])
@@ -147,14 +151,14 @@ model Course {
 
 // Tabla pivot: Relación muchos-a-muchos entre Course y TrainingProfile
 model CourseProfile {
-  courseId  String
-  course    Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  courseId String
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   profileId String
   profile   TrainingProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
 
-  required  Boolean @default(false) // ¿Es obligatorio para este perfil?
-  order     Int     @default(0)     // Orden recomendado en el perfil
+  required Boolean @default(false) // ¿Es obligatorio para este perfil?
+  order    Int     @default(0) // Orden recomendado en el perfil
 
   @@id([courseId, profileId])
   @@index([profileId])
@@ -166,15 +170,15 @@ model CourseProfile {
 // ============================================================================
 
 model Module {
-  id          String   @id @default(cuid())
-  courseId    String
-  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  id       String @id @default(cuid())
+  courseId String
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
-  order       Int      // Orden del módulo dentro del curso
+  order       Int // Orden del módulo dentro del curso
   title       String
-  description String   @db.Text
-  duration    Int      // Duración estimada en minutos
-  isPublished Boolean  @default(false)
+  description String  @db.Text
+  duration    Int // Duración estimada en minutos
+  isPublished Boolean @default(false)
 
   // Relaciones
   lessons      Lesson[]
@@ -192,25 +196,25 @@ model Module {
 // ============================================================================
 
 enum LessonType {
-  TEXT       // Contenido de texto/markdown
-  VIDEO      // Video embebido
+  TEXT // Contenido de texto/markdown
+  VIDEO // Video embebido
   INTERACTIVE // Contenido interactivo
-  READING    // Material de lectura externa
+  READING // Material de lectura externa
 }
 
 model Lesson {
-  id            String     @id @default(cuid())
-  moduleId      String
-  module        Module     @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  id       String @id @default(cuid())
+  moduleId String
+  module   Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
 
-  order         Int        // Orden dentro del módulo
+  order         Int // Orden dentro del módulo
   title         String
   content       String     @db.Text // Markdown o HTML
   type          LessonType @default(TEXT)
-  estimatedTime Int        // Tiempo estimado en minutos
+  estimatedTime Int // Tiempo estimado en minutos
 
   // Relaciones
-  userProgress  UserProgress[]
+  userProgress UserProgress[]
 
   @@unique([moduleId, order])
   @@index([moduleId])
@@ -224,20 +228,20 @@ model Lesson {
 enum QuestionType {
   MULTIPLE_CHOICE // Una sola respuesta correcta
   MULTIPLE_SELECT // Múltiples respuestas correctas
-  TRUE_FALSE      // Verdadero o Falso
-  SHORT_ANSWER    // Respuesta corta de texto
+  TRUE_FALSE // Verdadero o Falso
+  SHORT_ANSWER // Respuesta corta de texto
 }
 
 model Quiz {
-  id           String   @id @default(cuid())
-  moduleId     String
-  module       Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  id       String @id @default(cuid())
+  moduleId String
+  module   Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
 
   title        String
-  description  String   @db.Text
-  passingScore Int      // Puntuación mínima para aprobar (%)
-  timeLimit    Int?     // Límite de tiempo en minutos (null = sin límite)
-  attempts     Int      @default(3) // Número máximo de intentos permitidos
+  description  String @db.Text
+  passingScore Int // Puntuación mínima para aprobar (%)
+  timeLimit    Int? // Límite de tiempo en minutos (null = sin límite)
+  attempts     Int    @default(3) // Número máximo de intentos permitidos
 
   // Relaciones
   questions    Question[]
@@ -248,16 +252,16 @@ model Quiz {
 }
 
 model Question {
-  id             String       @id @default(cuid())
-  quizId         String
-  quiz           Quiz         @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid())
+  quizId String
+  quiz   Quiz   @relation(fields: [quizId], references: [id], onDelete: Cascade)
 
-  order          Int          // Orden de la pregunta en el quiz
-  type           QuestionType
-  question       String       @db.Text
-  options        Json?        // Array de opciones para multiple choice/select
-  correctAnswer  Json         // Respuesta(s) correcta(s)
-  explanation    String?      @db.Text // Explicación de la respuesta correcta
+  order         Int // Orden de la pregunta en el quiz
+  type          QuestionType
+  question      String       @db.Text
+  options       Json? // Array de opciones para multiple choice/select
+  correctAnswer Json // Respuesta(s) correcta(s)
+  explanation   String?      @db.Text // Explicación de la respuesta correcta
 
   @@unique([quizId, order])
   @@index([quizId])
@@ -265,16 +269,16 @@ model Question {
 }
 
 model QuizAttempt {
-  id          String    @id @default(cuid())
-  userId      String
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  quizId      String
-  quiz        Quiz      @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  quizId String
+  quiz   Quiz   @relation(fields: [quizId], references: [id], onDelete: Cascade)
 
-  answers     Json      // Object con las respuestas del usuario
-  score       Int       // Puntuación obtenida (%)
-  passed      Boolean   // ¿Aprobó el quiz?
+  answers Json // Object con las respuestas del usuario
+  score   Int // Puntuación obtenida (%)
+  passed  Boolean // ¿Aprobó el quiz?
 
   startedAt   DateTime  @default(now())
   completedAt DateTime?
@@ -290,17 +294,17 @@ model QuizAttempt {
 // ============================================================================
 
 model Lab {
-  id          String   @id @default(cuid())
-  moduleId    String
-  module      Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  id       String @id @default(cuid())
+  moduleId String
+  module   Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
 
   title       String
-  description String   @db.Text
-  language    String   // Lenguaje de programación: "python", "javascript", "bash"
-  starterCode String   @db.Text // Código inicial proporcionado
-  solution    String   @db.Text // Solución de referencia (solo visible para instructores)
-  tests       Json     // Test cases para validar la solución
-  hints       Json?    // Array de pistas opcionales
+  description String @db.Text
+  language    String // Lenguaje de programación: "python", "javascript", "bash"
+  starterCode String @db.Text // Código inicial proporcionado
+  solution    String @db.Text // Solución de referencia (solo visible para instructores)
+  tests       Json // Test cases para validar la solución
+  hints       Json? // Array de pistas opcionales
 
   // Relaciones
   submissions LabSubmission[]
@@ -310,19 +314,26 @@ model Lab {
 }
 
 model LabSubmission {
-  id          String    @id @default(cuid())
-  userId      String
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  labId       String
-  lab         Lab       @relation(fields: [labId], references: [id], onDelete: Cascade)
+  labId String
+  lab   Lab    @relation(fields: [labId], references: [id], onDelete: Cascade)
 
-  code        String    @db.Text // Código enviado por el estudiante
-  output      String?   @db.Text // Output de la ejecución
-  passed      Boolean   @default(false) // ¿Pasó todos los tests?
-  attempts    Int       @default(1)     // Número de intentos
+  code     String @db.Text // Código enviado por el estudiante
+  language String // python, javascript, bash
 
-  submittedAt DateTime  @default(now())
+  stdout        String? @db.Text // Output estándar
+  stderr        String? @db.Text // Error output
+  exitCode      Int? // Código de salida
+  executionTime Int? // Tiempo de ejecución en ms
+
+  passed   Boolean @default(false) // ¿Pasó todos los tests?
+  feedback String? @db.Text // Feedback automático
+  attempts Int     @default(1) // Número de intentos
+
+  submittedAt DateTime @default(now())
 
   @@index([userId])
   @@index([labId])
@@ -335,46 +346,52 @@ model LabSubmission {
 // ============================================================================
 
 enum ProjectStatus {
-  PENDING    // Enviado, esperando revisión
-  REVIEWING  // En proceso de revisión
-  APPROVED   // Aprobado
-  REJECTED   // Rechazado, requiere cambios
+  PENDING // Enviado, esperando revisión
+  REVIEWING // En proceso de revisión
+  APPROVED // Aprobado
+  REJECTED // Rechazado, requiere cambios
 }
 
 model Project {
-  id           String   @id @default(cuid())
-  courseId     String
-  course       Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  id       String @id @default(cuid())
+  courseId String
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   title        String
-  description  String   @db.Text
-  requirements Json     // Requisitos del proyecto
-  rubric       Json     // Rúbrica de evaluación
+  description  String    @db.Text
+  requirements Json // Requisitos del proyecto
+  rubric       Json // Rúbrica de evaluación
   dueDate      DateTime?
 
   // Relaciones
-  submissions  ProjectSubmission[]
+  submissions ProjectSubmission[]
 
   @@index([courseId])
   @@map("projects")
 }
 
 model ProjectSubmission {
-  id            String        @id @default(cuid())
-  userId        String
-  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  projectId     String
-  project       Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  repositoryUrl String?       // URL del repositorio (GitHub, GitLab)
-  files         Json?         // Metadata de archivos subidos
-  status        ProjectStatus @default(PENDING)
-  grade         Int?          // Calificación (0-100)
-  feedback      String?       @db.Text // Feedback del instructor
+  repositoryUrl String? // URL del repositorio (GitHub, GitLab)
+  files         Json? // Metadata de archivos subidos { name, url, size }[]
+  description   String? @db.Text // Descripción del proyecto
 
-  submittedAt   DateTime      @default(now())
-  gradedAt      DateTime?
+  status   ProjectStatus @default(PENDING)
+  score    Int? // Calificación (0-100)
+  feedback String?       @db.Text // Feedback del instructor
+
+  reviewedBy String? // ID del instructor que revisó
+  reviewer   User?     @relation("ReviewedProjects", fields: [reviewedBy], references: [id])
+  reviewedAt DateTime? // Fecha de revisión
+
+  submittedAt DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@index([userId])
   @@index([projectId])
@@ -387,16 +404,16 @@ model ProjectSubmission {
 // ============================================================================
 
 model Enrollment {
-  id          String    @id @default(cuid())
-  userId      String
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  courseId    String
-  course      Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  courseId String
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   enrolledAt  DateTime  @default(now())
   completedAt DateTime? // Fecha de finalización del curso
-  certificate String?   // ID del certificado emitido
+  certificate String? // ID del certificado emitido
 
   @@unique([userId, courseId]) // Un usuario no puede inscribirse dos veces al mismo curso
   @@index([userId])
@@ -405,18 +422,18 @@ model Enrollment {
 }
 
 model UserProgress {
-  id         String   @id @default(cuid())
-  userId     String
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  moduleId   String
-  module     Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  moduleId String
+  module   Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
 
-  lessonId   String?
-  lesson     Lesson?  @relation(fields: [lessonId], references: [id], onDelete: SetNull)
+  lessonId String?
+  lesson   Lesson? @relation(fields: [lessonId], references: [id], onDelete: SetNull)
 
   completed  Boolean  @default(false)
-  progress   Int      @default(0)    // Porcentaje de progreso (0-100)
+  progress   Int      @default(0) // Porcentaje de progreso (0-100)
   lastAccess DateTime @default(now())
 
   @@unique([userId, moduleId, lessonId])
@@ -430,20 +447,90 @@ model UserProgress {
 // ============================================================================
 
 model Certificate {
-  id               String   @id @default(cuid())
-  userId           String
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  courseId         String
-  course           Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  courseId String
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   issuedAt         DateTime @default(now())
-  certificateUrl   String   // URL del PDF del certificado
+  certificateUrl   String // URL del PDF del certificado
   verificationCode String   @unique // Código único para verificar autenticidad
+  emailSent        Boolean  @default(false) // Flag para tracking de email enviado
 
   @@unique([userId, courseId]) // Un usuario solo puede tener un certificado por curso
   @@index([userId])
   @@index([courseId])
   @@index([verificationCode])
   @@map("certificates")
+}
+
+// ============================================================================
+// BADGES Y GAMIFICACIÓN
+// ============================================================================
+
+model Badge {
+  id          String   @id @default(cuid())
+  name        String   @unique // Ej: "Módulo 1 Completado", "Quiz Master"
+  slug        String   @unique // URL-friendly: "modulo-1-completado"
+  description String   @db.Text
+  icon        String? // URL o nombre del icono
+  color       String? // Color hexadecimal para UI
+  xpReward    Int      @default(0) // XP otorgado al conseguir el badge
+  createdAt   DateTime @default(now())
+
+  // Relaciones
+  userBadges UserBadge[]
+
+  @@index([slug])
+  @@map("badges")
+}
+
+model UserBadge {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  badgeId String
+  badge   Badge  @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+  awardedAt DateTime @default(now())
+
+  @@unique([userId, badgeId]) // Un usuario no puede recibir el mismo badge dos veces
+  @@index([userId])
+  @@index([badgeId])
+  @@map("user_badges")
+}
+
+// ============================================================================
+// NOTIFICACIONES
+// ============================================================================
+
+enum NotificationType {
+  BADGE_AWARDED // Badge obtenido
+  COURSE_COMPLETED // Curso completado
+  CERTIFICATE_ISSUED // Certificado emitido
+  QUIZ_PASSED // Quiz aprobado
+  LAB_PASSED // Lab completado
+  PROJECT_GRADED // Proyecto calificado
+  COURSE_ASSIGNED // Curso asignado por admin
+}
+
+model Notification {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type    NotificationType
+  title   String
+  message String           @db.Text
+  read    Boolean          @default(false)
+  data    Json? // Datos adicionales relacionados (courseId, badgeId, etc)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([userId, read])
+  @@map("notifications")
 }
