@@ -1,5 +1,6 @@
 import { prisma } from '../utils/prisma';
 import { Course, CourseLevel, Prisma } from '@prisma/client';
+import progressService from './progress.service';
 
 export interface GetCoursesOptions {
   page?: number;
@@ -320,22 +321,12 @@ class CourseService {
       },
     });
 
-    // Calculate progress for each enrollment and return enrollment with nested course
+    // Calculate progress for each enrollment using the CORRECT weighted calculation
     const enrollmentsWithProgress = await Promise.all(
       enrollments.map(async (enrollment) => {
-        const totalModules = enrollment.course.modules.length;
-        const completedModules = await prisma.userProgress.count({
-          where: {
-            userId,
-            moduleId: {
-              in: enrollment.course.modules.map((m) => m.id),
-            },
-            completed: true,
-          },
-        });
-
-        const progress =
-          totalModules > 0 ? Math.round((completedModules / totalModules) * 100) : 0;
+        // Use progressService for accurate weighted calculation
+        // Progress = 40% lessons + 30% quizzes + 30% labs
+        const progress = await progressService.getCourseProgress(userId, enrollment.courseId);
 
         // Update progress in database
         const updatedEnrollment = await prisma.enrollment.update({
@@ -343,6 +334,7 @@ class CourseService {
           data: {
             progress,
             progressPercentage: progress,
+            completedAt: progress === 100 ? new Date() : null,
           },
         });
 
