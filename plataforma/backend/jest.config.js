@@ -21,7 +21,13 @@ module.exports = {
 
   // Transformación de archivos TypeScript
   transform: {
-    '^.+\\.(ts|tsx)$': 'ts-jest',
+    '^.+\\.(ts|tsx)$': ['ts-jest', {
+      tsconfig: {
+        // Opciones específicas para tests
+        esModuleInterop: true,
+        allowSyntheticDefaultImports: true,
+      },
+    }],
   },
 
   // Cobertura de código
@@ -97,15 +103,4 @@ module.exports = {
 
   // Max workers (útil para CI/CD)
   maxWorkers: '50%',
-
-  // Globals para TypeScript
-  globals: {
-    'ts-jest': {
-      tsconfig: {
-        // Opciones específicas para tests
-        esModuleInterop: true,
-        allowSyntheticDefaultImports: true,
-      },
-    },
-  },
 };

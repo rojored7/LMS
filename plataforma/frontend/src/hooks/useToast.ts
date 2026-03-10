@@ -1,64 +1,33 @@
 /**
- * useToast hook
- * Provides toast notification functionality
+ * useToast Hook
+ * Custom hook for showing toast notifications
  */
 
 import { useUiStore } from '../store/uiStore';
 import { TOAST_DURATION } from '../utils/constants';
 
-export function useToast() {
-  const { addToast, removeToast, clearToasts } = useUiStore();
+export const useToast = () => {
+  const addToast = useUiStore((state) => state.addToast);
 
-  /**
-   * Show success toast
-   */
-  const success = (message: string, duration?: number) => {
+  const showToast = (message: string, type: 'success' | 'error' | 'info' | 'warning' = 'info') => {
     addToast({
-      type: 'success',
       message,
-      duration: duration || TOAST_DURATION.MEDIUM,
+      type,
+      duration: TOAST_DURATION.MEDIUM,
     });
   };
 
-  /**
-   * Show error toast
-   */
-  const error = (message: string, duration?: number) => {
-    addToast({
-      type: 'error',
-      message,
-      duration: duration || TOAST_DURATION.LONG,
-    });
-  };
-
-  /**
-   * Show warning toast
-   */
-  const warning = (message: string, duration?: number) => {
-    addToast({
-      type: 'warning',
-      message,
-      duration: duration || TOAST_DURATION.MEDIUM,
-    });
-  };
-
-  /**
-   * Show info toast
-   */
-  const info = (message: string, duration?: number) => {
-    addToast({
-      type: 'info',
-      message,
-      duration: duration || TOAST_DURATION.MEDIUM,
-    });
-  };
+  // Convenience methods for common toast types
+  const success = (message: string) => showToast(message, 'success');
+  const error = (message: string) => showToast(message, 'error');
+  const info = (message: string) => showToast(message, 'info');
+  const warning = (message: string) => showToast(message, 'warning');
 
   return {
+    showToast,
     success,
     error,
-    warning,
     info,
-    remove: removeToast,
-    clear: clearToasts,
+    warning
   };
-}
+};

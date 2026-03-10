@@ -333,6 +333,12 @@ export class AuthService {
     try {
       await emailService.sendPasswordResetEmail(user.email, resetToken);
       logger.info(`Token de reset generado y email enviado a ${email}`);
+
+      // LOG TEMPORAL PARA DESARROLLO: Mostrar URL completa
+      if (config.NODE_ENV === 'development') {
+        const resetUrl = `${config.FRONTEND_URL}/reset-password?token=${resetToken}`;
+        logger.info(`[DEV ONLY] Password reset URL: ${resetUrl}`);
+      }
     } catch (error) {
       logger.error(`Error enviando email de reset a ${email}:`, error);
       // Eliminar token si el email falló

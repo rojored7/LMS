@@ -53,12 +53,53 @@ backend_live.log
 temp_frontend.html
 nul
 
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# ARCHIVOS TEMPORALES Y BASURA - LEY GLOBAL
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# Reportes y snapshots temporales
+*REPORT*.md
+*REPORTE*.md
+*COMPLETE*.md
+*COMPLETION*.md
+*SNAPSHOT*.md
+*CHECKLIST*.md
+*VERIFICATION*.md
+*VERIFICACION*.md
+*FIX*.md
+*IMPLEMENTATION*.md
+*SETUP*.md
+*ESTADO*.md
+*PROGRESO*.md
+
+# Archivos de texto temporales (excepto docs importantes)
+*.txt
+!requirements.txt
+!package-lock.txt
+!LICENSE.txt
+!**/node_modules/**/*.txt
+
 # Scripts temporales
 start_visualizador.*
 verificar_*.sh
 generar_bundle.py
 completar_lab04.py
 contenido_bundle.js
-*.txt
-!requirements.txt
-!package-lock.txt
+temp_*.sh
+test_*.sh
+
+# Archivos de debug y logs de desarrollo
+*-snapshot.md
+*-attempt*.md
+console-errors.txt
+debug*.txt
+error*.txt
+*.log.txt
+
+# Documentación temporal de features/bugs
+MOBILE_*.md
+GENERADOR_*.md
+VISUALIZADOR_*.md
+INSTRUCCIONES_*.txt
+SOLUCION_*.txt
+LIMPIEZA_*.txt

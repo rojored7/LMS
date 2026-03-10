@@ -1,283 +1,389 @@
 /**
  * Admin Dashboard page
- * Shows user management table
+ * Shows user management with enrollment tracking and course assignment
  */
 
-import React, { useState, useEffect } from 'react';
-import { Card, CardBody, CardHeader } from '../components/common/Card';
-import { Badge } from '../components/common/Badge';
-import { Button } from '../components/common/Button';
-import { Loader } from '../components/common/Loader';
-import { Avatar } from '../components/common/Avatar';
+import { useState, useEffect } from 'react';
+import { Users, BookOpen, GraduationCap, TrendingUp, Plus, Settings } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useToast } from '../hooks/useToast';
 import userService from '../services/user.service';
-import { User } from '../types';
-import { formatDate } from '../utils/formatters';
-import { ROLE_LABELS } from '../utils/constants';
+import adminService, {
+  type UserWithEnrollments,
+  type DashboardStats,
+} from '../services/api/admin.service';
+import UserEnrollmentList from '../components/learning/UserEnrollmentList';
+import AssignCourseModal from '../components/learning/AssignCourseModal';
+import type { User } from '../types';
 
-export const AdminDashboard: React.FC = () => {
+export const AdminDashboard = () => {
   const toast = useToast();
+  const navigate = useNavigate();
+
+  // State
+  const [stats, setStats] = useState<DashboardStats | null>(null);
   const [users, setUsers] = useState<User[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [usersWithEnrollments, setUsersWithEnrollments] = useState<Map<string, UserWithEnrollments>>(new Map());
+  const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
+  const [modalState, setModalState] = useState<{
+    isOpen: boolean;
+    userId?: string;
+    userName?: string;
+    userEmail?: string;
+  }>({ isOpen: false });
+
+  // Loading states
+  const [isLoadingStats, setIsLoadingStats] = useState(true);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(true);
+  const [loadingEnrollments, setLoadingEnrollments] = useState<Set<string>>(new Set());
 
   useEffect(() => {
+    loadStats();
     loadUsers();
   }, []);
 
+  const loadStats = async () => {
+    try {
+      setIsLoadingStats(true);
+      const data = await adminService.getDashboardStats();
+      setStats(data);
+    } catch (err: any) {
+      toast.error('Error al cargar estadísticas');
+      console.error(err);
+    } finally {
+      setIsLoadingStats(false);
+    }
+  };
+
   const loadUsers = async () => {
     try {
-      setIsLoading(true);
-      setError(null);
+      setIsLoadingUsers(true);
       const response = await userService.getUsers({ page: 1, limit: 100 });
-      setUsers(response.data);
+      // Axios interceptor unwraps response.data, so response.data contains {users, total}
+      const usersData = response.data?.users || [];
+      setUsers(usersData);
     } catch (err: any) {
-      setError(err?.error?.message || 'Error al cargar usuarios');
       toast.error('Error al cargar usuarios');
+      console.error(err);
     } finally {
-      setIsLoading(false);
+      setIsLoadingUsers(false);
+    }
+  };
+
+  const loadUserEnrollments = async (userId: string) => {
+    if (usersWithEnrollments.has(userId)) {
+      return; // Already loaded
+    }
+
+    setLoadingEnrollments((prev) => new Set(prev).add(userId));
+    try {
+      const data = await adminService.getUserEnrollments(userId);
+      setUsersWithEnrollments((prev) => new Map(prev).set(userId, data));
+    } catch (err: any) {
+      toast.error('Error al cargar inscripciones del usuario');
+      console.error(err);
+    } finally {
+      setLoadingEnrollments((prev) => {
+        const next = new Set(prev);
+        next.delete(userId);
+        return next;
+      });
+    }
+  };
+
+  const handleUserExpand = async (userId: string) => {
+    if (expandedUserId === userId) {
+      setExpandedUserId(null);
+    } else {
+      setExpandedUserId(userId);
+      await loadUserEnrollments(userId);
+    }
+  };
+
+  const handleAssignCourse = async (userId: string, courseId: string) => {
+    try {
+      await adminService.assignCourseToUser(userId, courseId);
+      toast.success('Curso asignado exitosamente');
+
+      // Reload enrollments for this user
+      setUsersWithEnrollments((prev) => {
+        const next = new Map(prev);
+        next.delete(userId);
+        return next;
+      });
+      await loadUserEnrollments(userId);
+      await loadStats();
+    } catch (err: any) {
+      if (err?.error?.message?.includes('ya inscrito')) {
+        toast.info('El usuario ya está inscrito en este curso');
+      } else {
+        toast.error(err?.error?.message || 'Error al asignar curso');
+      }
+      throw err;
+    }
+  };
+
+  const handleRemoveEnrollment = async (enrollmentId: string) => {
+    if (!confirm('¿Retirar este curso del usuario?')) return;
+
+    try {
+      await adminService.removeEnrollment(enrollmentId);
+      toast.success('Curso retirado exitosamente');
+
+      // Reload data
+      if (expandedUserId) {
+        setUsersWithEnrollments((prev) => {
+          const next = new Map(prev);
+          next.delete(expandedUserId);
+          return next;
+        });
+        await loadUserEnrollments(expandedUserId);
+      }
+      await loadStats();
+    } catch (err: any) {
+      toast.error(err?.error?.message || 'Error al retirar curso');
     }
   };
 
   const handleDeleteUser = async (userId: string) => {
-    if (!confirm('¿Estás seguro de que deseas eliminar este usuario?')) {
-      return;
-    }
+    if (!confirm('¿Eliminar este usuario? Esta acción no se puede deshacer.')) return;
 
     try {
       await userService.deleteUser(userId);
       toast.success('Usuario eliminado correctamente');
       loadUsers();
+      loadStats();
+      setUsersWithEnrollments((prev) => {
+        const next = new Map(prev);
+        next.delete(userId);
+        return next;
+      });
     } catch (err: any) {
       toast.error(err?.error?.message || 'Error al eliminar usuario');
     }
   };
 
-  if (isLoading) {
-    return <Loader fullScreen text="Cargando panel de administración..." />;
-  }
+  // Filter only students for enrollment management
+  const students = users.filter((u) => u.role === 'STUDENT');
 
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-          Panel de Administración
-        </h1>
-        <p className="text-gray-600 dark:text-gray-400">
-          Gestiona usuarios y configuraciones del sistema
-        </p>
+      <div className="mb-8 flex items-start justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+            Panel de Administración
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400">
+            Gestión de usuarios, cursos y progreso del sistema
+          </p>
+        </div>
+        <button
+          onClick={() => navigate('/admin/courses')}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          <Settings className="w-5 h-5" />
+          Gestionar Cursos
+        </button>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <Card>
-          <CardBody>
+      {!isLoadingStats && stats && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-blue-100 dark:bg-blue-900 rounded-lg">
-                <svg
-                  className="w-8 h-8 text-blue-600 dark:text-blue-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
-                  />
-                </svg>
+                <Users className="w-6 h-6 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Total Usuarios
-                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Total Usuarios</p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {users.length}
+                  {stats.users.total}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  {stats.users.byRole.STUDENT} estudiantes
                 </p>
               </div>
             </div>
-          </CardBody>
-        </Card>
+          </div>
 
-        <Card>
-          <CardBody>
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-green-100 dark:bg-green-900 rounded-lg">
-                <svg
-                  className="w-8 h-8 text-green-600 dark:text-green-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Usuarios Activos
-                </p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {users.filter((u) => u.isActive).length}
-                </p>
-              </div>
-            </div>
-          </CardBody>
-        </Card>
-
-        <Card>
-          <CardBody>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-purple-100 dark:bg-purple-900 rounded-lg">
-                <svg
-                  className="w-8 h-8 text-purple-600 dark:text-purple-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-                  />
-                </svg>
+                <BookOpen className="w-6 h-6 text-purple-600 dark:text-purple-400" />
               </div>
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Administradores
-                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Cursos</p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {users.filter((u) => u.role === 'ADMIN').length}
+                  {stats.courses.published}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">de {stats.courses.total} totales</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-green-100 dark:bg-green-900 rounded-lg">
+                <GraduationCap className="w-6 h-6 text-green-600 dark:text-green-400" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Inscripciones</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                  {stats.enrollments.total}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  {stats.enrollments.completed} completadas
                 </p>
               </div>
             </div>
-          </CardBody>
-        </Card>
-      </div>
-
-      {/* Users Table */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-              Lista de Usuarios
-            </h2>
-            <Button variant="outline" size="sm" onClick={loadUsers}>
-              Actualizar
-            </Button>
           </div>
-        </CardHeader>
 
-        <CardBody>
-          {error ? (
-            <div className="text-center py-8">
-              <p className="text-red-600 dark:text-red-400 mb-4">{error}</p>
-              <Button variant="outline" onClick={loadUsers}>
-                Reintentar
-              </Button>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-yellow-100 dark:bg-yellow-900 rounded-lg">
+                <TrendingUp className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Progreso Promedio</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                  {stats.systemHealth.averageProgress}%
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  {stats.systemHealth.activeUsers} usuarios activos
+                </p>
+              </div>
             </div>
-          ) : users.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 dark:bg-gray-700">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Usuario
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Email
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Rol
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Estado
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Registro
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Acciones
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                  {users.map((user) => (
-                    <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center gap-3">
-                          <Avatar
-                            src={user.avatar}
-                            name={`${user.firstName} ${user.lastName}`}
-                            size="sm"
-                          />
-                          <div>
-                            <p className="text-sm font-medium text-gray-900 dark:text-white">
-                              {user.firstName} {user.lastName}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          {user.email}
-                        </p>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <Badge
-                          variant={
-                            user.role === 'ADMIN'
-                              ? 'error'
-                              : user.role === 'INSTRUCTOR'
-                              ? 'warning'
-                              : 'info'
-                          }
-                          size="sm"
-                        >
-                          {ROLE_LABELS[user.role]}
-                        </Badge>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <Badge
-                          variant={user.isActive ? 'success' : 'default'}
-                          size="sm"
-                        >
-                          {user.isActive ? 'Activo' : 'Inactivo'}
-                        </Badge>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-                        {formatDate(user.createdAt)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteUser(user.id)}
-                        >
-                          Eliminar
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          </div>
+        </div>
+      )}
+
+      {/* Users Management */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+            Gestión de Estudiantes
+          </h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+            {students.length} estudiantes registrados
+          </p>
+        </div>
+
+        <div className="p-6">
+          {isLoadingUsers ? (
+            <div className="text-center py-12">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+            </div>
+          ) : students.length === 0 ? (
+            <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+              No hay estudiantes registrados
             </div>
           ) : (
-            <div className="text-center py-12">
-              <p className="text-gray-600 dark:text-gray-400">
-                No hay usuarios registrados
-              </p>
+            <div className="space-y-4">
+              {students.map((user) => {
+                const userEnrollments = usersWithEnrollments.get(user.id);
+                const isExpanded = expandedUserId === user.id;
+                const isLoading = loadingEnrollments.has(user.id);
+
+                return (
+                  <div key={user.id} className="border border-gray-200 dark:border-gray-700 rounded-lg">
+                    <div className="p-4 flex items-center justify-between">
+                      <div className="flex items-center gap-4 flex-1">
+                        <button
+                          onClick={() => handleUserExpand(user.id)}
+                          className="flex items-center gap-4 flex-1 text-left hover:opacity-80 transition-opacity"
+                        >
+                          <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold">
+                            {user.name ? user.name[0].toUpperCase() : user.email[0].toUpperCase()}
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-900 dark:text-white">{user.name || user.email}</p>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">{user.email}</p>
+                          </div>
+                        </button>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() =>
+                            setModalState({
+                              isOpen: true,
+                              userId: user.id,
+                              userName: user.name || user.email,
+                              userEmail: user.email,
+                            })
+                          }
+                          className="px-3 py-1.5 text-sm font-medium text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition-colors flex items-center gap-1"
+                        >
+                          <Plus className="w-4 h-4" />
+                          Asignar Curso
+                        </button>
+                        <button
+                          onClick={() => handleDeleteUser(user.id)}
+                          className="px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors"
+                        >
+                          Eliminar
+                        </button>
+                      </div>
+                    </div>
+
+                    {isExpanded && userEnrollments && (
+                      <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
+                        {userEnrollments.enrollments.length === 0 ? (
+                          <p className="text-center py-4 text-gray-500 dark:text-gray-400">
+                            Sin cursos asignados
+                          </p>
+                        ) : (
+                          <div className="space-y-3">
+                            {userEnrollments.enrollments.map((enrollment) => (
+                              <div key={enrollment.id} className="bg-white dark:bg-gray-800 rounded-lg p-4">
+                                <div className="flex items-start justify-between">
+                                  <div className="flex-1">
+                                    <h4 className="font-medium text-gray-900 dark:text-white">
+                                      {enrollment.course.title}
+                                    </h4>
+                                    <div className="mt-2">
+                                      <div className="flex items-center justify-between text-sm mb-1">
+                                        <span className="text-gray-600 dark:text-gray-400">Progreso</span>
+                                        <span className="font-semibold">{enrollment.progress}%</span>
+                                      </div>
+                                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                                        <div
+                                          className="bg-blue-600 h-2 rounded-full transition-all"
+                                          style={{ width: `${enrollment.progress}%` }}
+                                        />
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <button
+                                    onClick={() => handleRemoveEnrollment(enrollment.id)}
+                                    className="ml-4 text-sm text-red-600 hover:text-red-700 dark:text-red-400"
+                                  >
+                                    Retirar
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
-        </CardBody>
-      </Card>
+        </div>
+      </div>
+
+      {/* Assign Course Modal */}
+      <AssignCourseModal
+        isOpen={modalState.isOpen}
+        onClose={() => setModalState(prev => ({ ...prev, isOpen: false }))}
+        onAssign={(courseId) => handleAssignCourse(modalState.userId!, courseId)}
+        userName={modalState.userName || ''}
+        userEmail={modalState.userEmail || ''}
+      />
     </div>
   );
 };

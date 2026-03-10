@@ -30,6 +30,29 @@ import {
 import authRoutes from './routes/auth.routes';
 import userRoutes from './routes/user.routes';
 import courseRoutes from './routes/course.routes';
+import moduleRoutes from './routes/module.routes';
+import lessonRoutes from './routes/lesson.routes';
+import quizRoutes from './routes/quiz.routes';
+import labRoutes from './routes/lab.routes';
+import adminRoutes from './routes/admin.routes';
+import progressRoutes from './routes/progress.routes';
+import projectRoutes from './routes/project.routes';
+import certificateRoutes from './routes/certificate.routes';
+import notificationRoutes from './routes/notification.routes';
+import badgeRoutes from './routes/badge.routes';
+// import analyticsRoutes from './routes/analytics.routes';
+// import exportRoutes from './routes/export.routes';
+import courseImportRoutes from './routes/courseImport.routes';
+import courseManagementRoutes from './routes/courseManagement.routes';
+
+// Swagger
+// import swaggerUi from 'swagger-ui-express';
+// import { swaggerSpec } from './swagger';
+
+// Socket.IO
+import { createServer } from 'http';
+// import { Server } from 'socket.io';
+// import { setupChatSocket } from './sockets/chat.socket';
 
 /**
  * Inicialización de la aplicación Express
@@ -144,48 +167,73 @@ app.get('/', (_req: Request, res: Response) => {
 /**
  * Rutas de la API
  */
-// import courseRoutes from './routes/courses';
-// import moduleRoutes from './routes/modules';
-// import lessonRoutes from './routes/lessons';
-// import quizRoutes from './routes/quizzes';
-// import labRoutes from './routes/labs';
-// import projectRoutes from './routes/projects';
-// import userRoutes from './routes/users';
-// import enrollmentRoutes from './routes/enrollments';
-// import certificateRoutes from './routes/certificates';
-// import profileRoutes from './routes/profiles';
-
+// Rutas de autenticación y usuarios
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes); // HU-003: Sistema de Roles (RBAC)
+app.use('/api/admin', adminRoutes); // Rutas administrativas (solo ADMIN)
+
+// Rutas de contenido del curso
 app.use('/api/courses', courseRoutes);
-// app.use('/api/modules', moduleRoutes);
-// app.use('/api/lessons', lessonRoutes);
-// app.use('/api/quizzes', quizRoutes);
-// app.use('/api/labs', labRoutes);
-// app.use('/api/projects', projectRoutes);
-// app.use('/api/enrollments', enrollmentRoutes);
-// app.use('/api/certificates', certificateRoutes);
-// app.use('/api/profiles', profileRoutes);
+app.use('/api/modules', moduleRoutes);
+app.use('/api/lessons', lessonRoutes);
+app.use('/api/quizzes', quizRoutes);
+app.use('/api/labs', labRoutes);
+
+// Rutas de progreso y completitud (HU-015)
+app.use('/api/progress', progressRoutes);
+
+// Rutas de proyectos finales (HU-027, HU-028)
+app.use('/api/projects', projectRoutes);
+
+// Rutas de certificados (HU-030, HU-031)
+app.use('/api/certificates', certificateRoutes);
+
+// Rutas de notificaciones (HU-035)
+app.use('/api/notifications', notificationRoutes);
+
+// Rutas de badges y gamificación (HU-029)
+app.use('/api/badges', badgeRoutes);
+
+// Rutas de gestión de cursos (import/export/management)
+app.use('/api/admin/courses', courseImportRoutes);
+app.use('/api/admin/courses', courseManagementRoutes);
+
+// Rutas de analytics (nuevas) - Temporalmente deshabilitadas
+// app.use('/api/analytics', analyticsRoutes);
+
+// Rutas de exportación de datos (nuevas) - Temporalmente deshabilitadas
+// app.use('/api/export', exportRoutes);
+
+// Swagger UI documentation
+// app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+//   customCss: '.swagger-ui .topbar { display: none }',
+//   customSiteTitle: 'LMS Ciberseguridad API Docs',
+//   customfavIcon: '/favicon.ico'
+// }));
 
 /**
- * Placeholder para rutas API
- * Remover cuando se implementen las rutas reales
+ * Información de endpoints disponibles
  */
 app.get('/api', (_req: Request, res: Response) => {
   res.json({
-    message: 'API de Plataforma Multi-Curso',
+    message: 'API de Plataforma Multi-Curso de Ciberseguridad',
+    version: '1.0.0',
     endpoints: {
       auth: '/api/auth',
+      users: '/api/users',
+      admin: '/api/admin',
       courses: '/api/courses',
       modules: '/api/modules',
       lessons: '/api/lessons',
       quizzes: '/api/quizzes',
       labs: '/api/labs',
+      progress: '/api/progress',
       projects: '/api/projects',
-      users: '/api/users',
-      enrollments: '/api/enrollments',
       certificates: '/api/certificates',
-      profiles: '/api/profiles',
+      notifications: '/api/notifications',
+      badges: '/api/badges',
+      analytics: '/api/analytics',
+      export: '/api/export',
     },
   });
 });
@@ -230,12 +278,31 @@ async function startServer(): Promise<void> {
     // Inicializar servicios
     await initializeServices();
 
-    // Iniciar servidor HTTP
-    const server = app.listen(config.PORT, config.HOST, () => {
+    // Crear servidor HTTP
+    const httpServer = createServer(app);
+
+    // Configurar Socket.IO - Temporarily disabled
+    // const io = new Server(httpServer, {
+    //   cors: {
+    //     origin: config.CORS_ORIGIN?.split(',') || ['http://localhost:3000'],
+    //     methods: ['GET', 'POST'],
+    //     credentials: true
+    //   }
+    // });
+
+    // Setup chat socket handlers
+    // setupChatSocket(io);
+
+    // Make io accessible in routes (optional)
+    // app.set('io', io);
+
+    // Iniciar servidor HTTP con Socket.IO
+    const server = httpServer.listen(config.PORT, config.HOST, () => {
       logAppStart(config.PORT);
       console.log(`🌍 Servidor escuchando en http://${config.HOST}:${config.PORT}`);
       console.log(`📦 Entorno: ${config.NODE_ENV}`);
       console.log(`🎯 Frontend URL: ${config.FRONTEND_URL}`);
+      console.log(`💬 WebSocket habilitado para chat en tiempo real`);
     });
 
     /**

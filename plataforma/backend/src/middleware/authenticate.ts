@@ -117,6 +117,7 @@ export async function authenticate(req: Request, _res: Response, next: NextFunct
 
     // 7. Adjuntar datos del usuario al request
     const authenticatedUser: AuthenticatedUser = {
+      id: user.id, // Para compatibilidad con logger
       userId: user.id,
       email: user.email,
       role: user.role as any,
@@ -211,6 +212,7 @@ export async function authenticateOptional(req: Request, _res: Response, next: N
 
         if (user) {
           req.user = {
+            id: user.id, // Para compatibilidad con logger
             userId: decoded.userId,
             email: decoded.email,
             role: decoded.role,

@@ -6,7 +6,7 @@
 import PDFDocument from 'pdfkit';
 import fs from 'fs';
 import path from 'path';
-import { logger } from '../utils/logger';
+import { logger } from '../middleware/logger';
 
 export class PDFService {
   private publicDir: string;

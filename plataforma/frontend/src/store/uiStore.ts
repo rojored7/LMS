@@ -50,8 +50,8 @@ interface UiState {
 let toastIdCounter = 0;
 
 export const useUiStore = create<UiState>((set, get) => ({
-  // Sidebar
-  isSidebarOpen: true,
+  // Sidebar - default closed on mobile, will be controlled by window size
+  isSidebarOpen: false,
 
   toggleSidebar: () => {
     set((state) => ({ isSidebarOpen: !state.isSidebarOpen }));

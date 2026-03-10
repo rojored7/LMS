@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir:*)",
+      "Bash(if exist .env.example type .env.example)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

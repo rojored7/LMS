@@ -1,0 +1,376 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "version": "1.0.0",
+  "description": "Workflow system configuration for Plataforma Multi-Curso de Ciberseguridad",
+
+  "project": {
+    "name": "curso-ciber-lms",
+    "type": "nodejs",
+    "description": "Multi-course cybersecurity learning management system with executable code labs",
+
+    "backend": {
+      "enabled": true,
+      "framework": "express",
+      "language": "typescript",
+      "testRunner": "jest",
+      "path": "backend/",
+      "entryPoint": "backend/src/server.ts",
+      "testCommand": "npm test",
+      "testCommandInContainer": "docker exec ciber-backend npm test",
+      "buildCommand": "npm run build",
+      "devCommand": "npm run dev",
+      "lintCommand": "npm run lint",
+      "typeCheckCommand": "npm run type-check"
+    },
+
+    "frontend": {
+      "enabled": true,
+      "framework": "react",
+      "language": "typescript",
+      "testRunner": "vitest",
+      "path": "frontend/",
+      "entryPoint": "frontend/src/main.tsx",
+      "testCommand": "npm test",
+      "testCommandInContainer": "docker exec ciber-frontend npm test",
+      "buildCommand": "npm run build",
+      "devCommand": "npm run dev",
+      "lintCommand": "npm run lint",
+      "typeCheckCommand": "npm run type-check"
+    },
+
+    "e2e": {
+      "enabled": true,
+      "framework": "playwright",
+      "path": "e2e/",
+      "testCommand": "npm run test:e2e",
+      "visualRegressionPath": "e2e/visual-regression/baselines/"
+    },
+
+    "executor": {
+      "enabled": true,
+      "path": "executor/",
+      "framework": "express",
+      "description": "Code execution service for labs (sandboxed Docker containers)",
+      "testCommand": "npm test"
+    },
+
+    "database": {
+      "type": "postgresql",
+      "version": "15",
+      "orm": "prisma",
+      "schemaPath": "backend/prisma/schema.prisma",
+      "migrationsPath": "backend/prisma/migrations/",
+      "seedCommand": "docker exec ciber-backend npm run seed:curso"
+    },
+
+    "cache": {
+      "type": "redis",
+      "version": "7",
+      "purpose": "JWT blacklist, session storage, caching"
+    }
+  },
+
+  "workflows": {
+    "regression": {
+      "enabled": true,
+      "description": "Run ALL tests and compare with baseline - BLOCKS on failure",
+      "blockOnFailure": true,
+      "runOn": ["feature", "fix", "refactor"],
+      "skipOn": ["docs", "ci", "config", "style"],
+      "smokeTests": {
+        "backend": "backend/src/__tests__/regression/smoke-tests.test.ts",
+        "frontend": "frontend/src/tests/regression/smoke-tests.test.tsx"
+      }
+    },
+
+    "architecture": {
+      "enabled": true,
+      "description": "Validate architecture rules (CAS) - Advisory mode",
+      "mode": "advisory",
+      "blockOnFailure": false,
+      "rulesFile": ".arch-rules.ts",
+      "checks": [
+        "layering",
+        "naming",
+        "imports",
+        "circular-dependencies",
+        "file-organization"
+      ]
+    },
+
+    "visual": {
+      "enabled": true,
+      "description": "Visual validation with Playwright MCP",
+      "baselinesPath": "e2e/visual-regression/baselines/",
+      "threshold": 0.01,
+      "blockOnFailure": false,
+      "criticalPages": [
+        "/",
+        "/login",
+        "/dashboard",
+        "/courses",
+        "/courses/:slug"
+      ]
+    },
+
+    "baseline": {
+      "enabled": true,
+      "description": "Capture project state before changes",
+      "autoCapture": true,
+      "captureOn": ["feature-start", "fix-start"],
+      "retention": {
+        "keep": 10,
+        "description": "Keep last 10 baselines"
+      },
+      "includes": [
+        "tests",
+        "coverage",
+        "file-count",
+        "loc"
+      ]
+    }
+  },
+
+  "thresholds": {
+    "minCoverage": {
+      "backend": {
+        "lines": 70,
+        "functions": 70,
+        "branches": 60,
+        "statements": 70
+      },
+      "frontend": {
+        "lines": 70,
+        "functions": 70,
+        "branches": 60,
+        "statements": 70
+      },
+      "critical": {
+        "auth": 90,
+        "security": 95
+      }
+    },
+
+    "maxRegressionFailures": 0,
+    "maxArchViolations": 10,
+    "maxVisualDiff": 1.0,
+    "maxBuildTime": 300000,
+    "maxTestTime": 180000
+  },
+
+  "agents": {
+    "orchestrator": {
+      "name": "workflow-orchestrator",
+      "description": "Main workflow coordinator",
+      "mode": "semi-automatic",
+      "location": "~/.claude/agents/workflow-orchestrator"
+    },
+
+    "docker": {
+      "name": "docker-wsl2-devops",
+      "enabled": true,
+      "invokeWhen": ["database", "migration", "infra", "docker", "redis", "postgres"],
+      "description": "Manages Docker containers, volumes, networks, and migrations"
+    },
+
+    "backend": {
+      "name": "backend-implementor",
+      "enabled": true,
+      "invokeWhen": ["always"],
+      "description": "Implements backend features (Express + Prisma + TypeScript)"
+    },
+
+    "frontend": {
+      "name": "frontend-builder",
+      "enabled": true,
+      "invokeWhen": ["always"],
+      "description": "Implements frontend features (React + TypeScript + Zustand)"
+    },
+
+    "qa": {
+      "name": "qa-tester-senior",
+      "enabled": true,
+      "invokeWhen": ["feature", "fix"],
+      "description": "Validates implementation against acceptance criteria"
+    }
+  },
+
+  "directories": {
+    "baselines": ".baselines/",
+    "checkpoints": ".checkpoints/",
+    "reports": "reports/",
+    "visualBaselines": "e2e/visual-regression/baselines/",
+    "coverage": "reports/coverage/",
+    "logs": "logs/",
+    "temp": "temp/"
+  },
+
+  "git": {
+    "autoCommit": false,
+    "commitMessageTemplate": "{{type}}: {{description}}\n\n{{details}}\n\n🤖 Generated with Claude Code\nCo-Authored-By: Claude <noreply@anthropic.com>",
+    "branchNaming": "{{type}}/{{ticket}}-{{description}}",
+    "requireCleanWorkingDirectory": false
+  },
+
+  "docker": {
+    "composeFile": "docker-compose.yml",
+    "services": {
+      "backend": {
+        "container": "ciber-backend",
+        "port": 4000,
+        "healthCheck": "/health/ready"
+      },
+      "frontend": {
+        "container": "ciber-frontend",
+        "port": 3000
+      },
+      "postgres": {
+        "container": "ciber-postgres",
+        "port": 5433
+      },
+      "redis": {
+        "container": "ciber-redis",
+        "port": 6380
+      },
+      "executor": {
+        "container": "ciber-executor",
+        "port": 5000
+      }
+    }
+  },
+
+  "notifications": {
+    "enabled": false,
+    "channels": {
+      "slack": {
+        "enabled": false,
+        "webhookUrl": "",
+        "notifyOn": ["regression-failure", "workflow-complete"]
+      },
+      "email": {
+        "enabled": false,
+        "recipients": [],
+        "notifyOn": ["regression-failure"]
+      }
+    }
+  },
+
+  "advanced": {
+    "parallelExecution": {
+      "enabled": true,
+      "maxConcurrency": 2,
+      "description": "Run backend and frontend tests in parallel"
+    },
+
+    "caching": {
+      "enabled": true,
+      "cacheBaselines": true,
+      "cacheCoverage": true,
+      "ttl": 86400
+    },
+
+    "retry": {
+      "enabled": true,
+      "maxAttempts": 2,
+      "retryOn": ["network-error", "timeout"],
+      "backoff": "exponential"
+    },
+
+    "cleanup": {
+      "enabled": true,
+      "cleanupAfter": ["workflow-complete"],
+      "keepArtifacts": ["baselines", "reports"],
+      "retention": {
+        "days": 30
+      }
+    }
+  },
+
+  "ci": {
+    "github-actions": {
+      "enabled": false,
+      "workflowFile": ".github/workflows/regression.yml",
+      "triggerOn": ["push", "pull_request"]
+    }
+  },
+
+  "userStories": {
+    "backlogPath": "../docs/backlog.md",
+    "completedPath": "../docs/historias-usuario/completadas/",
+    "pendingPath": "../docs/historias-usuario/pendientes/",
+    "tracking": {
+      "enabled": true,
+      "updateOnCompletion": true
+    }
+  },
+
+  "architecture": {
+    "backend": {
+      "pattern": "Three-tier layered (Routes → Controllers → Services → Prisma)",
+      "layers": ["routes", "controllers", "services", "middleware", "validators", "types", "utils"],
+      "conventions": {
+        "files": "kebab-case",
+        "classes": "PascalCase",
+        "functions": "camelCase"
+      }
+    },
+    "frontend": {
+      "pattern": "Component-based with hooks and Zustand",
+      "structure": ["pages", "components", "hooks", "services", "store", "types", "utils"],
+      "conventions": {
+        "files": "PascalCase for components, kebab-case for utils",
+        "components": "PascalCase",
+        "hooks": "use prefix + camelCase"
+      }
+    }
+  },
+
+  "security": {
+    "jwtValidation": {
+      "checks": ["blacklist", "signature", "payload", "mass-invalidation", "user-exists"],
+      "description": "5-step token validation enforced"
+    },
+    "prismaClient": {
+      "singleton": true,
+      "location": "backend/src/utils/prisma.ts",
+      "rule": "NEVER create new PrismaClient() elsewhere"
+    },
+    "redisFailClosed": {
+      "enabled": true,
+      "description": "All Redis operations fail-closed for security"
+    }
+  },
+
+  "knownIssues": {
+    "routeOrderMatters": {
+      "description": "Specific routes MUST come before parameterized routes",
+      "example": "/enrolled BEFORE /:idOrSlug",
+      "files": ["backend/src/routes/course.routes.ts"],
+      "severity": "error"
+    },
+    "middlewareOrder": {
+      "description": "Middleware execution order is CRITICAL in server.ts",
+      "severity": "error"
+    },
+    "enrollmentIdempotency": {
+      "description": "Course enrollment returns 200 on duplicate, not 500",
+      "location": "backend/src/services/course.service.ts:233-256",
+      "severity": "info"
+    }
+  },
+
+  "metadata": {
+    "createdAt": "2026-03-09T00:00:00Z",
+    "createdBy": "workflow-orchestrator",
+    "version": "1.0.0",
+    "lastModified": "2026-03-09T00:00:00Z",
+    "project": "Plataforma Multi-Curso de Ciberseguridad",
+    "mvpVersion": "1.0.0",
+    "documentation": {
+      "architecture": "../CLAUDE.md",
+      "backend": "backend/CLAUDE.md",
+      "frontend": "frontend/CLAUDE.md",
+      "cas": ".arch-rules.ts"
+    }
+  }
+}

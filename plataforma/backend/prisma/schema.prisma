@@ -31,6 +31,8 @@ model User {
   avatar       String? // URL del avatar del usuario
   role         UserRole @default(STUDENT)
   xp           Int      @default(0) // Puntos de experiencia para gamificación
+  theme        String   @default("system") // system, light, dark
+  locale       String   @default("es") // es, en
 
   // Relación con perfil de entrenamiento
   trainingProfileId String?
@@ -48,11 +50,14 @@ model User {
   projectSubmissions  ProjectSubmission[]
   reviewedProjects    ProjectSubmission[]  @relation("ReviewedProjects")
   userProgress        UserProgress[]
+  userLessonProgress  UserLessonProgress[] @relation("UserLessonProgress")
   certificates        Certificate[]
   refreshTokens       RefreshToken[]
   passwordResetTokens PasswordResetToken[]
   badges              UserBadge[]
   notifications       Notification[]
+  sentMessages        ChatMessage[]       @relation("SentMessages")
+  receivedMessages    ChatMessage[]       @relation("ReceivedMessages")
 
   // Índices para búsquedas frecuentes
   @@index([email])
@@ -132,6 +137,7 @@ model Course {
   isPublished Boolean     @default(false)
   author      String // Nombre del autor/instructor
   version     String      @default("1.0")
+  price       Float       @default(0) // Precio del curso (0 = gratuito)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -142,6 +148,7 @@ model Course {
   enrollments    Enrollment[]
   projects       Project[]
   certificates   Certificate[]
+  scormPackages  ScormPackage[]
 
   @@index([slug])
   @@index([isPublished])
@@ -214,7 +221,8 @@ model Lesson {
   estimatedTime Int // Tiempo estimado en minutos
 
   // Relaciones
-  userProgress UserProgress[]
+  userProgress       UserProgress[]
+  userLessonProgress UserLessonProgress[]
 
   @@unique([moduleId, order])
   @@index([moduleId])
@@ -411,9 +419,15 @@ model Enrollment {
   courseId String
   course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
-  enrolledAt  DateTime  @default(now())
-  completedAt DateTime? // Fecha de finalización del curso
-  certificate String? // ID del certificado emitido
+  progress          Int       @default(0) // Porcentaje de progreso (0-100)
+  progressPercentage Int?     // Porcentaje alternativo de progreso
+  lastAccessedAt    DateTime? // Última vez que accedió al curso
+  enrolledAt        DateTime  @default(now())
+  completedAt       DateTime? // Fecha de finalización del curso
+  certificate       String?   // ID del certificado emitido
+
+  // Relaciones
+  userProgress UserProgress[]
 
   @@unique([userId, courseId]) // Un usuario no puede inscribirse dos veces al mismo curso
   @@index([userId])
@@ -426,15 +440,22 @@ model UserProgress {
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  enrollmentId String?
+  enrollment   Enrollment? @relation(fields: [enrollmentId], references: [id], onDelete: SetNull)
+
   moduleId String
   module   Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
 
   lessonId String?
   lesson   Lesson? @relation(fields: [lessonId], references: [id], onDelete: SetNull)
 
-  completed  Boolean  @default(false)
-  progress   Int      @default(0) // Porcentaje de progreso (0-100)
-  lastAccess DateTime @default(now())
+  status      String   @default("pending") // pending, in_progress, completed
+  completed   Boolean  @default(false)
+  progress    Int      @default(0) // Porcentaje de progreso (0-100)
+  score       Int?     // Puntuación si es evaluable
+  timeSpent   Int      @default(0) // Tiempo en minutos
+  lastAccess  DateTime @default(now())
+  completedAt DateTime?
 
   @@unique([userId, moduleId, lessonId])
   @@index([userId])
@@ -533,4 +554,107 @@ model Notification {
   @@index([userId])
   @@index([userId, read])
   @@map("notifications")
+}
+
+// ============================================================================
+// TRADUCCIONES Y LOCALIZACIÓN
+// ============================================================================
+
+model Translation {
+  id        String   @id @default(cuid())
+  key       String
+  locale    String   @default("es")
+  value     String   @db.Text
+  context   String?  // Contexto para traducción (ej: "navigation", "course", "quiz")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([key, locale])
+  @@index([locale])
+  @@index([key])
+  @@map("translations")
+}
+
+// ============================================================================
+// CHAT Y MENSAJERÍA
+// ============================================================================
+
+model ChatMessage {
+  id          String   @id @default(cuid())
+  roomId      String   // ID del chat room (puede ser courseId, supportId, etc)
+  senderId    String
+  sender      User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  recipientId String?  // Opcional para mensajes broadcast
+  recipient   User?    @relation("ReceivedMessages", fields: [recipientId], references: [id], onDelete: SetNull)
+  message     String   @db.Text
+  type        String   @default("text") // text, file, image, code
+  metadata    Json?    // Información adicional (archivo URL, tipo de código, etc)
+  read        Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([roomId, createdAt])
+  @@index([senderId])
+  @@index([recipientId])
+  @@map("chat_messages")
+}
+
+// ============================================================================
+// PAQUETES SCORM
+// ============================================================================
+
+model ScormPackage {
+  id          String   @id @default(cuid())
+  courseId    String
+  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  version     String   // Versión de SCORM (1.2, 2004)
+  manifest    Json     // Estructura del manifest.xml
+  files       Json     // Lista de archivos del paquete
+  uploadedAt  DateTime @default(now())
+  uploadedBy  String?  // ID del usuario que subió el paquete
+
+  @@index([courseId])
+  @@map("scorm_packages")
+}
+
+// ============================================================================
+// PROGRESO DETALLADO DE LECCIONES
+// ============================================================================
+
+model UserLessonProgress {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation("UserLessonProgress", fields: [userId], references: [id], onDelete: Cascade)
+  lessonId  String
+  lesson    Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  completed   Boolean  @default(false)
+  progress    Int      @default(0) // Porcentaje de la lección completada
+  timeSpent   Int      @default(0) // Tiempo en minutos
+  score       Int?     // Puntuación si la lección tiene evaluación
+  lastAccess  DateTime @default(now())
+  completedAt DateTime?
+
+  @@unique([userId, lessonId])
+  @@index([userId])
+  @@index([lessonId])
+  @@map("user_lesson_progress")
+}
+
+// ============================================================================
+// AUDIT LOG - TRACKING DE CAMBIOS
+// ============================================================================
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String   // Usuario que realizó la acción
+  action     String   // COURSE_CREATED, COURSE_UPDATED, etc.
+  entityType String   // Course, Module, Lesson, Quiz, Lab
+  entityId   String   // ID de la entidad afectada
+  metadata   Json?    // Información adicional del contexto
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
 }

@@ -10,4 +10,8 @@ export * from './Loader';
 export * from './Toast';
 export * from './Badge';
 export * from './Avatar';
-export * from './Authorized'; // HU-003: Sistema de Roles (RBAC)
+export * from './Authorized';
+export * from './ConfirmDialog';
+export * from './EmptyState';
+export * from './LoadingSpinner'; // HU-003: Sistema de Roles (RBAC)
+export { default as VideoEmbed } from './VideoEmbed'; // HU-023: VideoEmbed - Soporte para Multimedia

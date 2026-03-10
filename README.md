@@ -1,299 +1,226 @@
-# Curso Completo de Ciberseguridad: De Principiante a Experto
-## Enfoque en Criptografía Postcuántica y ANKASecure
+# 🎓 Proyecto: Sistema LMS Multi-Curso + Contenidos de Ciberseguridad
 
-> Duración: 40 horas | Nivel: Principiante → Experto | Modalidad: Teórico-Práctico
+**Sistema de gestión de aprendizaje (LMS)** con laboratorios ejecutables + Material educativo de ciberseguridad.
 
----
-
-## 📋 Descripción del Curso
-
-Este curso está diseñado para llevarte desde los fundamentos de la ciberseguridad hasta la implementación avanzada de soluciones criptográficas postcuánticas, con enfoque especial en la plataforma **ANKASecure**.
-
-Al finalizar, serás capaz de:
-- Comprender y aplicar conceptos avanzados de ciberseguridad
-- Implementar criptografía clásica y postcuántica
-- Trabajar con la plataforma ANKASecure
-- Cumplir con normativas internacionales (NIST, FIPS, PCI DSS, HIPAA)
-- Desarrollar soluciones seguras contra amenazas cuánticas
+> **Estado**: LMS 95% completo | Contenidos 70% completos | 100% funcional
 
 ---
 
-## 🎨 VISUALIZADOR WEB INTERACTIVO
+## 📋 Descripción General
 
-**¡NUEVO!** Navega el curso completo con nuestra interfaz web moderna:
+Este repositorio contiene **DOS componentes principales**:
 
-### 🚀 Inicio Rápido
+### 1️⃣ Plataforma LMS (`plataforma/`) - **SOFTWARE**
+Sistema de gestión de aprendizaje (LMS) con:
+- Backend API REST (Node.js + TypeScript)
+- Frontend React (21 páginas + 69 componentes)
+- Autenticación JWT + RBAC
+- Laboratorios ejecutables en Docker
+- Gamificación (XP, badges, certificados)
 
-**Opción 1 - Doble Click (Más Fácil)**:
-```
-1. Abre: index.html
-2. ¡Listo! Navega por los 9 módulos
-```
+**Estado**: 95% completo, 100% funcional
 
-**Opción 2 - Scripts de Inicio**:
+### 2️⃣ Contenidos Educativos (`contenidos/curso_ciberseguridad/`) - **MATERIAL**
+Curso de ciberseguridad postcuántica (40h):
+- 10 módulos en Markdown
+- Teorías, laboratorios, evaluaciones
+- Enfoque en ANKASecure
+
+**Estado**: 70% completo (módulos 01-02 listos)
+
+---
+
+## 🚀 Inicio Rápido
+
+### Opción 1: Iniciar el LMS (Recomendado)
+
 ```bash
-# Windows
-start_visualizador.bat
+# Clonar repositorio
+git clone <repo-url>
+cd Curso_ciber/plataforma
 
-# Linux/Mac
-./start_visualizador.sh
+# Iniciar servicios (Docker Compose)
+docker-compose up -d
+
+# Seed de datos iniciales
+docker exec ciber-backend npm run seed:curso
+
+# Acceso
+# Frontend: http://localhost:3000
+# Backend API: http://localhost:4000
+# API Docs: http://localhost:4000/api-docs
+
+# Usuario admin: admin@ciberplatform.com / Admin123!
 ```
 
-**Opción 3 - Servidor Local**:
+Ver documentación completa: [`ESTADO_LMS.md`](./ESTADO_LMS.md)
+
+### Opción 2: Ver solo los contenidos
+
 ```bash
-python -m http.server 8000
-# Abre: http://localhost:8000
+# Navegar a los contenidos
+cd contenidos/curso_ciberseguridad
+
+# Ver temario
+cat 00_TEMARIO_COMPLETO.md
+
+# Ver módulo 01
+cd 01_Fundamentos_Ciberseguridad
 ```
 
-### ✨ Características del Visualizador
-
-- 📊 **Vista de tarjetas** por módulo con estadísticas
-- 🔍 **Navegación modal** para explorar contenido
-- 📱 **Diseño responsive** (desktop, tablet, móvil)
-- 🎨 **UI moderna** con gradientes y animaciones
-- ⚡ **Sin dependencias** - 100% HTML/CSS/JS
-- 📂 **Acceso directo** a todos los archivos markdown
-
-**📖 [Ver documentación completa del visualizador](./VISUALIZADOR_README.md)**
+Ver documentación: `contenidos/curso_ciberseguridad/00_TEMARIO_COMPLETO.md`
 
 ---
 
-## 🎯 Objetivos de Aprendizaje
-
-### Conocimientos Técnicos
-- Fundamentos de redes, protocolos y seguridad
-- Criptografía simétrica y asimétrica
-- Algoritmos postcuánticos (ML-KEM, ML-DSA, Falcon, SLH-DSA)
-- Gestión de claves y PKI
-- APIs de seguridad (JWS/JWE/JOSE)
-- Cumplimiento normativo
-
-### Habilidades Prácticas
-- Configuración de entornos seguros
-- Implementación de cifrado end-to-end
-- Gestión de claves criptográficas
-- Migración de sistemas clásicos a postcuánticos
-- Integración de ANKASecure en arquitecturas reales
-
----
-
-## 📚 Estructura del Curso (40 horas)
-
-| Módulo | Tema | Duración | Tipo |
-|--------|------|----------|------|
-| **01** | Fundamentos de Ciberseguridad | 6 horas | Teoría + Labs |
-| **02** | Redes y Protocolos de Seguridad | 4 horas | Teoría + Labs |
-| **03** | Criptografía Clásica | 6 horas | Teoría + Labs |
-| **04** | Criptografía Postcuántica | 6 horas | Teoría + Labs |
-| **05** | Gestión de Claves y PKI | 4 horas | Teoría + Labs |
-| **06** | APIs de Seguridad (JWS/JWE/JOSE) | 4 horas | Teoría + Labs |
-| **07** | Normativas y Cumplimiento | 3 horas | Teoría + Casos |
-| **08** | ANKASecure en Producción | 5 horas | Práctica Intensiva |
-| **09** | Proyecto Final Integrador | 2 horas | Evaluación |
-
----
-
-## 🛠️ Requisitos Previos
-
-### Conocimientos Mínimos
-- Conceptos básicos de programación (Python, JavaScript o Java)
-- Uso básico de terminal/línea de comandos
-- Conceptos básicos de redes (opcional, se cubre en el curso)
-
-### Herramientas Necesarias
-- Sistema operativo: Windows/Linux/macOS
-- Docker Desktop
-- Git
-- Editor de código (VS Code recomendado)
-- Postman o similar
-- Python 3.9+
-- Node.js 18+ (para algunos labs)
-- Java 11+ (para SDK de ANKASecure)
-
-### Cuentas Requeridas
-- Cuenta de prueba en ANKASecure (se proporcionarán instrucciones)
-- GitHub (para laboratorios)
-
----
-
-## 📂 Organización del Contenido
-
-Cada módulo contiene:
+## 📂 Estructura del Proyecto
 
 ```
-XX_Nombre_Modulo/
-├── teoria/
-│   ├── 01_introduccion.md
-│   ├── 02_conceptos_clave.md
-│   ├── 03_casos_uso.md
-│   └── presentaciones/
-├── laboratorios/
-│   ├── lab_01_nombre/
-│   │   ├── README.md
-│   │   ├── guia_paso_a_paso.md
-│   │   ├── codigo_inicial/
-│   │   ├── solucion/
-│   │   └── validacion.md
-│   └── lab_02_nombre/
-├── recursos/
-│   ├── cheatsheets.md
-│   ├── enlaces_utiles.md
-│   ├── herramientas.md
-│   └── bibliografia.md
-└── evaluacion/
-    ├── cuestionario.md
-    └── ejercicios_adicionales.md
+Curso_ciber/
+├── plataforma/                      # Sistema LMS (código)
+│   ├── backend/                     # API REST (Node.js + TypeScript)
+│   ├── frontend/                    # Web App (React + TypeScript)
+│   ├── executor/                    # Docker Executor (sandboxing)
+│   ├── docs/                        # Documentación técnica
+│   │   └── historias-usuario/       # User stories (30 completadas)
+│   ├── docker-compose.yml           # Infraestructura
+│   └── CLAUDE.md                    # Guía de desarrollo
+│
+├── contenidos/                      # Material educativo (Markdown)
+│   └── curso_ciberseguridad/
+│       ├── 01_Fundamentos_Ciberseguridad/
+│       ├── 02_Redes_y_Protocolos/
+│       ├── 03-10/                   # Otros módulos
+│       ├── 00_TEMARIO_COMPLETO.md   # Temario del curso (40h)
+│       └── PROGRESO_CONTENIDOS.md   # Estado del contenido
+│
+├── ESTADO_LMS.md                    # Estado del sistema LMS
+├── CLAUDE.md                        # Guía global del proyecto
+├── cleanup.sh                       # Script de limpieza
+└── README.md                        # Este archivo
 ```
 
 ---
 
-## 🚀 Cómo Usar Este Curso
+## 📚 Contenidos del Curso (40 horas)
 
-### Ruta de Aprendizaje Sugerida
-
-1. **Lee el temario completo** (`00_TEMARIO_COMPLETO.md`) para entender el alcance
-2. **Configura tu entorno** siguiendo `00_SETUP_ENTORNO.md`
-3. **Sigue los módulos en orden** (01 → 09)
-4. **Completa todos los laboratorios** antes de avanzar
-5. **Consulta los recursos** cuando necesites profundizar
-6. **Realiza el proyecto final** para consolidar conocimientos
-
-### Tiempo Estimado por Sesión
-- **Sesiones cortas**: 2 horas (1h teoría + 1h práctica)
-- **Sesiones intensivas**: 4 horas (2h teoría + 2h práctica)
-- **Plan sugerido**: 2 sesiones/semana = 10 semanas
+**10 módulos** de ciberseguridad postcuántica (ver `contenidos/curso_ciberseguridad/00_TEMARIO_COMPLETO.md` para detalles completos)
 
 ---
 
-## 📖 Contenido Detallado por Módulo
+## 🎯 Diferencia Importante: LMS vs Contenidos
 
-### [Módulo 01: Fundamentos de Ciberseguridad](./01_Fundamentos_Ciberseguridad/) (6h)
-- Tríada CIA, modelos de seguridad, vectores de ataque
-- Conceptos de amenazas, vulnerabilidades y riesgos
-- **Labs**: Análisis de vulnerabilidades, configuración de entornos seguros
+### ✅ Plataforma LMS (Software)
+- **Qué es**: Sistema de gestión de cursos (como Moodle, Canvas)
+- **Tecnología**: Node.js, React, Docker, PostgreSQL
+- **Objetivo**: Plataforma REUTILIZABLE para CUALQUIER curso
+- **Estado**: 95% completo, 100% funcional
+- **LOC**: ~71,550 líneas de código
 
-### [Módulo 02: Redes y Protocolos](./02_Redes_y_Protocolos/) (4h)
-- TCP/IP, TLS/SSL, HTTPS, certificados digitales
-- Ataques de red y mitigaciones
-- **Labs**: Captura y análisis de tráfico, implementación TLS
+### 📚 Contenidos (Material Educativo)
+- **Qué es**: Material de aprendizaje en Markdown
+- **Tecnología**: Archivos .md con teoría, labs, evaluaciones
+- **Objetivo**: Curso ESPECÍFICO de ciberseguridad
+- **Estado**: 70% completo (módulos 01-02 listos)
 
-### [Módulo 03: Criptografía Clásica](./06_Criptografia_Clasica/) (6h)
-- Cifrado simétrico (AES) y asimétrico (RSA, ECDSA)
-- Hashing, firmas digitales, MACs
-- **Labs**: Implementación de cifrado, generación de claves RSA/ECDSA
-
-### [Módulo 04: Criptografía Postcuántica](./04_Criptografia_Postcuantica/) (6h)
-- Amenaza cuántica, algoritmos NIST PQC
-- ML-KEM, ML-DSA, Falcon, SLH-DSA, FrodoKEM, HQC
-- **Labs**: Comparativa clásico vs postcuántico, implementación ML-KEM
-
-### [Módulo 05: Gestión de Claves y PKI](./05_Gestion_Claves_PKI/) (4h)
-- Ciclo de vida de claves, HSM, key rotation
-- PKI, certificados X.509, PKCS#12
-- **Labs**: Creación de PKI, gestión de claves con ANKASecure
-
-### [Módulo 06: APIs de Seguridad](./06_APIs_Seguridad/) (4h)
-- JWS (JSON Web Signature), JWE (JSON Web Encryption)
-- JOSE, streaming seguro, detached signatures
-- **Labs**: Implementación JWS/JWE, integración con APIs
-
-### [Módulo 07: Normativas y Cumplimiento](./07_Normativas_Cumplimiento/) (3h)
-- NIST, FIPS 140-2/3, PCI DSS, HIPAA, GDPR
-- CNSA 2.0, GSA PQC Mandate
-- **Labs**: Auditoría de cumplimiento, documentación
-
-### [Módulo 08: ANKASecure en Producción](./08_ANKASecure_Practica/) (5h)
-- CLI, SDK Java, APIs REST
-- Despliegue SaaS y On-Premise
-- Migración RSA → ML-KEM
-- **Labs**: Proyecto completo con ANKASecure
-
-### [Módulo 09: Proyecto Final](./09_Proyecto_Final/) (2h)
-- Diseño e implementación de sistema seguro end-to-end
-- Migración de sistema clásico a postcuántico
-- Presentación y documentación
+**Nota**: La plataforma LMS puede funcionar con CUALQUIER contenido, no solo ciberseguridad.
 
 ---
 
-## 🏆 Evaluación y Certificación
+## 🚀 Stack Tecnológico
 
-### Criterios de Aprobación
-- Completar 100% de laboratorios (peso: 50%)
-- Aprobar cuestionarios por módulo (peso: 20%)
-- Proyecto final funcional (peso: 30%)
+### Backend
+- Node.js 20 + TypeScript 5.3
+- Express 4 (REST API)
+- Prisma ORM (PostgreSQL 15)
+- Redis 7 (cache + sessions)
+- JWT (autenticación)
+- Docker (code executor sandbox)
 
-### Entregables
-- Código de todos los laboratorios
-- Documentación técnica del proyecto final
-- Reporte de migración a PQC
+### Frontend
+- React 18 + TypeScript
+- Vite (build tool)
+- Tailwind CSS
+- Zustand (state management)
+- Monaco Editor (code editor)
+- xterm.js (terminal)
 
----
-
-## 📞 Soporte y Recursos
-
-### Documentación Oficial
-- [ANKASecure Documentation](https://docs.ankatech.co/)
-- [NIST Post-Quantum Cryptography](https://csrc.nist.gov/projects/post-quantum-cryptography)
-
-### Comunidad
-- Foro de discusión del curso (configurar Discord/Slack)
-- Issues en GitHub para dudas técnicas
-
-### Contacto
-- Instructor: [Configurar]
-- Correo: [Configurar]
+### Infraestructura
+- Docker Compose
+- Nginx (reverse proxy)
+- PostgreSQL 15
+- Redis 7
+- Playwright (E2E tests)
 
 ---
 
-## 📅 Cronograma Sugerido
+## 📊 Métricas del Proyecto LMS
 
-### Plan de 10 Semanas (4h/semana)
+```
+Backend:     ~22,500 LOC (147+ archivos)
+Frontend:    ~18,750 LOC (110+ archivos)
+Tests:       ~10,500 LOC (67 archivos)
+Docs:        ~15,000 LOC
+TOTAL:       ~71,550 LOC
+```
 
-| Semana | Módulos | Horas |
-|--------|---------|-------|
-| 1 | Setup + Módulo 01 | 4h |
-| 2 | Módulo 01 (cont.) + Módulo 02 | 4h |
-| 3 | Módulo 03 (parte 1) | 4h |
-| 4 | Módulo 03 (parte 2) | 4h |
-| 5 | Módulo 04 (parte 1) | 4h |
-| 6 | Módulo 04 (parte 2) | 4h |
-| 7 | Módulo 05 + Módulo 06 | 4h |
-| 8 | Módulo 07 + Módulo 08 (parte 1) | 4h |
-| 9 | Módulo 08 (parte 2) | 4h |
-| 10 | Módulo 09 (Proyecto Final) | 4h |
+**Features**: 30 historias de usuario completadas (204 story points)
 
 ---
 
-## 🔄 Actualizaciones
+## 🔧 Desarrollo
 
-Este curso se actualiza regularmente para incluir:
-- Nuevos algoritmos postcuánticos estandarizados
-- Actualizaciones de ANKASecure
-- Nuevas normativas y mejores prácticas
-- Feedback de estudiantes
+```bash
+# Backend
+cd plataforma/backend
+npm install
+npm run dev
 
-**Última actualización**: 2026-02-10
+# Frontend
+cd plataforma/frontend
+npm install
+npm run dev
+
+# Tests
+npm test
+```
+
+Ver `plataforma/CLAUDE.md` para guía completa de desarrollo.
 
 ---
 
-## 📜 Licencia
+## 📝 Documentación
 
-Este material educativo está diseñado con fines didácticos.
+### Plataforma LMS
+- [`ESTADO_LMS.md`](./ESTADO_LMS.md) - Estado actual detallado
+- [`plataforma/CLAUDE.md`](./plataforma/CLAUDE.md) - Guía de desarrollo
+- [`plataforma/docs/historias-usuario/`](./plataforma/docs/historias-usuario/) - User stories
 
-**Nota**: ANKASecure y su documentación son propiedad de Ankatech.
+### Contenidos Educativos
+- [`contenidos/curso_ciberseguridad/00_TEMARIO_COMPLETO.md`](./contenidos/curso_ciberseguridad/00_TEMARIO_COMPLETO.md) - Temario completo (40h)
+- [`contenidos/curso_ciberseguridad/PROGRESO_CONTENIDOS.md`](./contenidos/curso_ciberseguridad/PROGRESO_CONTENIDOS.md) - Estado de contenidos
 
 ---
 
-## 🚦 ¡Comienza Ahora!
+## 🎯 Próximos Pasos
 
-### Opción A: Visualizador Web (Recomendado) 🎨
-1. Abre `index.html` en tu navegador
-2. Explora los módulos visualmente
-3. Click para acceder al contenido
+### Plataforma LMS (2 semanas)
+1. ✅ Activar routes analytics y export
+2. ✅ Commitear archivos pendientes
+3. ⏳ Incrementar tests a 70% coverage
+4. ⏳ Deployment a staging
 
-### Opción B: Navegación Tradicional 📚
-1. Lee el [Temario Completo](./00_TEMARIO_COMPLETO.md)
-2. Configura tu [Entorno de Desarrollo](./00_SETUP_ENTORNO.md)
-3. Inicia con [Módulo 01: Fundamentos](./01_Fundamentos_Ciberseguridad/)
+### Contenidos (4 semanas)
+1. Completar Módulo 03
+2. Completar Módulos 04-10
+3. Evaluaciones finales
+4. Proyecto final
 
-**¡Bienvenido al mundo de la ciberseguridad postcuántica!** 🔐🚀
+---
+
+## 📄 Licencia
+
+[Pendiente de definir]
+
+---
+
+**Última actualización**: 2026-03-09

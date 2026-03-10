@@ -1,0 +1,174 @@
+import { PrismaClient } from '@prisma/client';
+import { readFileSync } from 'fs';
+import { join } from 'path';
+
+const prisma = new PrismaClient();
+
+async function main() {
+  console.log('🌱 Iniciando seed del curso: {CURSO_TITULO}...');
+
+  // 1. Crear el curso principal
+  const course = await prisma.course.upsert({
+    where: { slug: '{CURSO_SLUG}' },
+    update: {},
+    create: {
+      title: '{CURSO_TITULO}',
+      slug: '{CURSO_SLUG}',
+      description: `{CURSO_DESCRIPCION}`,
+      duration: {DURACION_TOTAL}, // horas
+      level: '{NIVEL}', // BEGINNER, INTERMEDIATE, ADVANCED, EXPERT
+      published: true,
+      tags: {TAGS_ARRAY}, // ['tag1', 'tag2', ...]
+      objectives: {OBJETIVOS_ARRAY}, // ['obj1', 'obj2', ...]
+      prerequisites: {PREREQUISITOS_ARRAY}, // ['pre1', 'pre2', ...]
+    },
+  });
+
+  console.log(`✅ Curso creado: ${course.title} (ID: ${course.id})`);
+
+  // 2. Crear módulos
+  {MODULOS_LOOP_START}
+  const modulo{MODULO_INDEX} = await prisma.module.create({
+    data: {
+      title: '{MODULO_TITULO}',
+      description: '{MODULO_DESCRIPCION}',
+      order: {MODULO_ORDER},
+      duration: {MODULO_DURACION}, // minutos
+      courseId: course.id,
+    },
+  });
+  console.log(`  📦 Módulo creado: ${modulo{MODULO_INDEX}.title}`);
+
+  // 2.{MODULO_INDEX} Crear lecciones del módulo {MODULO_INDEX}
+  {LECCIONES_LOOP_START}
+  const leccion{MODULO_INDEX}_{LECCION_INDEX} = await prisma.lesson.create({
+    data: {
+      title: '{LECCION_TITULO}',
+      content: readFileSync(
+        join(__dirname, '../{RUTA_CARPETA_MODULO}/teoria/{LECCION_ARCHIVO}.md'),
+        'utf-8'
+      ),
+      type: '{TIPO_LECCION}', // THEORY, VIDEO, READING
+      order: {LECCION_ORDER},
+      duration: {LECCION_DURACION}, // minutos
+      moduleId: modulo{MODULO_INDEX}.id,
+    },
+  });
+  console.log(`    📝 Lección creada: ${leccion{MODULO_INDEX}_{LECCION_INDEX}.title}`);
+  {LECCIONES_LOOP_END}
+
+  // 2.{MODULO_INDEX} Crear laboratorios del módulo {MODULO_INDEX}
+  {LABS_LOOP_START}
+  const lab{MODULO_INDEX}_{LAB_INDEX} = await prisma.lab.create({
+    data: {
+      title: '{LAB_TITULO}',
+      description: '{LAB_DESCRIPCION}',
+      instructions: readFileSync(
+        join(__dirname, '../{RUTA_CARPETA_MODULO}/laboratorios/{LAB_CARPETA}/README.md'),
+        'utf-8'
+      ),
+      starterCode: readFileSync(
+        join(__dirname, '../{RUTA_CARPETA_MODULO}/laboratorios/{LAB_CARPETA}/starter/{ARCHIVO_STARTER}'),
+        'utf-8'
+      ),
+      solution: readFileSync(
+        join(__dirname, '../{RUTA_CARPETA_MODULO}/laboratorios/{LAB_CARPETA}/solution/{ARCHIVO_SOLUTION}'),
+        'utf-8'
+      ),
+      testCode: readFileSync(
+        join(__dirname, '../{RUTA_CARPETA_MODULO}/laboratorios/{LAB_CARPETA}/tests/{ARCHIVO_TEST}'),
+        'utf-8'
+      ),
+      difficulty: '{DIFICULTAD_LAB}', // EASY, MEDIUM, HARD
+      estimatedTime: {TIEMPO_ESTIMADO_LAB}, // minutos
+      moduleId: modulo{MODULO_INDEX}.id,
+    },
+  });
+  console.log(`    🧪 Lab creado: ${lab{MODULO_INDEX}_{LAB_INDEX}.title}`);
+  {LABS_LOOP_END}
+
+  // 2.{MODULO_INDEX} Crear quiz del módulo {MODULO_INDEX}
+  const quiz{MODULO_INDEX} = await prisma.quiz.create({
+    data: {
+      title: '{QUIZ_TITULO}',
+      description: '{QUIZ_DESCRIPCION}',
+      passingScore: {PASSING_SCORE}, // porcentaje (ej: 70)
+      timeLimit: {TIME_LIMIT}, // minutos (null = sin límite)
+      maxAttempts: {MAX_ATTEMPTS}, // número de intentos permitidos
+      moduleId: modulo{MODULO_INDEX}.id,
+    },
+  });
+  console.log(`  ✅ Quiz creado: ${quiz{MODULO_INDEX}.title}`);
+
+  // 2.{MODULO_INDEX} Crear preguntas del quiz {MODULO_INDEX}
+  {PREGUNTAS_LOOP_START}
+  await prisma.question.create({
+    data: {
+      questionText: `{PREGUNTA_TEXTO}`,
+      type: '{TIPO_PREGUNTA}', // MULTIPLE_CHOICE, TRUE_FALSE, MULTIPLE_SELECT, SHORT_ANSWER
+      options: {OPCIONES_ARRAY}, // ['opción A', 'opción B', ...]
+      correctAnswer: '{RESPUESTA_CORRECTA}',
+      explanation: `{EXPLICACION}`,
+      points: {PUNTOS},
+      order: {PREGUNTA_ORDER},
+      quizId: quiz{MODULO_INDEX}.id,
+    },
+  });
+  {PREGUNTAS_LOOP_END}
+  console.log(`    ❓ ${quiz{MODULO_INDEX}.title}: {NUMERO_PREGUNTAS} preguntas creadas`);
+
+  {MODULOS_LOOP_END}
+
+  // 3. Crear proyecto final
+  const proyectoFinal = await prisma.project.create({
+    data: {
+      title: '{PROYECTO_TITULO}',
+      description: `{PROYECTO_DESCRIPCION}`,
+      requirements: readFileSync(
+        join(__dirname, '../{RUTA_PROYECTO_FINAL}/README.md'),
+        'utf-8'
+      ),
+      rubric: {RUBRICA_ARRAY}, // [{ criterion: 'X', points: 10 }, ...]
+      estimatedHours: {HORAS_PROYECTO},
+      courseId: course.id,
+    },
+  });
+  console.log(`✅ Proyecto final creado: ${proyectoFinal.title}`);
+
+  // 4. Estadísticas finales
+  const stats = {
+    modulos: await prisma.module.count({ where: { courseId: course.id } }),
+    lecciones: await prisma.lesson.count({
+      where: { module: { courseId: course.id } },
+    }),
+    labs: await prisma.lab.count({
+      where: { module: { courseId: course.id } },
+    }),
+    quizzes: await prisma.quiz.count({
+      where: { module: { courseId: course.id } },
+    }),
+    preguntas: await prisma.question.count({
+      where: { quiz: { module: { courseId: course.id } } },
+    }),
+  };
+
+  console.log('\n📊 Resumen del curso:');
+  console.log(`   Título: ${course.title}`);
+  console.log(`   Duración: ${course.duration} horas`);
+  console.log(`   Módulos: ${stats.modulos}`);
+  console.log(`   Lecciones: ${stats.lecciones}`);
+  console.log(`   Laboratorios: ${stats.labs}`);
+  console.log(`   Quizzes: ${stats.quizzes}`);
+  console.log(`   Preguntas: ${stats.preguntas}`);
+  console.log(`   Proyecto final: ${proyectoFinal.title}`);
+  console.log('\n✨ Seed completado exitosamente!\n');
+}
+
+main()
+  .catch((e) => {
+    console.error('❌ Error durante el seed:', e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });

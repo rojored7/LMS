@@ -49,12 +49,13 @@ export async function optionalAuth(req: Request, _res: Response, next: NextFunct
       if (user) {
         // Attach user to request (usando userId para consistencia con authenticate middleware)
         req.user = {
+          id: user.id, // Para compatibilidad con logger
           userId: user.id,
           email: user.email,
           name: user.name,
           role: user.role,
           avatar: user.avatar || undefined,
-        };
+        } as any;
       }
     } catch (error) {
       // Token invalid or expired, continue without authentication

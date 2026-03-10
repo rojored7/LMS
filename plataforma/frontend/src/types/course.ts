@@ -57,26 +57,30 @@ export interface Module {
   title: string;
   description: string;
   order: number;
-  lessons?: Lesson[];
   duration: number; // in minutes
-  createdAt: string;
-  updatedAt: string;
+  isPublished: boolean;
+  lessons: Lesson[];
+  quizzes: Quiz[];
+  labs: Lab[];
+  userProgress?: number; // 0-100 percentage
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Lesson {
   id: string;
-  moduleId: string;
+  moduleId?: string;
   title: string;
-  description: string;
+  description?: string;
   type: LessonType;
   order: number;
-  duration: number; // in minutes
+  estimatedTime: number; // in minutes
   content?: string; // Text content, video URL, etc.
   videoUrl?: string;
   resources?: Resource[];
-  isCompleted?: boolean;
-  createdAt: string;
-  updatedAt: string;
+  isCompleted?: boolean; // Set by backend when userId is provided
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Resource {
@@ -89,14 +93,16 @@ export interface Resource {
 
 export interface Quiz {
   id: string;
-  lessonId: string;
+  moduleId?: string;
   title: string;
-  description: string;
+  description?: string;
   passingScore: number; // percentage
   timeLimit?: number; // in minutes
-  questions: QuizQuestion[];
-  createdAt: string;
-  updatedAt: string;
+  attempts: number; // max attempts allowed
+  questions?: QuizQuestion[];
+  isPassed?: boolean; // Set by backend when userId is provided
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface QuizQuestion {
@@ -131,16 +137,18 @@ export interface QuizAnswer {
 
 export interface Lab {
   id: string;
-  lessonId: string;
+  moduleId?: string;
   title: string;
-  description: string;
-  difficulty: CourseLevel;
-  estimatedTime: number; // in minutes
-  objectives: string[];
-  tasks: LabTask[];
+  description?: string;
+  language: string; // Programming language
+  difficulty?: CourseLevel;
+  estimatedTime?: number; // in minutes
+  objectives?: string[];
+  tasks?: LabTask[];
   resources?: Resource[];
-  createdAt: string;
-  updatedAt: string;
+  isPassed?: boolean; // Set by backend when userId is provided
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface LabTask {

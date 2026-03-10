@@ -7,7 +7,11 @@ const prisma = new PrismaClient();
 // Función helper para leer archivos markdown
 function readMarkdown(filePath: string): string {
   try {
-    const fullPath = path.join(__dirname, '../../../', filePath);
+    // Si es ruta absoluta, usar directamente; si no, buscar relativa a raíz del proyecto
+    const fullPath = path.isAbsolute(filePath)
+      ? filePath
+      : path.join(__dirname, '../../../', filePath);
+
     if (fs.existsSync(fullPath)) {
       return fs.readFileSync(fullPath, 'utf-8');
     }
@@ -16,6 +20,88 @@ function readMarkdown(filePath: string): string {
     console.warn(`⚠️  No se pudo leer: ${filePath}`);
     return '';
   }
+}
+
+// Función helper para formatear opciones de quiz
+function formatQuizOptions(options: string[], correctAnswers: string | string[]) {
+  const correctArray = Array.isArray(correctAnswers) ? correctAnswers : [correctAnswers];
+
+  return options.map((text, index) => ({
+    id: `opt${index + 1}`,
+    text,
+    isCorrect: correctArray.includes(text)
+  }));
+}
+
+// Función helper para importar lecciones desde archivos MD
+async function importLessonsFromFiles(moduleId: string, moduleFolder: string, order: number) {
+  // Intentar múltiples rutas posibles
+  const possiblePaths = [
+    path.join('/content', moduleFolder, 'teoria'), // Desde /content mount en Docker
+    path.join(__dirname, '../../../', moduleFolder, 'teoria'), // Desde backend/prisma
+    path.join(process.cwd(), '../../../', moduleFolder, 'teoria'), // Desde CWD
+  ];
+
+  let teoriaPath = '';
+  for (const tryPath of possiblePaths) {
+    if (fs.existsSync(tryPath)) {
+      teoriaPath = tryPath;
+      break;
+    }
+  }
+
+  if (!teoriaPath) {
+    console.log(`    ⚠️  No se encontró carpeta 'teoria' para ${moduleFolder}`);
+    console.log(`    Rutas intentadas:`);
+    possiblePaths.forEach(p => console.log(`      - ${p}`));
+    return order;
+  }
+
+  const files = fs.readdirSync(teoriaPath).filter(f => f.endsWith('.md')).sort();
+  let lessonOrder = order;
+
+  console.log(`    📂 Importando ${files.length} lecciones desde ${moduleFolder}/teoria`);
+
+  for (const file of files) {
+    const content = readMarkdown(path.join(teoriaPath, file));
+    const titleMatch = file.match(/\d+_(.+)\.md/);
+    const title = titleMatch && titleMatch[1]
+      ? titleMatch[1].replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+      : file.replace('.md', '');
+
+    if (!content || content.length === 0) {
+      console.log(`      ⚠️  Lección ${file} está vacía, omitiendo...`);
+      continue;
+    }
+
+    await prisma.lesson.upsert({
+      where: {
+        moduleId_order: {
+          moduleId,
+          order: lessonOrder
+        }
+      },
+      update: {
+        title,
+        content,
+        type: 'TEXT' as LessonType,
+        estimatedTime: 45 // Estimated time in minutes
+      },
+      create: {
+        moduleId,
+        order: lessonOrder,
+        title,
+        content,
+        type: 'TEXT' as LessonType,
+        estimatedTime: 45
+      }
+    });
+
+    console.log(`      ✓ Lección ${lessonOrder}: ${title}`);
+    lessonOrder++;
+  }
+
+  return lessonOrder;
 }
 
 async function main() {
@@ -48,7 +134,8 @@ Este curso intensivo de 40 horas te llevará desde los conceptos básicos de cib
       isPublished: true,
       author: 'Plataforma Ciberseguridad',
       version: '1.0',
-      thumbnail: '/images/courses/ciberseguridad.jpg'
+      thumbnail: '/images/courses/ciberseguridad.jpg',
+      price: 0 // Curso gratuito
     },
     create: {
       slug: 'ciberseguridad-postcuantica',
@@ -75,7 +162,8 @@ Este curso intensivo de 40 horas te llevará desde los conceptos básicos de cib
       isPublished: true,
       author: 'Plataforma Ciberseguridad',
       version: '1.0',
-      thumbnail: '/images/courses/ciberseguridad.jpg'
+      thumbnail: '/images/courses/ciberseguridad.jpg',
+      price: 0 // Curso gratuito
     }
   });
 
@@ -108,254 +196,7 @@ Este curso intensivo de 40 horas te llevará desde los conceptos básicos de cib
   });
 
   console.log('  📘 Módulo 1 creado:', modulo01.title);
-
-  // Lecciones del Módulo 01
-  const lecciones01 = [
-    {
-      order: 1,
-      title: 'Introducción a la Ciberseguridad',
-      content: readMarkdown('01_Fundamentos_Ciberseguridad/teoria/01_introduccion.md') || `
-# Introducción a la Ciberseguridad
-
-## ¿Qué es la ciberseguridad?
-
-La ciberseguridad es la práctica de proteger sistemas, redes y programas de ataques digitales. Estos ataques generalmente tienen como objetivo acceder, cambiar o destruir información sensible, extorsionar dinero a los usuarios o interrumpir procesos comerciales normales.
-
-## Evolución histórica de las amenazas
-
-- **1970s**: Primeros virus informáticos
-- **1980s**: Malware y ataques de red
-- **1990s**: Internet y nuevos vectores de ataque
-- **2000s**: Cibercrimen organizado
-- **2010s**: APTs y ransomware
-- **2020s**: Amenaza cuántica y criptografía postcuántica
-
-## Panorama actual: ciberataques más comunes 2024-2026
-
-1. **Ransomware**: Cifrado de datos con exigencia de rescate
-2. **Phishing**: Engaño para robar credenciales
-3. **DDoS**: Saturación de servicios
-4. **Vulnerabilidades Zero-Day**: Exploits desconocidos
-5. **Supply Chain Attacks**: Ataques a la cadena de suministro
-
-## El rol de la ciberseguridad en la era digital
-
-La ciberseguridad es fundamental para:
-- Proteger la privacidad de los usuarios
-- Garantizar la continuidad del negocio
-- Cumplir con regulaciones (GDPR, PCI DSS)
-- Mantener la confianza del cliente
-- Prevenir pérdidas financieras
-`,
-      type: 'TEXT' as LessonType,
-      estimatedTime: 30
-    },
-    {
-      order: 2,
-      title: 'Principios Fundamentales',
-      content: readMarkdown('01_Fundamentos_Ciberseguridad/teoria/02_principios_fundamentales.md') || `
-# Principios Fundamentales de Ciberseguridad
-
-## Tríada CIA
-
-### Confidencialidad (Confidentiality)
-Control de acceso a la información. Solo usuarios autorizados pueden acceder a datos sensibles.
-
-**Técnicas:**
-- Cifrado
-- Control de acceso
-- Autenticación
-
-### Integridad (Integrity)
-Protección contra modificaciones no autorizadas. Los datos deben permanecer exactos y completos.
-
-**Técnicas:**
-- Hashes criptográficos
-- Firmas digitales
-- Control de versiones
-
-### Disponibilidad (Availability)
-Garantía de acceso cuando se necesite. Los sistemas deben estar disponibles para usuarios autorizados.
-
-**Técnicas:**
-- Redundancia
-- Backups
-- Protección DDoS
-
-## Principios Adicionales
-
-### Autenticación
-Verificación de la identidad del usuario.
-
-### Autorización
-Determinación de permisos del usuario.
-
-### No Repudio
-Prueba de que una acción fue realizada por un usuario específico.
-
-## Defensa en Profundidad (Defense in Depth)
-
-Múltiples capas de seguridad para proteger contra diferentes tipos de ataques.
-
-## Principio de Mínimo Privilegio
-
-Los usuarios solo deben tener los permisos mínimos necesarios para realizar su trabajo.
-
-## Zero Trust Architecture
-
-"Nunca confíes, siempre verifica" - Cada solicitud debe ser autenticada y autorizada.
-`,
-      type: 'TEXT' as LessonType,
-      estimatedTime: 45
-    },
-    {
-      order: 3,
-      title: 'Amenazas, Vulnerabilidades y Riesgos',
-      content: readMarkdown('01_Fundamentos_Ciberseguridad/teoria/03_amenazas_vulnerabilidades_riesgos.md') || `
-# Amenazas, Vulnerabilidades y Riesgos
-
-## Definiciones
-
-**Amenaza**: Potencial causa de un incidente no deseado.
-
-**Vulnerabilidad**: Debilidad que puede ser explotada por una amenaza.
-
-**Riesgo**: Probabilidad de que una amenaza explote una vulnerabilidad.
-
-## Tipos de Amenazas
-
-### Malware
-- **Virus**: Se replica insertándose en otros programas
-- **Ransomware**: Cifra datos y exige rescate
-- **Troyanos**: Se disfrazan de software legítimo
-- **Spyware**: Espía actividad del usuario
-
-### Ataques de Red
-- **Man-in-the-Middle (MitM)**: Intercepta comunicaciones
-- **DDoS**: Satura recursos del sistema
-- **SQL Injection**: Inyecta código SQL malicioso
-- **XSS**: Cross-Site Scripting
-
-### Ingeniería Social
-- **Phishing**: Correos fraudulentos
-- **Spear Phishing**: Ataques dirigidos
-- **Pretexting**: Creación de escenarios falsos
-
-## Vulnerabilidades Comunes
-
-### CVE (Common Vulnerabilities and Exposures)
-Base de datos pública de vulnerabilidades conocidas.
-
-### OWASP Top 10
-Lista de las 10 vulnerabilidades web más críticas:
-1. Broken Access Control
-2. Cryptographic Failures
-3. Injection
-4. Insecure Design
-5. Security Misconfiguration
-6. Vulnerable Components
-7. Authentication Failures
-8. Software and Data Integrity Failures
-9. Security Logging Failures
-10. Server-Side Request Forgery (SSRF)
-
-## Gestión de Riesgos
-
-### Proceso
-1. **Identificación**: Detectar amenazas y vulnerabilidades
-2. **Análisis**: Evaluar probabilidad e impacto
-3. **Evaluación**: Priorizar riesgos
-4. **Tratamiento**: Decidir estrategia
-
-### Estrategias de Tratamiento
-- **Mitigar**: Reducir probabilidad o impacto
-- **Transferir**: Asegurar o tercerizar
-- **Aceptar**: Asumir el riesgo
-- **Evitar**: Eliminar la actividad riesgosa
-`,
-      type: 'TEXT' as LessonType,
-      estimatedTime: 45
-    },
-    {
-      order: 4,
-      title: 'Modelos y Marcos de Seguridad',
-      content: readMarkdown('01_Fundamentos_Ciberseguridad/teoria/04_modelos_marcos.md') || `
-# Modelos y Marcos de Seguridad
-
-## NIST Cybersecurity Framework
-
-Framework de 5 funciones:
-1. **Identify** (Identificar)
-2. **Protect** (Proteger)
-3. **Detect** (Detectar)
-4. **Respond** (Responder)
-5. **Recover** (Recuperar)
-
-## ISO/IEC 27001/27002
-
-Estándar internacional para sistemas de gestión de seguridad de la información (SGSI).
-
-**ISO 27001**: Requisitos del SGSI
-**ISO 27002**: Controles de seguridad
-
-## MITRE ATT&CK Framework
-
-Base de conocimiento de tácticas y técnicas de adversarios basada en observaciones del mundo real.
-
-**Matrices:**
-- Enterprise
-- Mobile
-- ICS (Industrial Control Systems)
-
-## Kill Chain de Lockheed Martin
-
-Modelo de 7 fases de un ciberataque:
-1. Reconnaissance (Reconocimiento)
-2. Weaponization (Armamentización)
-3. Delivery (Entrega)
-4. Exploitation (Explotación)
-5. Installation (Instalación)
-6. Command & Control (C2)
-7. Actions on Objectives (Acciones sobre objetivos)
-
-## Modelos de Control de Acceso
-
-### Bell-LaPadula
-Enfocado en **confidencialidad**.
-
-Reglas:
-- No read up
-- No write down
-
-### Biba
-Enfocado en **integridad**.
-
-Reglas:
-- No read down
-- No write up
-`,
-      type: 'TEXT' as LessonType,
-      estimatedTime: 30
-    }
-  ];
-
-  for (const leccion of lecciones01) {
-    await prisma.lesson.upsert({
-      where: {
-        moduleId_order: {
-          moduleId: modulo01.id,
-          order: leccion.order
-        }
-      },
-      update: leccion,
-      create: {
-        ...leccion,
-        moduleId: modulo01.id
-      }
-    });
-  }
-
-  console.log(`    ✓ ${lecciones01.length} lecciones creadas`);
+  await importLessonsFromFiles(modulo01.id, '01_Fundamentos_Ciberseguridad', 1);
 
   // Quiz del Módulo 01
   const quiz01 = await prisma.quiz.upsert({
@@ -380,12 +221,12 @@ Reglas:
   });
 
   // Preguntas del Quiz 01
-  const preguntas01 = [
+  const preguntasData01 = [
     {
       order: 1,
       type: 'MULTIPLE_CHOICE' as QuestionType,
       question: '¿Qué significa la "C" en la tríada CIA?',
-      options: ['Confidencialidad', 'Conectividad', 'Complejidad', 'Criptografía'],
+      optionsText: ['Confidencialidad', 'Conectividad', 'Complejidad', 'Criptografía'],
       correctAnswer: 'Confidencialidad',
       explanation: 'La tríada CIA representa Confidencialidad, Integridad y Disponibilidad.'
     },
@@ -393,7 +234,7 @@ Reglas:
       order: 2,
       type: 'MULTIPLE_CHOICE' as QuestionType,
       question: '¿Cuál de los siguientes NO es un tipo de malware?',
-      options: ['Ransomware', 'Firewall', 'Troyano', 'Spyware'],
+      optionsText: ['Ransomware', 'Firewall', 'Troyano', 'Spyware'],
       correctAnswer: 'Firewall',
       explanation: 'Firewall es una medida de seguridad, no un tipo de malware.'
     },
@@ -401,7 +242,7 @@ Reglas:
       order: 3,
       type: 'TRUE_FALSE' as QuestionType,
       question: 'El principio de mínimo privilegio establece que los usuarios deben tener todos los permisos posibles.',
-      options: ['Verdadero', 'Falso'],
+      optionsText: ['Verdadero', 'Falso'],
       correctAnswer: 'Falso',
       explanation: 'El principio de mínimo privilegio establece que los usuarios solo deben tener los permisos mínimos necesarios.'
     },
@@ -409,7 +250,7 @@ Reglas:
       order: 4,
       type: 'MULTIPLE_SELECT' as QuestionType,
       question: '¿Cuáles son funciones del NIST Cybersecurity Framework? (Selecciona todas las correctas)',
-      options: ['Identify', 'Protect', 'Delete', 'Detect', 'Respond', 'Recover'],
+      optionsText: ['Identify', 'Protect', 'Delete', 'Detect', 'Respond', 'Recover'],
       correctAnswer: ['Identify', 'Protect', 'Detect', 'Respond', 'Recover'],
       explanation: 'Las 5 funciones del NIST CSF son: Identify, Protect, Detect, Respond y Recover.'
     },
@@ -417,11 +258,18 @@ Reglas:
       order: 5,
       type: 'MULTIPLE_CHOICE' as QuestionType,
       question: '¿Qué ataque consiste en interceptar comunicaciones entre dos partes?',
-      options: ['DDoS', 'Man-in-the-Middle', 'SQL Injection', 'Phishing'],
+      optionsText: ['DDoS', 'Man-in-the-Middle', 'SQL Injection', 'Phishing'],
       correctAnswer: 'Man-in-the-Middle',
       explanation: 'Man-in-the-Middle (MitM) es un ataque donde el atacante intercepta la comunicación entre dos partes.'
     }
   ];
+
+  // Transformar opciones al formato correcto
+  const preguntas01 = preguntasData01.map(p => ({
+    ...p,
+    options: formatQuizOptions(p.optionsText, p.correctAnswer),
+    optionsText: undefined // Remove temporary field
+  })).map(({ optionsText, ...rest }) => rest);
 
   for (const pregunta of preguntas01) {
     await prisma.question.upsert({
@@ -467,6 +315,9 @@ Reglas:
 
   console.log('  📘 Módulo 2 creado:', modulo02.title);
 
+  // Importar lecciones del módulo 2
+  await importLessonsFromFiles(modulo02.id, '02_Redes_y_Protocolos', 1);
+
   // MÓDULO 03: Criptografía Clásica
   const modulo03 = await prisma.module.upsert({
     where: {
@@ -492,6 +343,9 @@ Reglas:
   });
 
   console.log('  📘 Módulo 3 creado:', modulo03.title);
+
+  // Importar lecciones del módulo 3
+  await importLessonsFromFiles(modulo03.id, '03_Criptografia_Clasica', 1);
 
   // MÓDULO 04: Criptografía Postcuántica
   const modulo04 = await prisma.module.upsert({
@@ -519,6 +373,9 @@ Reglas:
 
   console.log('  📘 Módulo 4 creado:', modulo04.title);
 
+  // Importar lecciones del módulo 4
+  await importLessonsFromFiles(modulo04.id, '04_Criptografia_Postcuantica', 1);
+
   // MÓDULO 05: Gestión de Claves y PKI
   const modulo05 = await prisma.module.upsert({
     where: {
@@ -544,6 +401,9 @@ Reglas:
   });
 
   console.log('  📘 Módulo 5 creado:', modulo05.title);
+
+  // Importar lecciones del módulo 5
+  await importLessonsFromFiles(modulo05.id, '05_Gestion_Claves_PKI', 1);
 
   // MÓDULO 06: APIs de Seguridad
   const modulo06 = await prisma.module.upsert({
@@ -571,6 +431,9 @@ Reglas:
 
   console.log('  📘 Módulo 6 creado:', modulo06.title);
 
+  // Importar lecciones del módulo 6
+  await importLessonsFromFiles(modulo06.id, '06_APIs_Seguridad', 1);
+
   // MÓDULO 07: Normativas y Cumplimiento
   const modulo07 = await prisma.module.upsert({
     where: {
@@ -596,6 +459,9 @@ Reglas:
   });
 
   console.log('  📘 Módulo 7 creado:', modulo07.title);
+
+  // Importar lecciones del módulo 7
+  await importLessonsFromFiles(modulo07.id, '07_Normativas_Cumplimiento', 1);
 
   // MÓDULO 08: ANKASecure en Producción
   const modulo08 = await prisma.module.upsert({
@@ -623,6 +489,9 @@ Reglas:
 
   console.log('  📘 Módulo 8 creado:', modulo08.title);
 
+  // Importar lecciones del módulo 8
+  await importLessonsFromFiles(modulo08.id, '08_ANKASecure_Practica', 1);
+
   // MÓDULO 09: Proyecto Final
   const modulo09 = await prisma.module.upsert({
     where: {
@@ -648,6 +517,9 @@ Reglas:
   });
 
   console.log('  📘 Módulo 9 creado:', modulo09.title);
+
+  // Importar lecciones del módulo 9 (si existen)
+  await importLessonsFromFiles(modulo09.id, '09_Proyecto_Final', 1);
 
   // Crear Proyecto Final
   await prisma.project.upsert({

@@ -7,7 +7,7 @@ import multer, { FileFilterCallback } from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { Request } from 'express';
-import { logger } from '../utils/logger';
+import { logger } from '../middleware/logger';
 
 // Allowed file types for project uploads
 const ALLOWED_EXTENSIONS = [

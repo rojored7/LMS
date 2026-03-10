@@ -320,8 +320,8 @@ class CourseService {
       },
     });
 
-    // Calculate progress for each enrollment
-    const enrollmentsWithProgress = await Promise.all(
+    // Calculate progress for each enrollment and return courses with progress
+    const coursesWithProgress = await Promise.all(
       enrollments.map(async (enrollment) => {
         const totalModules = enrollment.course.modules.length;
         const completedModules = await prisma.userProgress.count({
@@ -337,14 +337,17 @@ class CourseService {
         const progress =
           totalModules > 0 ? Math.round((completedModules / totalModules) * 100) : 0;
 
+        // Return course object with progress and enrollment info
         return {
-          ...enrollment,
+          ...enrollment.course,
           progress,
+          enrolledAt: enrollment.enrolledAt,
+          enrollmentId: enrollment.id,
         };
       })
     );
 
-    return enrollmentsWithProgress;
+    return coursesWithProgress;
   }
 }
 

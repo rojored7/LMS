@@ -2,7 +2,7 @@
  * Sidebar component for dashboard
  */
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '../../utils/cn';
 import { useAuth } from '../../hooks/useAuth';
@@ -30,6 +30,7 @@ const menuItems: MenuItem[] = [
         />
       </svg>
     ),
+    roles: ['STUDENT', 'INSTRUCTOR'],
   },
   {
     label: 'Mis Cursos',
@@ -44,6 +45,7 @@ const menuItems: MenuItem[] = [
         />
       </svg>
     ),
+    roles: ['STUDENT', 'INSTRUCTOR'],
   },
   {
     label: 'Explorar Cursos',
@@ -58,6 +60,7 @@ const menuItems: MenuItem[] = [
         />
       </svg>
     ),
+    roles: ['STUDENT', 'INSTRUCTOR'],
   },
   {
     label: 'Mi Perfil',
@@ -100,6 +103,34 @@ export const Sidebar: React.FC = () => {
   const location = useLocation();
   const { user, hasAnyRole } = useAuth();
   const { isSidebarOpen, closeSidebar } = useUiStore();
+
+  // Close sidebar on mobile when route changes
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 1024) {
+        closeSidebar();
+      }
+    };
+
+    // Close on initial mobile load
+    if (window.innerWidth < 1024) {
+      closeSidebar();
+    }
+
+    // Listen for window resize
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [closeSidebar]);
+
+  // Close sidebar on mobile when location changes (user navigates)
+  useEffect(() => {
+    if (window.innerWidth < 1024) {
+      closeSidebar();
+    }
+  }, [location.pathname, closeSidebar]);
 
   // Filter menu items based on user role
   const visibleMenuItems = menuItems.filter((item) => {

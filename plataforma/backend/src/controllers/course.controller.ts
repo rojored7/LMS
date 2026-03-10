@@ -106,7 +106,7 @@ export const enrollInCourse = async (
 
     // For now, require authentication
     // In the future, could support guest enrollments
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
 
     if (!userId) {
       return res.status(401).json({

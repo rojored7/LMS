@@ -15,6 +15,7 @@ export { UserRole };
  * This interface represents the user data attached to the request after authentication
  */
 export interface AuthenticatedUser {
+  id: string; // ID del usuario (alias de userId para compatibilidad)
   userId: string;
   email: string;
   role: UserRole;

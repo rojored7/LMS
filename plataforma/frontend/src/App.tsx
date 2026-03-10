@@ -17,15 +17,29 @@ import {
   Dashboard,
   CourseCatalog,
   CourseDetail,
+  CourseLearning,
   AdminDashboard,
   Profile,
   NotFound,
   Forbidden,
+  UsersList,
+  UserProgressDetail,
+  TrainingProfiles,
+  ProjectSubmission,
+  SubmissionsReview,
+  PublicProfile,
+  NotificationsPage,
 } from './pages';
 import { ForgotPassword } from './pages/ForgotPassword';
 import { ResetPassword } from './pages/ResetPassword';
+import QuizBuilder from './pages/QuizBuilder';
+import CourseImportPage from './pages/CourseImportPage';
+import CourseListPage from './pages/CourseListPage';
+import CourseEditorPage from './pages/CourseEditorPage';
+import CourseWizardPage from './pages/CourseWizardPage';
 import { ROUTES } from './utils/constants';
 import { UserRole } from './types';
+import { useAuth } from './hooks/useAuth';
 
 // Create QueryClient instance
 const queryClient = new QueryClient({
@@ -62,6 +76,19 @@ const PublicLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
       <Footer />
     </div>
   );
+};
+
+/**
+ * Dashboard wrapper that redirects ADMIN users to /admin
+ */
+const DashboardRedirect: React.FC = () => {
+  const { user } = useAuth();
+
+  if (user?.role === UserRole.ADMIN) {
+    return <Navigate to={ROUTES.ADMIN} replace />;
+  }
+
+  return <Dashboard />;
 };
 
 function App() {
@@ -114,7 +141,7 @@ function App() {
               element={
                 <ProtectedRoute>
                   <DashboardLayout>
-                    <Dashboard />
+                    <DashboardRedirect />
                   </DashboardLayout>
                 </ProtectedRoute>
               }
@@ -131,6 +158,16 @@ function App() {
               }
             />
 
+            {/* Course Learning Interface - Full screen layout */}
+            <Route
+              path="/courses/:courseId/learn"
+              element={
+                <ProtectedRoute>
+                  <CourseLearning />
+                </ProtectedRoute>
+              }
+            />
+
             {/* Admin Routes - Require Admin Role */}
             <Route
               path={ROUTES.ADMIN}
@@ -138,6 +175,152 @@ function App() {
                 <ProtectedRoute requiredRoles={[UserRole.ADMIN]}>
                   <DashboardLayout>
                     <AdminDashboard />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/admin/users"
+              element={
+                <ProtectedRoute requiredRoles={[UserRole.ADMIN]}>
+                  <DashboardLayout>
+                    <UsersList />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/admin/users/:userId/progress"
+              element={
+                <ProtectedRoute requiredRoles={[UserRole.ADMIN]}>
+                  <DashboardLayout>
+                    <UserProgressDetail />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/admin/training-profiles"
+              element={
+                <ProtectedRoute requiredRoles={[UserRole.ADMIN]}>
+                  <DashboardLayout>
+                    <TrainingProfiles />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Course Management Routes */}
+            <Route
+              path="/admin/courses"
+              element={
+                <ProtectedRoute requiredRoles={[UserRole.ADMIN, UserRole.INSTRUCTOR]}>
+                  <DashboardLayout>
+                    <CourseListPage />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/admin/courses/import"
+              element={
+                <ProtectedRoute requiredRoles={[UserRole.ADMIN, UserRole.INSTRUCTOR]}>
+                  <DashboardLayout>
+                    <CourseImportPage />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/admin/courses/create"
+              element={
+                <ProtectedRoute requiredRoles={[UserRole.ADMIN, UserRole.INSTRUCTOR]}>
+                  <DashboardLayout>
+                    <CourseWizardPage />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/admin/courses/:id/edit"
+              element={
+                <ProtectedRoute requiredRoles={[UserRole.ADMIN, UserRole.INSTRUCTOR]}>
+                  <DashboardLayout>
+                    <CourseEditorPage />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Quiz Routes */}
+            <Route
+              path="/courses/:courseId/quizzes/create"
+              element={
+                <ProtectedRoute requiredRoles={[UserRole.INSTRUCTOR, UserRole.ADMIN]}>
+                  <DashboardLayout>
+                    <QuizBuilder />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/courses/:courseId/quizzes/:quizId/edit"
+              element={
+                <ProtectedRoute requiredRoles={[UserRole.INSTRUCTOR, UserRole.ADMIN]}>
+                  <DashboardLayout>
+                    <QuizBuilder />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Project Routes */}
+            <Route
+              path="/courses/:courseId/projects/:projectId/submit"
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout>
+                    <ProjectSubmission />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/courses/:courseId/projects/:projectId/submissions"
+              element={
+                <ProtectedRoute requiredRoles={[UserRole.INSTRUCTOR, UserRole.ADMIN]}>
+                  <DashboardLayout>
+                    <SubmissionsReview />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Public Profile */}
+            <Route
+              path="/profile/:userId"
+              element={
+                <PublicLayout>
+                  <PublicProfile />
+                </PublicLayout>
+              }
+            />
+
+            {/* Notifications */}
+            <Route
+              path="/notifications"
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout>
+                    <NotificationsPage />
                   </DashboardLayout>
                 </ProtectedRoute>
               }

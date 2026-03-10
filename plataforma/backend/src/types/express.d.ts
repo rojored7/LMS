@@ -10,6 +10,7 @@ import { UserRole } from '@prisma/client';
  * Esta interfaz representa los datos del usuario que se adjuntan al request después de la autenticación
  */
 export interface AuthenticatedUser {
+  id: string; // ID del usuario (alias de userId para compatibilidad)
   userId: string; // Cambiado de 'id' a 'userId' para consistencia con JWT payload
   email: string;
   name: string;

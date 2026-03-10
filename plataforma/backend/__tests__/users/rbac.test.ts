@@ -3,7 +3,7 @@
  * Valida todos los criterios de aceptación de autorización por roles
  */
 
-process.env.NODE_ENV = 'test';
+process.env['NODE_ENV'] = 'test';
 
 import request from 'supertest';
 import app from '../../src/server';
@@ -238,7 +238,6 @@ describe('HU-003: Sistema de Roles (RBAC) - Integration Tests', () => {
 
   describe('DELETE /api/users/:userId - Eliminar usuario', () => {
     let userToDelete: any;
-    let userToDeleteToken: string;
 
     beforeAll(async () => {
       // Crear usuario temporal para eliminar
@@ -251,12 +250,6 @@ describe('HU-003: Sistema de Roles (RBAC) - Integration Tests', () => {
           role: UserRole.STUDENT,
         },
       });
-      userToDeleteToken = generateTestToken(
-        userToDelete.id,
-        userToDelete.email,
-        userToDelete.role as UserRole,
-        userToDelete.name
-      );
     });
 
     it('ADMIN puede eliminar usuarios', async () => {
@@ -454,7 +447,7 @@ describe('HU-003: Sistema de Roles (RBAC) - Integration Tests', () => {
 
     endpoints.forEach((endpoint) => {
       testRoles.forEach((testRole) => {
-        const shouldAllow = endpoint.allowedRoles.includes(testRole.role);
+        const shouldAllow = endpoint.allowedRoles.includes(testRole.role as any);
         const expectedStatus = shouldAllow ? 200 : 403;
 
         it(`${endpoint.description}: ${testRole.role} ${shouldAllow ? 'PUEDE' : 'NO PUEDE'} acceder`, async () => {

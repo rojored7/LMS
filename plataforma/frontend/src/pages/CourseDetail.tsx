@@ -204,7 +204,7 @@ export const CourseDetail: React.FC = () => {
                   variant="primary"
                   size="lg"
                   className="w-full mb-4"
-                  onClick={() => navigate(ROUTES.DASHBOARD)}
+                  onClick={() => navigate(`/courses/${id}/learn`)}
                 >
                   Ir al Curso
                 </Button>

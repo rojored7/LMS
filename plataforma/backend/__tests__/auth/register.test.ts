@@ -4,7 +4,7 @@
  */
 
 // Set test environment before any imports
-process.env.NODE_ENV = 'test';
+process.env['NODE_ENV'] = 'test';
 
 import request from 'supertest';
 import app from '../../src/server';
