@@ -12,6 +12,7 @@ import type {
   QuizAttempt,
   Lab,
   Enrollment,
+  EnrollmentWithCourse,
   Certificate,
   CourseProgress,
 } from '../types';
@@ -72,10 +73,11 @@ export async function unenrollCourse(courseId: string): Promise<void> {
 }
 
 /**
- * Get user's enrolled courses
+ * Get user's enrolled courses with individual progress
+ * Returns enrollments with nested course data and user-specific progress
  */
-export async function getEnrolledCourses(): Promise<Course[]> {
-  const response = await api.get<ApiResponse<Course[]>>('/courses/enrolled');
+export async function getEnrolledCourses(): Promise<EnrollmentWithCourse[]> {
+  const response = await api.get<ApiResponse<EnrollmentWithCourse[]>>('/courses/enrolled');
   return response.data;
 }
 

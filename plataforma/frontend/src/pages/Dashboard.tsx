@@ -92,7 +92,9 @@ export const Dashboard: React.FC = () => {
                 <p className="text-sm text-gray-600 dark:text-gray-400">
                   Cursos Completados
                 </p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">0</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                  {enrolledCourses?.filter(e => e.progress === 100).length || 0}
+                </p>
               </div>
             </div>
           </CardBody>
@@ -156,14 +158,14 @@ export const Dashboard: React.FC = () => {
             </div>
           ) : enrolledCourses && enrolledCourses.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {enrolledCourses.map((course) => (
-                <Card key={course.id} variant="outlined">
+              {enrolledCourses.map((enrollment) => (
+                <Card key={enrollment.id} variant="outlined">
                   <CardBody>
                     {/* Course Thumbnail */}
-                    {course.thumbnail && (
+                    {enrollment.course.thumbnail && (
                       <img
-                        src={course.thumbnail}
-                        alt={course.title}
+                        src={enrollment.course.thumbnail}
+                        alt={enrollment.course.title}
                         className="w-full h-40 object-cover rounded-md mb-4"
                       />
                     )}
@@ -171,18 +173,18 @@ export const Dashboard: React.FC = () => {
                     {/* Course Info */}
                     <div className="mb-4">
                       <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                        {course.title}
+                        {enrollment.course.title}
                       </h3>
                       <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mb-3">
-                        {course.description}
+                        {enrollment.course.description}
                       </p>
 
                       {/* Level Badge */}
                       <Badge
-                        className={COURSE_LEVEL_COLORS[course.level]}
+                        className={COURSE_LEVEL_COLORS[enrollment.course.level]}
                         size="sm"
                       >
-                        {COURSE_LEVEL_LABELS[course.level]}
+                        {COURSE_LEVEL_LABELS[enrollment.course.level]}
                       </Badge>
                     </div>
 
@@ -193,13 +195,13 @@ export const Dashboard: React.FC = () => {
                           Progreso
                         </span>
                         <span className="text-sm font-medium text-gray-900 dark:text-white">
-                          0%
+                          {enrollment.progress}%
                         </span>
                       </div>
                       <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                         <div
                           className="bg-blue-600 h-2 rounded-full"
-                          style={{ width: '0%' }}
+                          style={{ width: `${enrollment.progress}%` }}
                         />
                       </div>
                     </div>
@@ -209,7 +211,7 @@ export const Dashboard: React.FC = () => {
                       variant="primary"
                       size="sm"
                       className="w-full"
-                      onClick={() => navigate(`${ROUTES.COURSES}/${course.id}`)}
+                      onClick={() => navigate(`${ROUTES.COURSES}/${enrollment.course.slug || enrollment.course.id}`)}
                     >
                       Continuar Curso
                     </Button>

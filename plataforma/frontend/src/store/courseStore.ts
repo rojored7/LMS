@@ -4,19 +4,19 @@
  */
 
 import { create } from 'zustand';
-import type { Course, Enrollment } from '../types';
+import type { Course, Enrollment, EnrollmentWithCourse } from '../types';
 import courseService from '../services/course.service';
 
 interface CourseState {
   courses: Course[];
-  enrolledCourses: Course[];
+  enrolledCourses: EnrollmentWithCourse[];
   selectedCourse: Course | null;
   isLoading: boolean;
   error: string | null;
 
   // Actions
   setCourses: (courses: Course[]) => void;
-  setEnrolledCourses: (courses: Course[]) => void;
+  setEnrolledCourses: (enrollments: EnrollmentWithCourse[]) => void;
   setSelectedCourse: (course: Course | null) => void;
   fetchCourses: (params?: any) => Promise<void>;
   fetchEnrolledCourses: () => Promise<void>;

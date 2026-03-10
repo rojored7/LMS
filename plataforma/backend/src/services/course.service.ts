@@ -320,8 +320,8 @@ class CourseService {
       },
     });
 
-    // Calculate progress for each enrollment and return courses with progress
-    const coursesWithProgress = await Promise.all(
+    // Calculate progress for each enrollment and return enrollment with nested course
+    const enrollmentsWithProgress = await Promise.all(
       enrollments.map(async (enrollment) => {
         const totalModules = enrollment.course.modules.length;
         const completedModules = await prisma.userProgress.count({
@@ -337,17 +337,44 @@ class CourseService {
         const progress =
           totalModules > 0 ? Math.round((completedModules / totalModules) * 100) : 0;
 
-        // Return course object with progress and enrollment info
+        // Update progress in database
+        const updatedEnrollment = await prisma.enrollment.update({
+          where: { id: enrollment.id },
+          data: {
+            progress,
+            progressPercentage: progress,
+          },
+        });
+
+        // Return enrollment object with nested course and individual progress
         return {
-          ...enrollment.course,
-          progress,
-          enrolledAt: enrollment.enrolledAt,
-          enrollmentId: enrollment.id,
+          id: updatedEnrollment.id,
+          userId: updatedEnrollment.userId,
+          courseId: updatedEnrollment.courseId,
+          progress: updatedEnrollment.progress,
+          enrolledAt: updatedEnrollment.enrolledAt,
+          completedAt: updatedEnrollment.completedAt,
+          course: {
+            id: enrollment.course.id,
+            slug: enrollment.course.slug,
+            title: enrollment.course.title,
+            description: enrollment.course.description,
+            level: enrollment.course.level,
+            duration: enrollment.course.duration,
+            thumbnail: enrollment.course.thumbnail,
+            isPublished: enrollment.course.isPublished,
+            tags: enrollment.course.tags,
+            prerequisites: enrollment.course.prerequisites,
+            objectives: enrollment.course.objectives,
+            createdAt: enrollment.course.createdAt,
+            updatedAt: enrollment.course.updatedAt,
+            modules: enrollment.course.modules,
+          },
         };
       })
     );
 
-    return coursesWithProgress;
+    return enrollmentsWithProgress;
   }
 }
 

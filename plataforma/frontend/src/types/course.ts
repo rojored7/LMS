@@ -171,6 +171,35 @@ export interface Enrollment {
   certificateId?: string;
 }
 
+/**
+ * Enrollment with nested course data
+ * This is the structure returned by the backend for enrolled courses
+ */
+export interface EnrollmentWithCourse {
+  id: string;
+  userId: string;
+  courseId: string;
+  progress: number; // Individual user progress (0-100)
+  enrolledAt: string;
+  completedAt: string | null;
+  course: {
+    id: string;
+    slug: string;
+    title: string;
+    description: string;
+    level: CourseLevel;
+    duration: number;
+    thumbnail: string | null;
+    isPublished: boolean;
+    tags: string[];
+    prerequisites: string[];
+    objectives: string[];
+    createdAt: string;
+    updatedAt: string;
+    modules: Module[];
+  };
+}
+
 export interface Certificate {
   id: string;
   userId: string;
