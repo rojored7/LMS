@@ -179,6 +179,7 @@ class CourseService {
     return {
       ...course,
       isEnrolled,
+      enrollmentCount: course._count?.enrollments || 0,
     };
   }
 

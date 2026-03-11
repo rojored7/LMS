@@ -30,8 +30,14 @@ export async function getCourses(params?: QueryParams): Promise<PaginatedRespons
  * Get course by ID
  */
 export async function getCourseById(courseId: string): Promise<Course> {
-  const response = await api.get<ApiResponse<Course>>(`/courses/${courseId}`);
-  return response.data;
+  const response = await api.get<ApiResponse<any>>(`/courses/${courseId}`);
+
+  // Transform backend response to frontend Course type
+  // Backend returns _count.enrollments, frontend expects enrollmentCount
+  return {
+    ...response.data,
+    enrollmentCount: response.data._count?.enrollments || 0,
+  };
 }
 
 /**
