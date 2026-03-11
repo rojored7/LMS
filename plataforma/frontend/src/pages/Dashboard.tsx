@@ -211,7 +211,10 @@ export const Dashboard: React.FC = () => {
                       variant="primary"
                       size="sm"
                       className="w-full"
-                      onClick={() => navigate(`${ROUTES.COURSES}/${enrollment.course.slug || enrollment.course.id}`)}
+                      onClick={() => {
+                        const targetId = enrollment.course?.slug || enrollment.course?.id || enrollment.courseId;
+                        navigate(`${ROUTES.COURSES}/${targetId}`);
+                      }}
                     >
                       Continuar Curso
                     </Button>
