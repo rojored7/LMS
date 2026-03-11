@@ -103,3 +103,24 @@ VISUALIZADOR_*.md
 INSTRUCCIONES_*.txt
 SOLUCION_*.txt
 LIMPIEZA_*.txt
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# EXCLUSIONES PARA GITHUB - HERRAMIENTAS EXTERNAS Y ARTEFACTOS
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# SonarQube standalone (herramienta externa de análisis de código)
+sonarqube-standalone/
+
+# Playwright MCP testing artifacts
+.playwright-mcp/
+
+# Archivos temporales específicos de desarrollo
+console-*.log
+network-requests.log
+login-console-errors.log
+fix-test-users.js
+index.html
+
+# Documentación temporal de plataforma
+plataforma/BACKEND_COURSE_MANAGEMENT_FINAL.md
+plataforma/CAS_DOCUMENTATION.md

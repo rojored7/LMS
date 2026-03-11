@@ -237,6 +237,20 @@ cd plataforma/frontend && npm test
 
 # Test coverage
 docker exec ciber-backend npm run test:coverage
+
+# E2E tests with Playwright (via MCP)
+# Use mcp__playwright__* tools for interactive testing
+# IMPORTANT: Always clean up after Playwright tests
+```
+
+**Playwright Testing Cleanup (MANDATORY)**:
+```bash
+# ALWAYS run this command after finishing Playwright/MCP browser tests
+rm -f *.png
+
+# This removes all screenshot files generated during testing
+# Screenshots are temporary evidence files and should NOT be committed
+# Execute this cleanup IMMEDIATELY after completing browser testing sessions
 ```
 
 **Adding New Features**:
