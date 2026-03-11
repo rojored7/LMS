@@ -1,0 +1,185 @@
+version: '3.8'
+
+# ===========================================
+# AUTOMATED BACKUP SERVICE
+# ===========================================
+# Servicio cron que ejecuta backups automáticos
+# - Backups diarios de PostgreSQL (2:00 AM)
+# - Backups semanales de volúmenes (domingos 3:00 AM)
+# - Cleanup automático de backups antiguos
+#
+# Uso:
+#   docker-compose -f docker-compose.backup.yml up -d
+#   docker logs ciber-backup-cron -f
+#   docker exec ciber-backup-cron backup-now     # Backup manual
+#
+# Variables requeridas en .env:
+#   BACKUP_PROVIDER=s3|azure|gcs|local
+#   S3_BUCKET, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
+#   O equivalentes para Azure/GCS
+# ===========================================
+
+services:
+  # ===== CRON SERVICE PARA BACKUPS =====
+  backup-cron:
+    image: alpine:3.18
+    container_name: ciber-backup-cron
+    environment:
+      # Configuración de base de datos
+      DB_USER: ${DB_USER}
+      DB_NAME: ${DB_NAME}
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+
+      # Configuración de backup cloud
+      BACKUP_PROVIDER: ${BACKUP_PROVIDER:-local}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
+
+      # AWS S3
+      S3_BUCKET: ${S3_BUCKET:-}
+      S3_REGION: ${S3_REGION:-us-east-1}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+
+      # Azure Blob Storage
+      AZURE_STORAGE_ACCOUNT: ${AZURE_STORAGE_ACCOUNT:-}
+      AZURE_STORAGE_KEY: ${AZURE_STORAGE_KEY:-}
+      AZURE_CONTAINER: ${AZURE_CONTAINER:-}
+
+      # Google Cloud Storage
+      GCS_BUCKET: ${GCS_BUCKET:-}
+      GOOGLE_APPLICATION_CREDENTIALS: ${GOOGLE_APPLICATION_CREDENTIALS:-/credentials/gcs-key.json}
+
+      # Timezone
+      TZ: America/New_York
+    volumes:
+      # Scripts de backup
+      - ./scripts:/scripts:ro
+
+      # Directorio de backups
+      - ./database/backups:/backups
+
+      # Docker socket (para acceder a volúmenes)
+      - /var/run/docker.sock:/var/run/docker.sock
+
+      # Credenciales GCS (opcional)
+      - ./credentials:/credentials:ro
+    command: >
+      sh -c '
+        echo "====================================="
+        echo "  CIBER BACKUP CRON SERVICE"
+        echo "====================================="
+        echo ""
+        echo "Instalando dependencias..."
+
+        # Instalar herramientas necesarias
+        apk add --no-cache \
+          bash \
+          postgresql-client \
+          docker-cli \
+          curl \
+          gzip \
+          tar \
+          coreutils
+
+        # Instalar AWS CLI si BACKUP_PROVIDER=s3
+        if [ "$BACKUP_PROVIDER" = "s3" ]; then
+          echo "Instalando AWS CLI..."
+          apk add --no-cache aws-cli
+        fi
+
+        # Crear directorio de backups
+        mkdir -p /backups/database /backups/volumes
+
+        # Crear crontab
+        echo "Configurando crontab..."
+        cat > /etc/crontabs/root <<EOF
+        # ===== BACKUPS AUTOMÁTICOS =====
+        # Formato: min hour day month weekday command
+
+        # Backup completo diario a las 2:00 AM
+        0 2 * * * /scripts/backup-to-cloud.sh >> /var/log/backup.log 2>&1
+
+        # Backup solo DB cada 6 horas (redundancia)
+        0 */6 * * * /scripts/backup-to-cloud.sh --db-only >> /var/log/backup-db.log 2>&1
+
+        # Cleanup semanal (domingos 4:00 AM)
+        0 4 * * 0 find /backups -type f -mtime +${BACKUP_RETENTION_DAYS:-30} -delete
+
+        # Verificación semanal (domingos 5:00 AM)
+        0 5 * * 0 /scripts/backup-to-cloud.sh --verify >> /var/log/backup-verify.log 2>&1
+        EOF
+
+        echo "Crontab configurado:"
+        cat /etc/crontabs/root
+        echo ""
+
+        # Crear alias para backup manual
+        echo "#!/bin/sh" > /usr/local/bin/backup-now
+        echo "/scripts/backup-to-cloud.sh" >> /usr/local/bin/backup-now
+        chmod +x /usr/local/bin/backup-now
+
+        echo "Servicio listo!"
+        echo ""
+        echo "Comandos disponibles:"
+        echo "  backup-now                     - Ejecutar backup completo ahora"
+        echo "  /scripts/backup-to-cloud.sh    - Backup completo"
+        echo "  /scripts/backup-volumes.sh     - Backup solo volúmenes"
+        echo ""
+        echo "Logs:"
+        echo "  tail -f /var/log/backup.log"
+        echo ""
+        echo "Iniciando cron daemon..."
+
+        # Iniciar cron en foreground
+        crond -f -l 2
+      '
+    networks:
+      - ciber-network
+    restart: unless-stopped
+
+  # ===== BACKUP INICIALIZADOR (ONE-TIME) =====
+  # Ejecuta backup inmediato al levantar el servicio
+  backup-init:
+    image: alpine:3.18
+    container_name: ciber-backup-init
+    environment:
+      DB_USER: ${DB_USER}
+      DB_NAME: ${DB_NAME}
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      BACKUP_PROVIDER: ${BACKUP_PROVIDER:-local}
+      S3_BUCKET: ${S3_BUCKET:-}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+    volumes:
+      - ./scripts:/scripts:ro
+      - ./database/backups:/backups
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: >
+      sh -c '
+        echo "Instalando dependencias..."
+        apk add --no-cache \
+          bash \
+          postgresql-client \
+          docker-cli \
+          curl \
+          gzip \
+          tar
+
+        if [ "$BACKUP_PROVIDER" = "s3" ]; then
+          apk add --no-cache aws-cli
+        fi
+
+        echo "Ejecutando backup inicial..."
+        /scripts/backup-to-cloud.sh
+
+        echo "Backup inicial completado - Container terminará"
+      '
+    networks:
+      - ciber-network
+    restart: "no"  # Solo ejecuta una vez
+
+# ===== NETWORKS =====
+networks:
+  ciber-network:
+    external: true
+    name: plataforma_ciber-network

@@ -1,0 +1,318 @@
+name: Scheduled Database Backup
+
+# ===========================================
+# BACKUP AUTOMÁTICO DESDE GITHUB ACTIONS
+# ===========================================
+# Sistema de backup redundante que corre INDEPENDIENTE
+# del servidor de producción como failsafe
+#
+# Triggers:
+# - Cron: Diario a las 3:00 AM UTC
+# - Manual: workflow_dispatch
+#
+# Requisitos en GitHub Secrets:
+#   PROD_SERVER_HOST, PROD_SERVER_USER, PROD_SSH_PRIVATE_KEY
+#   S3_BUCKET, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
+#   (O equivalentes para Azure/GCS)
+#
+# RTO/RPO:
+# - Recovery Time Objective: < 1 hora
+# - Recovery Point Objective: < 24 horas
+# ===========================================
+
+on:
+  # Backup diario a las 3:00 AM UTC
+  schedule:
+    - cron: '0 3 * * *'
+
+  # Permitir ejecución manual
+  workflow_dispatch:
+    inputs:
+      backup_type:
+        description: 'Tipo de backup'
+        required: true
+        type: choice
+        default: 'full'
+        options:
+          - full
+          - database-only
+          - volumes-only
+
+      upload_to_cloud:
+        description: 'Subir a cloud storage'
+        required: true
+        type: boolean
+        default: true
+
+jobs:
+  # ===== BACKUP DESDE SERVIDOR =====
+  backup-database:
+    name: Backup Database & Volumes
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      # 1. Setup SSH
+      - name: Setup SSH Agent
+        uses: webfactory/ssh-agent@v0.8.0
+        with:
+          ssh-private-key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
+
+      # 2. Add server to known hosts
+      - name: Add Server to Known Hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.PROD_SERVER_HOST }} >> ~/.ssh/known_hosts
+
+      # 3. Execute backup on production server
+      - name: Execute Backup Script on Server
+        id: backup
+        run: |
+          echo "Conectando a servidor de producción..."
+
+          BACKUP_TYPE="${{ github.event.inputs.backup_type || 'full' }}"
+
+          case $BACKUP_TYPE in
+            database-only)
+              BACKUP_CMD="--db-only"
+              ;;
+            volumes-only)
+              BACKUP_CMD="--volumes-only"
+              ;;
+            *)
+              BACKUP_CMD=""
+              ;;
+          esac
+
+          ssh ${{ secrets.PROD_SERVER_USER }}@${{ secrets.PROD_SERVER_HOST }} << 'EOF'
+            set -e
+
+            # Ir al directorio del proyecto
+            cd /opt/plataforma
+
+            # Cargar variables de entorno
+            export $(cat .env | grep -v '^#' | xargs)
+
+            # Ejecutar backup
+            ./scripts/backup-to-cloud.sh $BACKUP_CMD
+
+            # Obtener nombre del último backup
+            LATEST_BACKUP=$(ls -t database/backups/postgres_*.sql.gz 2>/dev/null | head -1)
+
+            if [ -n "$LATEST_BACKUP" ]; then
+              echo "BACKUP_FILE=$LATEST_BACKUP" >> $GITHUB_OUTPUT
+              echo "Backup creado: $LATEST_BACKUP"
+            else
+              echo "Error: No se encontró archivo de backup"
+              exit 1
+            fi
+          EOF
+
+      # 4. Download backup from server (como respaldo adicional)
+      - name: Download Backup from Server
+        if: success()
+        run: |
+          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+          BACKUP_DIR="./backups/$TIMESTAMP"
+          mkdir -p "$BACKUP_DIR"
+
+          echo "Descargando backups desde servidor..."
+
+          scp -r \
+            ${{ secrets.PROD_SERVER_USER }}@${{ secrets.PROD_SERVER_HOST }}:/opt/plataforma/database/backups/*.gz \
+            "$BACKUP_DIR/" || echo "No se descargaron backups"
+
+          echo "BACKUP_DIR=$BACKUP_DIR" >> $GITHUB_ENV
+
+      # 5. Upload to GitHub Artifacts (retention: 90 days)
+      - name: Upload Backup to GitHub Artifacts
+        if: success()
+        uses: actions/upload-artifact@v3
+        with:
+          name: database-backup-${{ github.run_number }}
+          path: ./backups/**/*.gz
+          retention-days: 90
+
+      # 6. Upload to S3 (opcional, como redundancia)
+      - name: Upload to AWS S3
+        if: success() && (github.event.inputs.upload_to_cloud == 'true' || github.event_name == 'schedule')
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION || 'us-east-1' }}
+        run: |
+          # Instalar AWS CLI
+          pip install awscli
+
+          TIMESTAMP=$(date +%Y/%m)
+          S3_PREFIX="s3://${{ secrets.S3_BUCKET }}/github-backups/$TIMESTAMP"
+
+          echo "Subiendo a S3: $S3_PREFIX"
+
+          aws s3 cp \
+            "$BACKUP_DIR" \
+            "$S3_PREFIX/" \
+            --recursive \
+            --storage-class STANDARD_IA
+
+          echo "✓ Backups subidos a S3"
+
+      # 7. Verify backup integrity
+      - name: Verify Backup Integrity
+        if: success()
+        run: |
+          echo "Verificando integridad de backups..."
+
+          for file in $BACKUP_DIR/*.gz; do
+            if [ -f "$file" ]; then
+              echo "Verificando: $(basename $file)"
+
+              if gunzip -t "$file" 2>/dev/null; then
+                SIZE=$(du -h "$file" | cut -f1)
+                echo "  ✓ OK ($SIZE)"
+              else
+                echo "  ✗ CORRUPTO"
+                exit 1
+              fi
+            fi
+          done
+
+          echo "✓ Todos los backups verificados"
+
+  # ===== VERIFICACIÓN POST-BACKUP =====
+  verify-backup:
+    name: Verify Backup Integrity
+    runs-on: ubuntu-latest
+    needs: backup-database
+    if: always()
+
+    steps:
+      - name: Download Backup Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: database-backup-${{ github.run_number }}
+          path: ./backups
+
+      - name: Verify PostgreSQL Backup
+        run: |
+          echo "Verificando backup de PostgreSQL..."
+
+          BACKUP_FILE=$(ls ./backups/postgres_*.sql.gz 2>/dev/null | head -1)
+
+          if [ -z "$BACKUP_FILE" ]; then
+            echo "❌ No se encontró backup de PostgreSQL"
+            exit 1
+          fi
+
+          echo "Backup encontrado: $(basename $BACKUP_FILE)"
+
+          # Verificar compresión
+          if gunzip -t "$BACKUP_FILE" 2>/dev/null; then
+            SIZE=$(du -h "$BACKUP_FILE" | cut -f1)
+            echo "✓ Compresión OK ($SIZE)"
+          else
+            echo "❌ Archivo corrupto"
+            exit 1
+          fi
+
+          # Verificar contenido SQL básico
+          if gunzip -c "$BACKUP_FILE" | head -n 100 | grep -q "PostgreSQL database dump"; then
+            echo "✓ Formato SQL válido"
+          else
+            echo "⚠️  Advertencia: No se detectó header de PostgreSQL"
+          fi
+
+          # Metadata
+          LINES=$(gunzip -c "$BACKUP_FILE" | wc -l)
+          echo "✓ Líneas SQL: $LINES"
+
+      - name: Check Backup Age
+        run: |
+          # Verificar que el backup no sea muy antiguo
+          BACKUP_FILE=$(ls ./backups/postgres_*.sql.gz 2>/dev/null | head -1)
+
+          if [ -n "$BACKUP_FILE" ]; then
+            AGE_SECONDS=$(( $(date +%s) - $(stat -c %Y "$BACKUP_FILE" 2>/dev/null || stat -f %m "$BACKUP_FILE") ))
+            AGE_HOURS=$(( AGE_SECONDS / 3600 ))
+
+            echo "Edad del backup: $AGE_HOURS horas"
+
+            if [ $AGE_HOURS -gt 26 ]; then
+              echo "⚠️  Backup muy antiguo (> 26 horas)"
+              exit 1
+            else
+              echo "✓ Backup reciente"
+            fi
+          fi
+
+  # ===== NOTIFICACIÓN DE RESULTADO =====
+  notify-result:
+    name: Notify Backup Result
+    runs-on: ubuntu-latest
+    needs: [backup-database, verify-backup]
+    if: always()
+
+    steps:
+      - name: Determine Status
+        id: status
+        run: |
+          if [ "${{ needs.backup-database.result }}" = "success" ] && [ "${{ needs.verify-backup.result }}" = "success" ]; then
+            echo "status=success" >> $GITHUB_OUTPUT
+            echo "message=✅ Backup completado y verificado exitosamente" >> $GITHUB_OUTPUT
+          else
+            echo "status=failure" >> $GITHUB_OUTPUT
+            echo "message=❌ Backup falló o verificación no exitosa" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Send Slack Notification
+        if: env.SLACK_WEBHOOK_URL != ''
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          curl -X POST "$SLACK_WEBHOOK_URL" \
+            -H 'Content-Type: application/json' \
+            -d "{
+              \"text\": \"${{ steps.status.outputs.message }}\",
+              \"blocks\": [
+                {
+                  \"type\": \"section\",
+                  \"text\": {
+                    \"type\": \"mrkdwn\",
+                    \"text\": \"*Backup Automático*\n${{ steps.status.outputs.message }}\"
+                  }
+                },
+                {
+                  \"type\": \"context\",
+                  \"elements\": [
+                    {
+                      \"type\": \"mrkdwn\",
+                      \"text\": \"Workflow: ${{ github.workflow }} | Run: #${{ github.run_number }}\"
+                    }
+                  ]
+                }
+              ]
+            }"
+
+      - name: Create Issue on Failure
+        if: needs.backup-database.result == 'failure' || needs.verify-backup.result == 'failure'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `❌ Backup automático falló - ${new Date().toISOString().split('T')[0]}`,
+              body: `## Fallo en Backup Automático\n\n` +
+                    `**Workflow Run:** #${context.runNumber}\n` +
+                    `**Fecha:** ${new Date().toISOString()}\n\n` +
+                    `**Resultados:**\n` +
+                    `- Backup Database: ${{ needs.backup-database.result }}\n` +
+                    `- Verify Backup: ${{ needs.verify-backup.result }}\n\n` +
+                    `**Acción Requerida:**\n` +
+                    `1. Revisar logs del workflow\n` +
+                    `2. Verificar conectividad al servidor de producción\n` +
+                    `3. Validar credenciales de cloud storage\n` +
+                    `4. Ejecutar backup manual si es necesario\n\n` +
+                    `[Ver Workflow Run](${context.payload.repository.html_url}/actions/runs/${context.runId})`,
+              labels: ['backup', 'critical', 'automated']
+            })

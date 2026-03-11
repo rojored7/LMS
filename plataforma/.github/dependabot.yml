@@ -1,0 +1,198 @@
+# ===========================================
+# DEPENDABOT CONFIGURATION
+# ===========================================
+# Actualizaciones automáticas de dependencias
+# Crea PRs cuando hay nuevas versiones disponibles
+# ===========================================
+
+version: 2
+
+updates:
+  # ==========================================
+  # BACKEND - NPM Dependencies
+  # ==========================================
+  - package-ecosystem: "npm"
+    directory: "/plataforma/backend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/New_York"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "your-github-username"  # Reemplazar con tu username
+    assignees:
+      - "your-github-username"
+    labels:
+      - "dependencies"
+      - "backend"
+      - "automated"
+    commit-message:
+      prefix: "deps(backend)"
+      include: "scope"
+    # Agrupar actualizaciones menores en un solo PR
+    groups:
+      development-dependencies:
+        dependency-type: "development"
+        patterns:
+          - "@types/*"
+          - "eslint*"
+          - "prettier"
+          - "jest"
+          - "@jest/*"
+      production-dependencies:
+        dependency-type: "production"
+        update-types:
+          - "minor"
+          - "patch"
+    # Ignorar actualizaciones específicas si es necesario
+    ignore:
+      # Ejemplo: No actualizar Prisma automáticamente (requiere migración)
+      - dependency-name: "prisma"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@prisma/client"
+        update-types: ["version-update:semver-major"]
+
+  # ==========================================
+  # FRONTEND - NPM Dependencies
+  # ==========================================
+  - package-ecosystem: "npm"
+    directory: "/plataforma/frontend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/New_York"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "your-github-username"
+    assignees:
+      - "your-github-username"
+    labels:
+      - "dependencies"
+      - "frontend"
+      - "automated"
+    commit-message:
+      prefix: "deps(frontend)"
+      include: "scope"
+    groups:
+      development-dependencies:
+        dependency-type: "development"
+        patterns:
+          - "@types/*"
+          - "eslint*"
+          - "vite*"
+          - "@vitejs/*"
+      production-dependencies:
+        dependency-type: "production"
+        update-types:
+          - "minor"
+          - "patch"
+    ignore:
+      # No actualizar React a major versions automáticamente
+      - dependency-name: "react"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react-dom"
+        update-types: ["version-update:semver-major"]
+
+  # ==========================================
+  # EXECUTOR - NPM Dependencies
+  # ==========================================
+  - package-ecosystem: "npm"
+    directory: "/plataforma/executor"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/New_York"
+    open-pull-requests-limit: 3
+    reviewers:
+      - "your-github-username"
+    labels:
+      - "dependencies"
+      - "executor"
+      - "automated"
+    commit-message:
+      prefix: "deps(executor)"
+
+  # ==========================================
+  # DOCKER - Base Images
+  # ==========================================
+  - package-ecosystem: "docker"
+    directory: "/plataforma/backend"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+      time: "09:00"
+      timezone: "America/New_York"
+    open-pull-requests-limit: 3
+    reviewers:
+      - "your-github-username"
+    labels:
+      - "dependencies"
+      - "docker"
+      - "backend"
+      - "automated"
+    commit-message:
+      prefix: "deps(docker)"
+
+  - package-ecosystem: "docker"
+    directory: "/plataforma/frontend"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+      time: "09:00"
+    open-pull-requests-limit: 3
+    labels:
+      - "dependencies"
+      - "docker"
+      - "frontend"
+
+  - package-ecosystem: "docker"
+    directory: "/plataforma/executor"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+      time: "09:00"
+    open-pull-requests-limit: 3
+    labels:
+      - "dependencies"
+      - "docker"
+      - "executor"
+
+  # ==========================================
+  # GITHUB ACTIONS - Workflow Dependencies
+  # ==========================================
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+      time: "09:00"
+      timezone: "America/New_York"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "your-github-username"
+    labels:
+      - "dependencies"
+      - "github-actions"
+      - "ci-cd"
+      - "automated"
+    commit-message:
+      prefix: "deps(actions)"
+
+  # ==========================================
+  # MONITORING STACK - Docker Images
+  # ==========================================
+  - package-ecosystem: "docker"
+    directory: "/plataforma"
+    schedule:
+      interval: "monthly"
+      day: "first monday"
+      time: "09:00"
+    open-pull-requests-limit: 3
+    labels:
+      - "dependencies"
+      - "docker"
+      - "monitoring"
+    # Solo para docker-compose.monitoring.yml, docker-compose.certbot.yml, etc.

@@ -32,6 +32,7 @@ out/
 *.key
 credentials.json
 secrets.json
+generated-secrets-*.txt
 
 # ┌─────────────────────────────────────────────────────────────────────────┐
 # │ Database                                                                 │

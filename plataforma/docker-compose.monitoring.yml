@@ -1,0 +1,238 @@
+version: '3.8'
+
+# ===========================================
+# MONITORING STACK
+# ===========================================
+# Prometheus + Grafana + Exporters
+# - Métricas de sistema (Node Exporter)
+# - Métricas de PostgreSQL (Postgres Exporter)
+# - Métricas de Redis (Redis Exporter)
+# - Métricas de aplicación (backend /metrics endpoint)
+# - Dashboards pre-configurados
+#
+# Uso:
+#   docker-compose -f docker-compose.monitoring.yml up -d
+#   Grafana: http://localhost:3100 (admin/admin)
+#   Prometheus: http://localhost:9090
+#
+# Integración con producción:
+#   docker-compose -f docker-compose.prod.yml -f docker-compose.monitoring.yml up -d
+# ===========================================
+
+services:
+  # ===== PROMETHEUS - Metrics Collection =====
+  prometheus:
+    image: prom/prometheus:v2.47.0
+    container_name: ciber-prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - ciber-network
+    restart: always
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+
+  # ===== GRAFANA - Visualization & Dashboards =====
+  grafana:
+    image: grafana/grafana:10.1.2
+    container_name: ciber-grafana
+    environment:
+      # Admin credentials
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+
+      # Server settings
+      GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:-http://localhost:3100}
+      GF_SERVER_HTTP_PORT: 3000
+
+      # Anonymous access (disabled en producción)
+      GF_AUTH_ANONYMOUS_ENABLED: ${GRAFANA_ANONYMOUS:-false}
+
+      # Database (usa SQLite por defecto, PostgreSQL en producción)
+      GF_DATABASE_TYPE: ${GRAFANA_DB_TYPE:-sqlite3}
+
+      # SMTP para alertas
+      GF_SMTP_ENABLED: ${SMTP_ENABLED:-false}
+      GF_SMTP_HOST: ${SMTP_HOST:-}
+      GF_SMTP_USER: ${SMTP_USER:-}
+      GF_SMTP_PASSWORD: ${SMTP_PASS:-}
+      GF_SMTP_FROM_ADDRESS: ${SMTP_FROM:-noreply@plataforma-ciber.com}
+
+      # Security
+      GF_SECURITY_ALLOW_EMBEDDING: false
+      GF_SECURITY_COOKIE_SECURE: false  # true en producción con HTTPS
+      GF_SECURITY_STRICT_TRANSPORT_SECURITY: false  # true en producción
+    ports:
+      - "3100:3000"
+    volumes:
+      # Provisioning (datasources + dashboards automáticos)
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+
+      # Persistent data
+      - grafana_data:/var/lib/grafana
+    networks:
+      - ciber-network
+    depends_on:
+      - prometheus
+    restart: always
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+
+  # ===== NODE EXPORTER - System Metrics =====
+  node-exporter:
+    image: prom/node-exporter:v1.6.1
+    container_name: ciber-node-exporter
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--path.rootfs=/rootfs'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    networks:
+      - ciber-network
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 64M
+
+  # ===== POSTGRES EXPORTER - Database Metrics =====
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.14.0
+    container_name: ciber-postgres-exporter
+    environment:
+      DATA_SOURCE_NAME: "postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}?sslmode=disable"
+      PG_EXPORTER_EXTEND_QUERY_PATH: /etc/postgres-exporter/queries.yaml
+    ports:
+      - "9187:9187"
+    volumes:
+      - ./prometheus/postgres-queries.yaml:/etc/postgres-exporter/queries.yaml:ro
+    networks:
+      - ciber-network
+    depends_on:
+      - postgres
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 64M
+
+  # ===== REDIS EXPORTER - Cache Metrics =====
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.55.0
+    container_name: ciber-redis-exporter
+    environment:
+      REDIS_ADDR: "redis:6379"
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    ports:
+      - "9121:9121"
+    networks:
+      - ciber-network
+    depends_on:
+      - redis
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 64M
+
+  # ===== CADVISOR - Container Metrics =====
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.47.2
+    container_name: ciber-cadvisor
+    privileged: true
+    ports:
+      - "8080:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+      - /dev/disk:/dev/disk:ro
+    networks:
+      - ciber-network
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+
+  # ===== ALERTMANAGER - Alert Routing (opcional) =====
+  alertmanager:
+    image: prom/alertmanager:v0.26.0
+    container_name: ciber-alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./prometheus/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
+    networks:
+      - ciber-network
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+
+# ===== VOLUMES =====
+volumes:
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  alertmanager_data:
+    driver: local
+
+# ===== NETWORKS =====
+networks:
+  ciber-network:
+    external: true
+    name: plataforma_ciber-network

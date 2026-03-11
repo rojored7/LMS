@@ -1,0 +1,202 @@
+version: '3.8'
+
+# ===========================================
+# SSL/TLS CERTIFICATES - LET'S ENCRYPT
+# ===========================================
+# Gestión automática de certificados SSL con Certbot
+# - Obtención inicial de certificados
+# - Renovación automática cada 12 horas
+# - Integración con nginx
+#
+# Uso:
+#   # Primera vez (obtener certificado)
+#   docker-compose -f docker-compose.certbot.yml run --rm certbot-init
+#
+#   # Renovación automática (servicio cron)
+#   docker-compose -f docker-compose.certbot.yml up -d certbot-renew
+#
+# Variables requeridas en .env:
+#   DOMAIN=plataforma-ciber.com
+#   CERTBOT_EMAIL=admin@plataforma-ciber.com
+# ===========================================
+
+services:
+  # ===== CERTBOT - Obtención inicial de certificados =====
+  certbot-init:
+    image: certbot/certbot:v2.7.4
+    container_name: ciber-certbot-init
+    environment:
+      # Dominio y email
+      DOMAIN: ${DOMAIN:-localhost}
+      CERTBOT_EMAIL: ${CERTBOT_EMAIL:-admin@localhost}
+
+      # Opciones de certbot
+      CERTBOT_STAGING: ${CERTBOT_STAGING:-false}  # true para testing
+    volumes:
+      # Certificados (persistentes)
+      - ./nginx/ssl/certbot/conf:/etc/letsencrypt
+      - ./nginx/ssl/certbot/www:/var/www/certbot
+
+      # Logs
+      - certbot_logs:/var/log/letsencrypt
+    command: >
+      sh -c '
+        echo "====================================="
+        echo "  CERTBOT - SSL Certificate Setup"
+        echo "====================================="
+        echo ""
+        echo "Domain: $DOMAIN"
+        echo "Email: $CERTBOT_EMAIL"
+        echo "Staging: $CERTBOT_STAGING"
+        echo ""
+
+        # Determinar si usar staging (para testing)
+        if [ "$CERTBOT_STAGING" = "true" ]; then
+          STAGING_FLAG="--staging"
+          echo "⚠️  MODO STAGING ACTIVADO (certificados de prueba)"
+        else
+          STAGING_FLAG=""
+          echo "✓ Modo producción (certificados reales)"
+        fi
+
+        # Obtener certificado
+        certbot certonly \
+          --webroot \
+          --webroot-path=/var/www/certbot \
+          --email "$CERTBOT_EMAIL" \
+          --agree-tos \
+          --no-eff-email \
+          --force-renewal \
+          $STAGING_FLAG \
+          -d "$DOMAIN" \
+          -d "www.$DOMAIN"
+
+        if [ $? -eq 0 ]; then
+          echo ""
+          echo "✅ Certificado obtenido exitosamente"
+          echo ""
+          echo "Ubicación:"
+          echo "  /etc/letsencrypt/live/$DOMAIN/fullchain.pem"
+          echo "  /etc/letsencrypt/live/$DOMAIN/privkey.pem"
+          echo ""
+          echo "Próximos pasos:"
+          echo "  1. Verificar archivos en: nginx/ssl/certbot/conf/live/$DOMAIN/"
+          echo "  2. Reiniciar nginx: docker-compose restart nginx"
+          echo "  3. Iniciar renovación automática:"
+          echo "     docker-compose -f docker-compose.certbot.yml up -d certbot-renew"
+        else
+          echo ""
+          echo "❌ Error al obtener certificado"
+          echo ""
+          echo "Troubleshooting:"
+          echo "  1. Verificar que nginx esté corriendo"
+          echo "  2. Verificar que $DOMAIN apunte a este servidor"
+          echo "  3. Verificar que puerto 80 esté abierto"
+          echo "  4. Revisar logs: docker logs ciber-certbot-init"
+          echo ""
+          echo "Para testing, usar: CERTBOT_STAGING=true"
+          exit 1
+        fi
+      '
+    networks:
+      - ciber-network
+    restart: "no"  # Solo ejecuta una vez
+
+  # ===== CERTBOT - Renovación automática =====
+  certbot-renew:
+    image: certbot/certbot:v2.7.4
+    container_name: ciber-certbot-renew
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+    volumes:
+      - ./nginx/ssl/certbot/conf:/etc/letsencrypt
+      - ./nginx/ssl/certbot/www:/var/www/certbot
+      - certbot_logs:/var/log/letsencrypt
+    entrypoint: >
+      sh -c '
+        echo "====================================="
+        echo "  CERTBOT - Auto-Renewal Service"
+        echo "====================================="
+        echo ""
+        echo "Configurando renovación automática..."
+        echo "Frecuencia: Cada 12 horas"
+        echo ""
+
+        # Crear crontab para renovación
+        cat > /etc/crontabs/root <<EOF
+        # Renovar certificados 2 veces al día
+        # Certbot solo renueva si faltan < 30 días
+        0 */12 * * * certbot renew --quiet --webroot --webroot-path=/var/www/certbot && nginx -s reload 2>&1 | tee -a /var/log/letsencrypt/renew.log
+        EOF
+
+        echo "Crontab configurado:"
+        cat /etc/crontabs/root
+        echo ""
+
+        # Instalar cron
+        apk add --no-cache dcron
+
+        echo "Servicio de renovación iniciado"
+        echo "Logs: /var/log/letsencrypt/renew.log"
+        echo ""
+
+        # Ejecutar cron en foreground
+        crond -f -l 2
+      '
+    networks:
+      - ciber-network
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+
+  # ===== NGINX HELPER - Configuración para ACME Challenge =====
+  # Este servicio NO es necesario si nginx ya está configurado
+  # correctamente con location /.well-known/acme-challenge/
+  nginx-acme:
+    image: nginx:1.25-alpine
+    container_name: ciber-nginx-acme-helper
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/ssl/certbot/www:/var/www/certbot:ro
+    command: >
+      sh -c '
+        cat > /etc/nginx/conf.d/acme.conf <<EOF
+        server {
+            listen 80;
+            server_name _;
+
+            # ACME challenge para Let''s Encrypt
+            location /.well-known/acme-challenge/ {
+                root /var/www/certbot;
+                allow all;
+            }
+
+            # Redirigir todo lo demás a HTTPS
+            location / {
+                return 301 https://\$$host\$$request_uri;
+            }
+        }
+        EOF
+
+        echo "NGINX ACME Helper configurado"
+        echo "Puerto 80 abierto para ACME challenges"
+        nginx -g "daemon off;"
+      '
+    networks:
+      - ciber-network
+    restart: unless-stopped
+
+# ===== VOLUMES =====
+volumes:
+  certbot_logs:
+    driver: local
+
+# ===== NETWORKS =====
+networks:
+  ciber-network:
+    external: true
+    name: plataforma_ciber-network

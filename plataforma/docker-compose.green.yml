@@ -1,0 +1,124 @@
+version: '3.8'
+
+# ===========================================
+# GREEN ENVIRONMENT - Production Deployment
+# ===========================================
+# Este entorno comparte PostgreSQL y Redis con blue
+# Solo backend, frontend y executor son específicos
+
+services:
+  # ===== BACKEND API - GREEN =====
+  backend-green:
+    image: ghcr.io/${GITHUB_REPOSITORY}/backend:${GITHUB_SHA:-latest}
+    container_name: ciber-backend-green
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}?schema=public
+      REDIS_URL: redis://default:${REDIS_PASSWORD}@redis:6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-15m}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
+      CORS_ORIGIN: ${CORS_ORIGIN}
+      EXECUTOR_URL: http://executor-green:5000
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
+      SMTP_FROM: ${SMTP_FROM:-noreply@plataforma-ciber.com}
+      SMTP_SECURE: ${SMTP_SECURE:-true}
+      FRONTEND_URL: ${FRONTEND_URL}
+    ports:
+      - "4001:4000"
+    volumes:
+      - backend_uploads:/app/uploads
+      - backend_logs_green:/app/logs
+      - backend_public:/app/public
+    networks:
+      - ciber-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:4000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+
+  # ===== CODE EXECUTOR SERVICE - GREEN =====
+  executor-green:
+    image: ghcr.io/${GITHUB_REPOSITORY}/executor:${GITHUB_SHA:-latest}
+    container_name: ciber-executor-green
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      DOCKER_HOST: unix:///var/run/docker.sock
+      SANDBOX_TIMEOUT: ${SANDBOX_TIMEOUT:-30000}
+      SANDBOX_MEMORY_LIMIT: ${SANDBOX_MEMORY_LIMIT:-256m}
+      SANDBOX_CPU_LIMIT: ${SANDBOX_CPU_LIMIT:-1}
+      SANDBOX_NETWORK_DISABLED: ${SANDBOX_NETWORK_DISABLED:-true}
+      REDIS_URL: redis://default:${REDIS_PASSWORD}@redis:6379
+    ports:
+      - "5001:5000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - ciber-network
+    privileged: true
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 512M
+
+  # ===== FRONTEND REACT - GREEN =====
+  frontend-green:
+    image: ghcr.io/${GITHUB_REPOSITORY}/frontend:${GITHUB_SHA:-latest}
+    container_name: ciber-frontend-green
+    environment:
+      NODE_ENV: production
+    ports:
+      - "3001:80"
+    networks:
+      - ciber-network
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+
+# ===== VOLUMES - GREEN =====
+volumes:
+  backend_logs_green:
+    driver: local
+  # backend_uploads y backend_public son compartidos con blue (definidos en docker-compose.prod.yml)
+
+# ===== NETWORK - GREEN =====
+# Usa la misma red que el resto de servicios (compartida)
+networks:
+  ciber-network:
+    external: true
+    name: plataforma_ciber-network

@@ -1,0 +1,273 @@
+# ===========================================
+# PROMETHEUS ALERT RULES
+# ===========================================
+# Reglas de alertas para monitoreo del sistema
+# ===========================================
+
+groups:
+  # ==========================================
+  # ALERTAS DE SISTEMA
+  # ==========================================
+  - name: system_alerts
+    interval: 30s
+    rules:
+      # High CPU usage
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+          category: system
+        annotations:
+          summary: "CPU usage alto en {{ $labels.instance }}"
+          description: "CPU usage está en {{ $value | humanize }}% por más de 5 minutos"
+
+      # High memory usage
+      - alert: HighMemoryUsage
+        expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+          category: system
+        annotations:
+          summary: "Memoria alta en {{ $labels.instance }}"
+          description: "Uso de memoria en {{ $value | humanize }}%"
+
+      # Disk space low
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 < 15
+        for: 5m
+        labels:
+          severity: critical
+          category: system
+        annotations:
+          summary: "Espacio en disco bajo en {{ $labels.instance }}"
+          description: "Solo {{ $value | humanize }}% de espacio disponible"
+
+  # ==========================================
+  # ALERTAS DE BASE DE DATOS
+  # ==========================================
+  - name: database_alerts
+    interval: 30s
+    rules:
+      # PostgreSQL down
+      - alert: PostgresDown
+        expr: pg_up == 0
+        for: 1m
+        labels:
+          severity: critical
+          category: database
+        annotations:
+          summary: "PostgreSQL está DOWN"
+          description: "Base de datos no responde"
+
+      # High database connections
+      - alert: HighDatabaseConnections
+        expr: (pg_stat_database_numbackends / pg_settings_max_connections) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+          category: database
+        annotations:
+          summary: "Conexiones altas a PostgreSQL"
+          description: "{{ $value | humanize }}% de conexiones en uso"
+
+      # Slow queries
+      - alert: SlowQueries
+        expr: rate(pg_stat_database_tup_fetched[5m]) > 10000
+        for: 5m
+        labels:
+          severity: warning
+          category: database
+        annotations:
+          summary: "Queries lentas detectadas"
+          description: "{{ $value | humanize }} tuplas fetched/s"
+
+      # Database size growth
+      - alert: DatabaseSizeGrowth
+        expr: rate(pg_database_size_bytes[1h]) > 1073741824  # 1GB/hora
+        for: 1h
+        labels:
+          severity: warning
+          category: database
+        annotations:
+          summary: "Crecimiento rápido de DB"
+          description: "Base de datos creciendo {{ $value | humanize }} bytes/s"
+
+  # ==========================================
+  # ALERTAS DE REDIS
+  # ==========================================
+  - name: redis_alerts
+    interval: 30s
+    rules:
+      # Redis down
+      - alert: RedisDown
+        expr: redis_up == 0
+        for: 1m
+        labels:
+          severity: critical
+          category: cache
+        annotations:
+          summary: "Redis está DOWN"
+          description: "Cache no disponible"
+
+      # High memory usage in Redis
+      - alert: RedisMemoryHigh
+        expr: (redis_memory_used_bytes / redis_memory_max_bytes) * 100 > 90
+        for: 5m
+        labels:
+          severity: warning
+          category: cache
+        annotations:
+          summary: "Memoria de Redis alta"
+          description: "{{ $value | humanize }}% de memoria usada"
+
+      # High eviction rate
+      - alert: RedisHighEvictionRate
+        expr: rate(redis_evicted_keys_total[5m]) > 100
+        for: 5m
+        labels:
+          severity: warning
+          category: cache
+        annotations:
+          summary: "Alta tasa de eviction en Redis"
+          description: "{{ $value | humanize }} keys evicted/s"
+
+  # ==========================================
+  # ALERTAS DE APLICACIÓN
+  # ==========================================
+  - name: application_alerts
+    interval: 30s
+    rules:
+      # Backend down
+      - alert: BackendDown
+        expr: up{job="backend-api"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          category: application
+        annotations:
+          summary: "Backend API está DOWN"
+          description: "Servicio {{ $labels.instance }} no responde"
+
+      # High HTTP error rate
+      - alert: HighHTTPErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) * 100 > 5
+        for: 5m
+        labels:
+          severity: warning
+          category: application
+        annotations:
+          summary: "Alta tasa de errores HTTP 5xx"
+          description: "{{ $value | humanize }}% de requests con error"
+
+      # Slow response times
+      - alert: SlowResponseTimes
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+          category: application
+        annotations:
+          summary: "Tiempos de respuesta lentos"
+          description: "P95 en {{ $value | humanize }} segundos"
+
+      # JWT authentication failures
+      - alert: HighAuthFailureRate
+        expr: rate(jwt_authentication_failures_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          category: security
+        annotations:
+          summary: "Alta tasa de fallos de autenticación"
+          description: "{{ $value | humanize }} fallos/s"
+
+  # ==========================================
+  # ALERTAS DE CONTENEDORES
+  # ==========================================
+  - name: container_alerts
+    interval: 30s
+    rules:
+      # Container restarting
+      - alert: ContainerRestarting
+        expr: rate(container_restart_count[15m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+          category: containers
+        annotations:
+          summary: "Contenedor reiniciándose frecuentemente"
+          description: "{{ $labels.name }} se ha reiniciado {{ $value }} veces"
+
+      # High container CPU
+      - alert: ContainerHighCPU
+        expr: (sum(rate(container_cpu_usage_seconds_total{name!=""}[5m])) by (name)) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+          category: containers
+        annotations:
+          summary: "CPU alto en contenedor {{ $labels.name }}"
+          description: "{{ $value | humanize }}% CPU usado"
+
+      # High container memory
+      - alert: ContainerHighMemory
+        expr: (container_memory_usage_bytes{name!=""} / container_spec_memory_limit_bytes{name!=""}) * 100 > 90
+        for: 5m
+        labels:
+          severity: warning
+          category: containers
+        annotations:
+          summary: "Memoria alta en contenedor {{ $labels.name }}"
+          description: "{{ $value | humanize }}% de límite usado"
+
+  # ==========================================
+  # ALERTAS DE CODE EXECUTOR
+  # ==========================================
+  - name: executor_alerts
+    interval: 30s
+    rules:
+      # Executor down
+      - alert: ExecutorDown
+        expr: up{job="executor"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          category: executor
+        annotations:
+          summary: "Code Executor está DOWN"
+          description: "Servicio de ejecución de código no disponible"
+
+      # High execution queue
+      - alert: HighExecutionQueue
+        expr: code_execution_queue_length > 50
+        for: 5m
+        labels:
+          severity: warning
+          category: executor
+        annotations:
+          summary: "Cola de ejecución alta"
+          description: "{{ $value }} ejecuciones en cola"
+
+      # Execution timeouts
+      - alert: HighExecutionTimeouts
+        expr: rate(code_execution_timeouts_total[5m]) > 5
+        for: 5m
+        labels:
+          severity: warning
+          category: executor
+        annotations:
+          summary: "Muchos timeouts de ejecución"
+          description: "{{ $value | humanize }} timeouts/s"
+
+      # Docker daemon issues
+      - alert: DockerDaemonIssues
+        expr: code_execution_docker_errors_total > 10
+        for: 5m
+        labels:
+          severity: critical
+          category: executor
+        annotations:
+          summary: "Problemas con Docker daemon"
+          description: "{{ $value }} errores de Docker"

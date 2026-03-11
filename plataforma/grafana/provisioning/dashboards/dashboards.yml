@@ -1,0 +1,20 @@
+# ===========================================
+# GRAFANA DASHBOARDS - AUTO-PROVISIONING
+# ===========================================
+# Dashboards cargados automáticamente desde archivos JSON
+# ===========================================
+
+apiVersion: 1
+
+providers:
+  # Dashboards del proyecto
+  - name: 'Ciber Platform'
+    orgId: 1
+    folder: 'Ciber Platform'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: true

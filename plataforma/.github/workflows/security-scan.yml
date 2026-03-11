@@ -1,0 +1,322 @@
+name: Security Scan
+
+# ===========================================
+# SECURITY SCANNING WORKFLOW
+# ===========================================
+# Escaneos automáticos de seguridad:
+# - Vulnerabilidades de dependencias (npm audit)
+# - Vulnerabilidades de contenedores (Trivy)
+# - Secretos hardcodeados (GitGuardian)
+# - SAST (CodeQL)
+#
+# Triggers:
+# - Push a main/master
+# - Pull requests
+# - Cron: Diario a las 2:00 AM UTC
+# - Manual: workflow_dispatch
+# ===========================================
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  schedule:
+    # Escaneo diario a las 2:00 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+jobs:
+  # ==========================================
+  # NPM AUDIT - Dependency Vulnerabilities
+  # ==========================================
+  npm-audit:
+    name: NPM Security Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    strategy:
+      matrix:
+        service: [backend, frontend, executor]
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: plataforma/${{ matrix.service }}/package-lock.json
+
+      - name: Run NPM Audit
+        working-directory: plataforma/${{ matrix.service }}
+        run: |
+          echo "Running npm audit for ${{ matrix.service }}..."
+
+          # Audit en modo JSON para parsear
+          npm audit --audit-level=moderate --json > audit-report.json || true
+
+          # Mostrar resumen
+          npm audit --audit-level=moderate || true
+
+          # Verificar vulnerabilidades críticas/altas
+          CRITICAL=$(jq -r '.metadata.vulnerabilities.critical // 0' audit-report.json)
+          HIGH=$(jq -r '.metadata.vulnerabilities.high // 0' audit-report.json)
+
+          echo "Critical vulnerabilities: $CRITICAL"
+          echo "High vulnerabilities: $HIGH"
+
+          # Fallar si hay vulnerabilidades críticas o altas
+          if [ "$CRITICAL" -gt 0 ] || [ "$HIGH" -gt 0 ]; then
+            echo "❌ FAIL: Critical or high vulnerabilities found"
+            echo "Run 'npm audit fix' to resolve"
+            exit 1
+          else
+            echo "✅ PASS: No critical or high vulnerabilities"
+          fi
+
+      - name: Upload Audit Report
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: npm-audit-${{ matrix.service }}
+          path: plataforma/${{ matrix.service }}/audit-report.json
+          retention-days: 30
+
+  # ==========================================
+  # TRIVY - Container Image Scanning
+  # ==========================================
+  trivy-scan:
+    name: Trivy Container Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    strategy:
+      matrix:
+        service: [backend, frontend, executor]
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Build Docker Image
+        working-directory: plataforma/${{ matrix.service }}
+        run: |
+          docker build -t ciber-${{ matrix.service }}:scan .
+
+      - name: Run Trivy Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ciber-${{ matrix.service }}:scan
+          format: 'sarif'
+          output: 'trivy-results-${{ matrix.service }}.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Upload Trivy Results to GitHub Security
+        if: always()
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: 'trivy-results-${{ matrix.service }}.sarif'
+          category: trivy-${{ matrix.service }}
+
+      - name: Trivy Summary Report
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ciber-${{ matrix.service }}:scan
+          format: 'table'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+          output: 'trivy-summary-${{ matrix.service }}.txt'
+
+      - name: Upload Trivy Summary
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: trivy-scan-${{ matrix.service }}
+          path: trivy-summary-${{ matrix.service }}.txt
+          retention-days: 30
+
+  # ==========================================
+  # CODEQL - Static Analysis Security Testing
+  # ==========================================
+  codeql:
+    name: CodeQL SAST
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ['javascript']
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v2
+        with:
+          languages: ${{ matrix.language }}
+          queries: security-extended
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v2
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
+        with:
+          category: "/language:${{ matrix.language }}"
+
+  # ==========================================
+  # SECRET SCANNING - Hardcoded Secrets
+  # ==========================================
+  secret-scan:
+    name: Secret Detection
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for better detection
+
+      - name: Run GitGuardian Scan
+        uses: GitGuardian/ggshield-action@v1
+        env:
+          GITHUB_PUSH_BEFORE_SHA: ${{ github.event.before }}
+          GITHUB_PUSH_BASE_SHA: ${{ github.event.base }}
+          GITHUB_DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          GITGUARDIAN_API_KEY: ${{ secrets.GITGUARDIAN_API_KEY }}
+        with:
+          args: secret scan path . --recursive --show-secrets
+
+      - name: Fallback - TruffleHog Scan
+        if: failure() || env.GITGUARDIAN_API_KEY == ''
+        run: |
+          echo "GitGuardian no disponible, usando TruffleHog..."
+
+          # Instalar TruffleHog
+          pip install truffleHog3
+
+          # Escanear repositorio
+          trufflehog3 -v -r https://github.com/${{ github.repository }}.git || {
+            echo "⚠️  Secretos potenciales detectados"
+            echo "Revisar manualmente el código"
+          }
+
+  # ==========================================
+  # DEPENDENCY CHECK - OWASP
+  # ==========================================
+  owasp-dependency-check:
+    name: OWASP Dependency Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Run OWASP Dependency-Check
+        uses: dependency-check/Dependency-Check_Action@main
+        with:
+          project: 'ciber-platform'
+          path: './plataforma'
+          format: 'HTML'
+          out: 'reports'
+          args: >
+            --enableRetired
+            --enableExperimental
+
+      - name: Upload Dependency-Check Report
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: dependency-check-report
+          path: reports/
+          retention-days: 30
+
+  # ==========================================
+  # DOCKER COMPOSE SECURITY
+  # ==========================================
+  docker-compose-security:
+    name: Docker Compose Security
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Analyze Docker Compose Files
+        run: |
+          echo "Verificando configuraciones de seguridad en Docker Compose..."
+
+          # Buscar compose files
+          COMPOSE_FILES=$(find plataforma -name "docker-compose*.yml")
+
+          for file in $COMPOSE_FILES; do
+            echo "Analizando: $file"
+
+            # Verificar modo privilegiado
+            if grep -q "privileged: true" "$file"; then
+              echo "⚠️  Advertencia: Contenedor privilegiado en $file"
+            fi
+
+            # Verificar secretos hardcodeados
+            if grep -E "(password|secret|key):\s*['\"]" "$file"; then
+              echo "❌ ERROR: Secreto hardcodeado en $file"
+              exit 1
+            fi
+
+            # Verificar uso de :latest
+            if grep -E "image:.*:latest" "$file"; then
+              echo "⚠️  Advertencia: Uso de tag :latest en $file"
+            fi
+          done
+
+          echo "✅ Análisis de Docker Compose completado"
+
+  # ==========================================
+  # SECURITY SUMMARY
+  # ==========================================
+  security-summary:
+    name: Security Summary
+    runs-on: ubuntu-latest
+    needs: [npm-audit, trivy-scan, codeql, secret-scan, owasp-dependency-check]
+    if: always()
+
+    steps:
+      - name: Generate Summary
+        run: |
+          echo "# 🔒 Security Scan Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| NPM Audit | ${{ needs.npm-audit.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Trivy Container Scan | ${{ needs.trivy-scan.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| CodeQL SAST | ${{ needs.codeql.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Secret Scanning | ${{ needs.secret-scan.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| OWASP Dependency Check | ${{ needs.owasp-dependency-check.result }} |" >> $GITHUB_STEP_SUMMARY
+
+      - name: Notify on Failure
+        if: |
+          needs.npm-audit.result == 'failure' ||
+          needs.trivy-scan.result == 'failure' ||
+          needs.codeql.result == 'failure' ||
+          needs.secret-scan.result == 'failure'
+        run: |
+          echo "❌ Security scan failed!"
+          echo "Review the detailed logs above."
+          exit 1

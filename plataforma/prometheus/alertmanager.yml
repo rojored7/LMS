@@ -1,0 +1,171 @@
+# ===========================================
+# ALERTMANAGER CONFIGURATION
+# ===========================================
+# Routing de alertas a diferentes canales
+# ===========================================
+
+global:
+  # Timeout de resolución de alertas
+  resolve_timeout: 5m
+
+  # SMTP para email notifications
+  smtp_from: ${SMTP_FROM:-noreply@plataforma-ciber.com}
+  smtp_smarthost: ${SMTP_HOST:-smtp.gmail.com}:${SMTP_PORT:-587}
+  smtp_auth_username: ${SMTP_USER:-}
+  smtp_auth_password: ${SMTP_PASS:-}
+  smtp_require_tls: ${SMTP_SECURE:-true}
+
+  # Slack (opcional)
+  slack_api_url: ${SLACK_WEBHOOK_URL:-}
+
+# Templates para notificaciones
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'
+
+# Rutas de alertas
+route:
+  # Agrupar por...
+  group_by: ['alertname', 'cluster', 'service']
+
+  # Tiempos de agrupación
+  group_wait: 30s        # Esperar 30s antes de enviar primera alerta
+  group_interval: 5m     # Esperar 5m antes de enviar alertas agrupadas
+  repeat_interval: 4h    # Re-notificar cada 4h si no se resuelve
+
+  # Receptor por defecto
+  receiver: 'default'
+
+  # Rutas específicas
+  routes:
+    # Alertas críticas -> Slack + Email
+    - match:
+        severity: critical
+      receiver: 'critical-alerts'
+      continue: false
+
+    # Alertas de base de datos -> DBA team
+    - match:
+        category: database
+      receiver: 'database-team'
+      continue: false
+
+    # Alertas de seguridad -> Security team
+    - match:
+        category: security
+      receiver: 'security-team'
+      continue: false
+
+    # Alertas de aplicación -> Dev team
+    - match:
+        category: application
+      receiver: 'dev-team'
+      continue: true
+
+    # Warnings -> Solo logs
+    - match:
+        severity: warning
+      receiver: 'warnings'
+
+# Inhibición de alertas
+# (suprimir alertas menos importantes si hay una más crítica)
+inhibit_rules:
+  # Si el backend está DOWN, no notificar sobre response times
+  - source_match:
+      alertname: 'BackendDown'
+    target_match:
+      alertname: 'SlowResponseTimes'
+    equal: ['instance']
+
+  # Si PostgreSQL está DOWN, no notificar sobre conexiones
+  - source_match:
+      alertname: 'PostgresDown'
+    target_match:
+      alertname: 'HighDatabaseConnections'
+    equal: ['instance']
+
+# Receptores (canales de notificación)
+receivers:
+  # Default: Solo logs
+  - name: 'default'
+    webhook_configs:
+      - url: 'http://localhost:9093/api/v1/alerts'
+        send_resolved: true
+
+  # Alertas críticas: Slack + Email
+  - name: 'critical-alerts'
+    slack_configs:
+      - channel: '#alerts-critical'
+        title: '🚨 ALERTA CRÍTICA'
+        text: |
+          *Alert:* {{ .GroupLabels.alertname }}
+          *Severity:* {{ .CommonLabels.severity }}
+          *Summary:* {{ .CommonAnnotations.summary }}
+          *Description:* {{ .CommonAnnotations.description }}
+        send_resolved: true
+    email_configs:
+      - to: ${ALERT_EMAIL_CRITICAL:-admin@plataforma-ciber.com}
+        headers:
+          Subject: '🚨 [CRITICAL] {{ .GroupLabels.alertname }}'
+        html: |
+          <h2>Critical Alert Fired</h2>
+          <p><strong>Alert:</strong> {{ .GroupLabels.alertname }}</p>
+          <p><strong>Severity:</strong> {{ .CommonLabels.severity }}</p>
+          <p><strong>Summary:</strong> {{ .CommonAnnotations.summary }}</p>
+          <p><strong>Description:</strong> {{ .CommonAnnotations.description }}</p>
+          <p><strong>Time:</strong> {{ .StartsAt }}</p>
+        send_resolved: true
+
+  # Equipo de base de datos
+  - name: 'database-team'
+    email_configs:
+      - to: ${ALERT_EMAIL_DBA:-dba@plataforma-ciber.com}
+        headers:
+          Subject: '[Database Alert] {{ .GroupLabels.alertname }}'
+        send_resolved: true
+    slack_configs:
+      - channel: '#database-alerts'
+        title: 'Database Alert'
+        text: '{{ .CommonAnnotations.summary }}'
+        send_resolved: true
+
+  # Equipo de seguridad
+  - name: 'security-team'
+    email_configs:
+      - to: ${ALERT_EMAIL_SECURITY:-security@plataforma-ciber.com}
+        headers:
+          Subject: '[Security Alert] {{ .GroupLabels.alertname }}'
+        send_resolved: true
+    slack_configs:
+      - channel: '#security-alerts'
+        title: '🔒 Security Alert'
+        text: '{{ .CommonAnnotations.summary }}'
+        send_resolved: true
+
+  # Equipo de desarrollo
+  - name: 'dev-team'
+    slack_configs:
+      - channel: '#dev-alerts'
+        title: 'Application Alert'
+        text: |
+          *Alert:* {{ .GroupLabels.alertname }}
+          *Service:* {{ .CommonLabels.service }}
+          *Summary:* {{ .CommonAnnotations.summary }}
+        send_resolved: true
+
+  # Warnings (solo logs, sin notificaciones activas)
+  - name: 'warnings'
+    webhook_configs:
+      - url: 'http://localhost:9093/api/v1/alerts'
+        send_resolved: true
+
+# ===========================================
+# CONFIGURACIÓN POR ENTORNO
+# ===========================================
+# Desarrollo: Descomentar para suprimir notificaciones
+# route:
+#   receiver: 'null'
+#   routes: []
+#
+# receivers:
+#   - name: 'null'
+# ===========================================

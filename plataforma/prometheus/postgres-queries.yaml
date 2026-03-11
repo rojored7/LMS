@@ -1,0 +1,180 @@
+# ===========================================
+# POSTGRES EXPORTER - CUSTOM QUERIES
+# ===========================================
+# Queries específicas para métricas de la aplicación
+# ===========================================
+
+# Conteo de usuarios por rol
+pg_user_count_by_role:
+  query: "SELECT role::text, COUNT(*) as count FROM users GROUP BY role"
+  master: true
+  metrics:
+    - role:
+        usage: "LABEL"
+        description: "User role (ADMIN, INSTRUCTOR, STUDENT)"
+    - count:
+        usage: "GAUGE"
+        description: "Number of users with this role"
+
+# Conteo de cursos publicados vs no publicados
+pg_course_status:
+  query: "SELECT published::text, COUNT(*) as count FROM courses GROUP BY published"
+  master: true
+  metrics:
+    - published:
+        usage: "LABEL"
+        description: "Course published status"
+    - count:
+        usage: "GAUGE"
+        description: "Number of courses"
+
+# Total de inscripciones activas
+pg_active_enrollments:
+  query: "SELECT COUNT(*) as count FROM enrollments WHERE status = 'ACTIVE'"
+  master: true
+  metrics:
+    - count:
+        usage: "GAUGE"
+        description: "Number of active enrollments"
+
+# Progreso promedio de usuarios
+pg_avg_user_progress:
+  query: |
+    SELECT
+      COALESCE(AVG(CAST(progress AS FLOAT)), 0) as avg_progress
+    FROM user_progresses
+  master: true
+  metrics:
+    - avg_progress:
+        usage: "GAUGE"
+        description: "Average user progress percentage across all modules"
+
+# Quizzes completados en las últimas 24h
+pg_quiz_attempts_24h:
+  query: |
+    SELECT
+      COUNT(*) as count,
+      SUM(CASE WHEN passed THEN 1 ELSE 0 END) as passed_count
+    FROM quiz_attempts
+    WHERE "createdAt" > NOW() - INTERVAL '24 hours'
+  master: true
+  metrics:
+    - count:
+        usage: "GAUGE"
+        description: "Quiz attempts in last 24 hours"
+    - passed_count:
+        usage: "GAUGE"
+        description: "Passed quiz attempts in last 24 hours"
+
+# Ejecuciones de código en las últimas 24h
+pg_lab_submissions_24h:
+  query: |
+    SELECT
+      COUNT(*) as count,
+      SUM(CASE WHEN success THEN 1 ELSE 0 END) as success_count
+    FROM lab_submissions
+    WHERE "submittedAt" > NOW() - INTERVAL '24 hours'
+  master: true
+  metrics:
+    - count:
+        usage: "GAUGE"
+        description: "Lab submissions in last 24 hours"
+    - success_count:
+        usage: "GAUGE"
+        description: "Successful lab submissions in last 24 hours"
+
+# Certificados generados en las últimas 24h
+pg_certificates_24h:
+  query: |
+    SELECT COUNT(*) as count
+    FROM certificates
+    WHERE "issuedAt" > NOW() - INTERVAL '24 hours'
+  master: true
+  metrics:
+    - count:
+        usage: "GAUGE"
+        description: "Certificates issued in last 24 hours"
+
+# Badges otorgados por tipo
+pg_badges_by_type:
+  query: |
+    SELECT
+      b.name::text as badge_name,
+      COUNT(ub.id) as count
+    FROM badges b
+    LEFT JOIN user_badges ub ON b.id = ub."badgeId"
+    GROUP BY b.name
+  master: true
+  metrics:
+    - badge_name:
+        usage: "LABEL"
+        description: "Badge name"
+    - count:
+        usage: "GAUGE"
+        description: "Number of times this badge has been awarded"
+
+# Notificaciones no leídas
+pg_unread_notifications:
+  query: |
+    SELECT COUNT(*) as count
+    FROM notifications
+    WHERE read = false
+  master: true
+  metrics:
+    - count:
+        usage: "GAUGE"
+        description: "Total unread notifications"
+
+# Top 5 cursos por inscripciones
+pg_top_courses_by_enrollment:
+  query: |
+    SELECT
+      c.title::text as course_title,
+      COUNT(e.id) as enrollment_count
+    FROM courses c
+    LEFT JOIN enrollments e ON c.id = e."courseId"
+    GROUP BY c.id, c.title
+    ORDER BY enrollment_count DESC
+    LIMIT 5
+  master: true
+  metrics:
+    - course_title:
+        usage: "LABEL"
+        description: "Course title"
+    - enrollment_count:
+        usage: "GAUGE"
+        description: "Number of enrollments"
+
+# Sesiones activas (tokens de refresh válidos)
+pg_active_sessions:
+  query: |
+    SELECT COUNT(*) as count
+    FROM refresh_tokens
+    WHERE "expiresAt" > NOW()
+  master: true
+  metrics:
+    - count:
+        usage: "GAUGE"
+        description: "Number of active user sessions"
+
+# Tamaño de tablas principales
+pg_table_sizes:
+  query: |
+    SELECT
+      schemaname::text,
+      tablename::text,
+      pg_total_relation_size(schemaname||'.'||tablename) as size_bytes
+    FROM pg_tables
+    WHERE schemaname = 'public'
+    AND tablename IN ('users', 'courses', 'enrollments', 'modules', 'lessons', 'quiz_attempts')
+  master: true
+  metrics:
+    - schemaname:
+        usage: "LABEL"
+        description: "Schema name"
+    - tablename:
+        usage: "LABEL"
+        description: "Table name"
+    - size_bytes:
+        usage: "GAUGE"
+        description: "Total size of table in bytes (including indexes)"
