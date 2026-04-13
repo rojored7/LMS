@@ -1,137 +1,123 @@
 from datetime import datetime
-
-from pydantic import BaseModel, Field
-
+from pydantic import field_validator
 from app.schemas.common import CamelModel
 
 
 class CourseCreate(CamelModel):
-    title: str = Field(min_length=3, max_length=255)
-    slug: str = Field(min_length=3, max_length=255)
-    description: str = Field(min_length=10)
-    short_description: str | None = None
-    image: str | None = None
-    level: str = "BEGINNER"
-    duration_hours: int = 0
+    slug: str
+    title: str
+    description: str
+    duration: int
+    level: str
+    author: str
+    tags: list[str] | None = None
+    thumbnail: str | None = None
     price: float = 0.0
-    published: bool = False
-    instructor_id: str | None = None
+
+    @field_validator("slug")
+    @classmethod
+    def validate_slug(cls, v: str) -> str:
+        v = v.strip().lower()
+        if not v or len(v) < 3:
+            raise ValueError("El slug debe tener al menos 3 caracteres")
+        return v
 
 
 class CourseUpdate(CamelModel):
     title: str | None = None
-    slug: str | None = None
     description: str | None = None
-    short_description: str | None = None
-    image: str | None = None
+    duration: int | None = None
     level: str | None = None
-    duration_hours: int | None = None
+    tags: list[str] | None = None
+    thumbnail: str | None = None
     price: float | None = None
-    published: bool | None = None
-    instructor_id: str | None = None
+    is_published: bool | None = None
+
+
+class CourseResponse(CamelModel):
+    id: str
+    slug: str
+    title: str
+    description: str
+    thumbnail: str | None = None
+    duration: int
+    level: str
+    tags: list[str] | None = None
+    is_published: bool
+    author: str
+    version: str
+    price: float
+    created_at: datetime
+    updated_at: datetime
+
+
+class CourseDetailResponse(CourseResponse):
+    is_enrolled: bool = False
+
+
+class CourseListResponse(CamelModel):
+    id: str
+    slug: str
+    title: str
+    description: str
+    thumbnail: str | None = None
+    duration: int
+    level: str
+    is_published: bool
+    author: str
+    price: float
+
+
+class LessonSummary(CamelModel):
+    id: str
+    title: str
+    order: int
+    type: str
+    estimated_time: int
+
+
+class QuizSummary(CamelModel):
+    id: str
+    title: str
+    description: str | None = None
+
+
+class LabSummary(CamelModel):
+    id: str
+    title: str
+    description: str | None = None
+    language: str | None = None
 
 
 class ModuleResponse(CamelModel):
     id: str
-    title: str
-    description: str | None = None
-    order: int
     course_id: str
-    created_at: datetime
-    updated_at: datetime
-    lessons: list["LessonResponse"] = []
-
-
-class LessonResponse(CamelModel):
-    id: str
-    title: str
-    content: str | None = None
-    video_url: str | None = None
-    type: str
     order: int
-    duration_minutes: int
-    module_id: str
-    created_at: datetime
-    updated_at: datetime
-    user_progress: dict | None = None
+    title: str
+    description: str
+    duration: int
+    is_published: bool
+    lessons: list[LessonSummary] = []
+    quizzes: list[QuizSummary] = []
+    labs: list[LabSummary] = []
 
 
 class EnrollmentResponse(CamelModel):
     id: str
     user_id: str
     course_id: str
-    progress: float
+    progress: int
+    enrolled_at: datetime
     completed_at: datetime | None = None
-    created_at: datetime
-    updated_at: datetime
+    is_new: bool = False
+    course: CourseListResponse | None = None
 
 
-class CourseResponse(CamelModel):
+class LessonResponse(CamelModel):
     id: str
+    module_id: str
+    order: int
     title: str
-    slug: str
-    description: str
-    short_description: str | None = None
-    image: str | None = None
-    level: str
-    duration_hours: int
-    price: float
-    published: bool
-    instructor_id: str | None = None
-    created_at: datetime
-    updated_at: datetime
-    modules: list[ModuleResponse] = []
-    enrollment_count: int = 0
-    is_enrolled: bool = False
-
-
-class CourseListResponse(CamelModel):
-    id: str
-    title: str
-    slug: str
-    description: str
-    short_description: str | None = None
-    image: str | None = None
-    level: str
-    duration_hours: int
-    price: float
-    published: bool
-    instructor_id: str | None = None
-    created_at: datetime
-    updated_at: datetime
-    enrollment_count: int = 0
-    is_enrolled: bool = False
-    module_count: int = 0
-
-
-class ModuleCreate(BaseModel):
-    title: str = Field(min_length=3, max_length=255)
-    description: str | None = None
-    order: int = 0
-
-
-class ModuleUpdate(BaseModel):
-    title: str | None = None
-    description: str | None = None
-    order: int | None = None
-
-
-class LessonCreate(BaseModel):
-    title: str = Field(min_length=3, max_length=255)
-    content: str | None = None
-    video_url: str | None = None
-    type: str = "TEXT"
-    order: int = 0
-    duration_minutes: int = 0
-
-
-class LessonUpdate(BaseModel):
-    title: str | None = None
-    content: str | None = None
-    video_url: str | None = None
-    type: str | None = None
-    order: int | None = None
-    duration_minutes: int | None = None
-
-
-ModuleResponse.model_rebuild()
+    content: str
+    type: str
+    estimated_time: int
