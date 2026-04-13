@@ -34,10 +34,11 @@ class NotificationType(str, enum.Enum):
 class Badge(Base):
     __tablename__ = "badges"
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_gen_id)
-    name: Mapped[str] = mapped_column(String(255), nullable=False)
-    description: Mapped[str | None] = mapped_column(Text, nullable=True)
-    icon: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    criteria: Mapped[str | None] = mapped_column(Text, nullable=True)
+    name: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    slug: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    icon: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    color: Mapped[str | None] = mapped_column(String(20), nullable=True)
     xp_reward: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
 
