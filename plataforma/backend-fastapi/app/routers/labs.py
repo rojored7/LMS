@@ -16,23 +16,21 @@ router = APIRouter(prefix="/api/labs", tags=["labs"])
 class LabCreate(BaseModel):
     title: str
     description: str | None = None
-    instructions: str | None = None
     starter_code: str | None = None
-    solution_code: str | None = None
-    test_code: str | None = None
+    solution: str | None = None
+    tests: dict | None = None
+    hints: list[str] | None = None
     language: str = "python"
-    timeout_seconds: int = 30
 
 
 class LabUpdate(BaseModel):
     title: str | None = None
     description: str | None = None
-    instructions: str | None = None
     starter_code: str | None = None
-    solution_code: str | None = None
-    test_code: str | None = None
+    solution: str | None = None
+    tests: dict | None = None
+    hints: list[str] | None = None
     language: str | None = None
-    timeout_seconds: int | None = None
 
 
 class SubmitCodeRequest(BaseModel):
@@ -43,10 +41,11 @@ class LabResponse(CamelModel):
     id: str
     title: str
     description: str | None = None
-    instructions: str | None = None
+    language: str = "python"
     starter_code: str | None = None
-    language: str
-    timeout_seconds: int
+    solution: str | None = None
+    tests: dict | list | None = None
+    hints: list[str] | None = None
     module_id: str
 
 
@@ -55,9 +54,12 @@ class SubmissionResponse(CamelModel):
     user_id: str
     lab_id: str
     code: str
-    output: str | None = None
+    language: str = "python"
     passed: bool
-    execution_time_ms: int | None = None
+    stdout: str | None = None
+    stderr: str | None = None
+    exit_code: int = 0
+    execution_time: int = 0
 
 
 @router.get("/module/{module_id}")
@@ -132,21 +134,24 @@ async def submit_lab(
     exec_result = await executor.execute_code(
         code=body.code,
         language=lab.language,
-        test_code=lab.test_code,
-        timeout=lab.timeout_seconds,
     )
 
     passed = exec_result.get("success", False)
-    output = exec_result.get("stdout", "") or exec_result.get("stderr", "")
-    execution_time = exec_result.get("executionTime")
+    stdout = exec_result.get("stdout", "")
+    stderr = exec_result.get("stderr", "")
+    exit_code = exec_result.get("exitCode", 0)
+    execution_time = exec_result.get("executionTime", 0)
 
     submission = await lab_service.submit(
         lab_id=lab_id,
         user_id=user.id,
         code=body.code,
-        output=output,
+        language=lab.language,
         passed=passed,
-        execution_time_ms=execution_time,
+        stdout=stdout,
+        stderr=stderr,
+        exit_code=exit_code,
+        execution_time=execution_time,
     )
 
     return ApiResponse(
@@ -154,8 +159,10 @@ async def submit_lab(
         data={
             "submissionId": submission.id,
             "passed": submission.passed,
-            "output": submission.output,
-            "executionTimeMs": submission.execution_time_ms,
+            "stdout": submission.stdout,
+            "stderr": submission.stderr,
+            "exitCode": submission.exit_code,
+            "executionTime": submission.execution_time,
         },
     ).model_dump()
 
