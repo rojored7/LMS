@@ -31,47 +31,38 @@ export const CourseLearning: React.FC = () => {
   const [contentId, setContentId] = useState<string | null>(null);
 
   // Fetch modules
-  const { data: modules, isLoading: modulesLoading, error: modulesError} = useModules(courseId!);
+  const { data: modules, isLoading: modulesLoading, error: modulesError } = useModules(courseId!);
 
   // Create flat list of all content for navigation
-  const [flatContentList, setFlatContentList] = useState<Array<{ id: string; type: 'lesson' | 'quiz' | 'lab' }>>([]);
+  const [flatContentList, setFlatContentList] = useState<
+    Array<{ id: string; type: 'lesson' | 'quiz' | 'lab' }>
+  >([]);
 
   useEffect(() => {
     if (modules) {
       const contentList: Array<{ id: string; type: 'lesson' | 'quiz' | 'lab' }> = [];
-      modules.forEach(module => {
+      modules.forEach((module) => {
         // Add lessons
-        module.lessons.forEach(lesson => {
+        module.lessons.forEach((lesson) => {
           contentList.push({ id: lesson.id, type: 'lesson' });
         });
         // Add quizzes
-        module.quizzes.forEach(quiz => {
+        module.quizzes.forEach((quiz) => {
           contentList.push({ id: quiz.id, type: 'quiz' });
         });
         // Add labs
-        module.labs.forEach(lab => {
+        module.labs.forEach((lab) => {
           contentList.push({ id: lab.id, type: 'lab' });
         });
       });
-      console.log('DEBUG: flatContentList created with', contentList.length, 'items');
       setFlatContentList(contentList);
     }
   }, [modules]);
 
   // Find current index in flat list
   const currentIndex = flatContentList.findIndex(
-    item => item.id === contentId && item.type === contentType
+    (item) => item.id === contentId && item.type === contentType
   );
-
-  console.log('DEBUG Navigation:', {
-    contentId,
-    contentType,
-    currentIndex,
-    flatContentListLength: flatContentList.length,
-    firstItem: flatContentList[0],
-    hasPrevCalc: currentIndex > 0,
-    hasNextCalc: currentIndex < flatContentList.length - 1 && currentIndex >= 0
-  });
 
   // Navigation handlers
   const handlePrevious = () => {
@@ -105,20 +96,6 @@ export const CourseLearning: React.FC = () => {
     contentType === 'lab' ? contentId! : undefined
   );
 
-  // Auto-select first lesson on load
-  useEffect(() => {
-    if (modules && modules.length > 0 && !contentId) {
-      const firstModule = modules[0];
-      if (firstModule.lessons.length > 0) {
-        handleLessonClick(firstModule.lessons[0].id);
-      } else if (firstModule.quizzes.length > 0) {
-        handleQuizClick(firstModule.quizzes[0].id);
-      } else if (firstModule.labs.length > 0) {
-        handleLabClick(firstModule.labs[0].id);
-      }
-    }
-  }, [modules, contentId]);
-
   const handleLessonClick = (lessonId: string) => {
     setContentType('lesson');
     setContentId(lessonId);
@@ -133,6 +110,21 @@ export const CourseLearning: React.FC = () => {
     setContentType('lab');
     setContentId(labId);
   };
+
+  // Auto-select first lesson on load
+  useEffect(() => {
+    if (modules && modules.length > 0 && !contentId) {
+      const firstModule = modules[0];
+      if (firstModule.lessons.length > 0) {
+        handleLessonClick(firstModule.lessons[0].id);
+      } else if (firstModule.quizzes.length > 0) {
+        handleQuizClick(firstModule.quizzes[0].id);
+      } else if (firstModule.labs.length > 0) {
+        handleLabClick(firstModule.labs[0].id);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modules, contentId]);
 
   const handleModuleClick = (moduleId: string) => {
     setContentType('module');
@@ -188,10 +180,9 @@ export const CourseLearning: React.FC = () => {
   const isContentLoading = lessonLoading || quizLoading || labLoading;
 
   // Get course name from first module
-  const courseName = lesson?.module.course.title || quiz?.title || lab?.title || 'Curso';
-  const moduleName = lesson?.module.title || 'Módulo';
-  const contentName =
-    lesson?.title || quiz?.title || lab?.title || 'Selecciona un contenido';
+  const courseName = lesson?.module?.course?.title || quiz?.title || lab?.title || 'Curso';
+  const moduleName = lesson?.module?.title || 'Modulo';
+  const contentName = lesson?.title || quiz?.title || lab?.title || 'Selecciona un contenido';
 
   return (
     <div className="min-h-screen bg-gray-100">

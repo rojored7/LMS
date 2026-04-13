@@ -91,7 +91,7 @@ const CourseWizardPage: React.FC = () => {
         return true;
 
       case 2: // Content
-        const hasContent = wizardData.modules.every(m => m.lessons.length > 0);
+        const hasContent = wizardData.modules.every((m) => m.lessons.length > 0);
         if (!hasContent) {
           addToast({
             title: 'Error de validación',
@@ -126,7 +126,7 @@ const CourseWizardPage: React.FC = () => {
       };
       await createCourse(courseData);
     } catch (error) {
-      console.error('Error saving draft:', error);
+      // Error handled by UI
     }
   };
 
@@ -210,9 +210,7 @@ const CourseWizardPage: React.FC = () => {
               </Link>
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Crear Nuevo Curso</h1>
-                <p className="text-gray-600 mt-1">
-                  Sigue los pasos para crear un curso completo
-                </p>
+                <p className="text-gray-600 mt-1">Sigue los pasos para crear un curso completo</p>
               </div>
             </div>
 
@@ -270,9 +268,7 @@ const CourseWizardPage: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Nivel *
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Nivel *</label>
                   <select
                     value={wizardData.level}
                     onChange={(e) => setWizardData({ ...wizardData, level: e.target.value as any })}
@@ -292,7 +288,9 @@ const CourseWizardPage: React.FC = () => {
                   <input
                     type="number"
                     value={wizardData.duration}
-                    onChange={(e) => setWizardData({ ...wizardData, duration: parseInt(e.target.value) || 1 })}
+                    onChange={(e) =>
+                      setWizardData({ ...wizardData, duration: parseInt(e.target.value) || 1 })
+                    }
                     min="1"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   />
@@ -306,10 +304,15 @@ const CourseWizardPage: React.FC = () => {
                 <input
                   type="text"
                   value={wizardData.tags.join(', ')}
-                  onChange={(e) => setWizardData({
-                    ...wizardData,
-                    tags: e.target.value.split(',').map(t => t.trim()).filter(t => t)
-                  })}
+                  onChange={(e) =>
+                    setWizardData({
+                      ...wizardData,
+                      tags: e.target.value
+                        .split(',')
+                        .map((t) => t.trim())
+                        .filter((t) => t),
+                    })
+                  }
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   placeholder="seguridad, redes, programación"
                 />
@@ -425,8 +428,8 @@ const CourseWizardPage: React.FC = () => {
 
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <p className="text-blue-800">
-                  Los quizzes y laboratorios pueden ser agregados después de crear el curso,
-                  usando el editor completo de contenido.
+                  Los quizzes y laboratorios pueden ser agregados después de crear el curso, usando
+                  el editor completo de contenido.
                 </p>
               </div>
 
@@ -484,14 +487,16 @@ const CourseWizardPage: React.FC = () => {
                   <ul className="mt-2 space-y-1 text-sm">
                     <li className="text-gray-900">• {wizardData.modules.length} módulos</li>
                     <li className="text-gray-900">
-                      • {wizardData.modules.reduce((acc, m) => acc + m.lessons.length, 0)} lecciones totales
+                      • {wizardData.modules.reduce((acc, m) => acc + m.lessons.length, 0)} lecciones
+                      totales
                     </li>
                   </ul>
                 </div>
 
                 <div className="pt-4 border-t border-gray-200">
                   <p className="text-sm text-gray-600">
-                    El curso será creado como borrador. Podrás editarlo y publicarlo cuando esté listo.
+                    El curso será creado como borrador. Podrás editarlo y publicarlo cuando esté
+                    listo.
                   </p>
                 </div>
               </div>

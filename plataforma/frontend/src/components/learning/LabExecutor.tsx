@@ -35,8 +35,10 @@ export const LabExecutor: React.FC<LabExecutorProps> = ({ lab }) => {
 
       setResults(result);
       setShowResults(true);
-    } catch (error) {
-      console.error('Error submitting lab:', error);
+    } catch (error: any) {
+      const msg = error?.error?.message || 'Error al enviar el laboratorio';
+      setResults({ passed: false, error: msg });
+      setShowResults(true);
     }
   };
 
@@ -64,9 +66,9 @@ export const LabExecutor: React.FC<LabExecutorProps> = ({ lab }) => {
                 </span>
                 <div className="flex items-center space-x-1">
                   <ClockIcon className="h-4 w-4" />
-                  <span>Límite: {lab.timeLimit}s</span>
+                  <span>Limite: {lab.timeLimit ?? 30}s</span>
                 </div>
-                <span>Puntuación mínima: {lab.passingScore}%</span>
+                <span>Puntuacion minima: {lab.passingScore ?? 100}%</span>
               </div>
             </div>
           </div>
@@ -87,7 +89,7 @@ export const LabExecutor: React.FC<LabExecutorProps> = ({ lab }) => {
           <div className="bg-gray-50 rounded-lg border border-gray-200 p-4">
             <h3 className="text-lg font-semibold text-gray-900 mb-3">Test Cases</h3>
             <div className="space-y-3">
-              {lab.testCases.map((testCase, index) => (
+              {(lab.testCases ?? []).map((testCase, index) => (
                 <div key={index} className="bg-white p-3 rounded border border-gray-200">
                   <p className="font-medium text-gray-900 text-sm mb-2">
                     {testCase.description || `Test ${index + 1}`}
@@ -135,9 +137,7 @@ export const LabExecutor: React.FC<LabExecutorProps> = ({ lab }) => {
                         {new Date(submission.submittedAt).toLocaleString()}
                       </span>
                     </div>
-                    <div className="text-sm font-semibold text-gray-900">
-                      {submission.score}%
-                    </div>
+                    <div className="text-sm font-semibold text-gray-900">{submission.score}%</div>
                   </div>
                 ))}
               </div>

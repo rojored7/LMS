@@ -1,5 +1,6 @@
 /**
  * User types and role definitions
+ * Adapted for FastAPI backend (returns `name` instead of firstName/lastName)
  */
 
 export enum UserRole {
@@ -11,15 +12,21 @@ export enum UserRole {
 export interface User {
   id: string;
   email: string;
-  firstName: string;
-  lastName: string;
+  name: string;
   role: UserRole;
   avatar?: string;
-  bio?: string;
-  createdAt: string;
-  updatedAt: string;
-  enrolledCourses?: string[]; // Course IDs
-  isActive: boolean;
+  xp?: number;
+  theme?: string;
+  locale?: string;
+  createdAt?: string;
+  lastLoginAt?: string;
+  // Legacy snake_case aliases (backend migrated to camelCase)
+  created_at?: string;
+  last_login_at?: string;
+  // Computed for backward compat with components that use firstName/lastName
+  firstName?: string;
+  lastName?: string;
+  isActive?: boolean;
 }
 
 export interface UserProfile extends User {
@@ -40,17 +47,10 @@ export interface UserPreferences {
 }
 
 export interface UpdateUserDto {
-  firstName?: string;
-  lastName?: string;
-  bio?: string;
+  name?: string;
   avatar?: string;
-  phone?: string;
-  address?: string;
-  city?: string;
-  country?: string;
-  timezone?: string;
-  language?: string;
-  preferences?: Partial<UserPreferences>;
+  theme?: string;
+  locale?: string;
 }
 
 export interface UserStats {

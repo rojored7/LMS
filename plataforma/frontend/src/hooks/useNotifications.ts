@@ -66,7 +66,6 @@ export const useNotifications = (
     } catch (err: any) {
       // Only log error if it's not a 401 (authentication error)
       if (err?.response?.status !== 401) {
-        console.error('Error fetching notifications:', err);
         setError(err?.error?.message || 'Error al cargar notificaciones');
       } else {
         // For 401 errors, silently clear notifications
@@ -128,7 +127,7 @@ export const useNotifications = (
         setUnreadCount((prev) => Math.max(0, prev - 1));
       } catch (err: any) {
         if (err?.response?.status !== 401) {
-          console.error('Error marking notification as read:', err);
+          // Error handled by reverting to fetched state
         }
         // Revert on error
         await fetchNotifications();
@@ -152,7 +151,7 @@ export const useNotifications = (
       setUnreadCount(0);
     } catch (err: any) {
       if (err?.response?.status !== 401) {
-        console.error('Error marking all notifications as read:', err);
+        // Error handled by reverting to fetched state
       }
       // Revert on error
       await fetchNotifications();
@@ -180,7 +179,7 @@ export const useNotifications = (
         });
       } catch (err: any) {
         if (err?.response?.status !== 401) {
-          console.error('Error deleting notification:', err);
+          // Error handled by reverting to fetched state
         }
         // Revert on error
         await fetchNotifications();

@@ -16,7 +16,7 @@ class ContentEditorService {
    */
   async createModule(courseId: string, module: Omit<CourseModule, 'id'>): Promise<CourseModule> {
     const response = await api.post(`${this.baseURL}/${courseId}/modules`, module);
-    return response.data.module;
+    return (response as any).data;
   }
 
   async updateModule(
@@ -24,11 +24,8 @@ class ContentEditorService {
     moduleId: string,
     updates: Partial<CourseModule>
   ): Promise<CourseModule> {
-    const response = await api.put(
-      `${this.baseURL}/${courseId}/modules/${moduleId}`,
-      updates
-    );
-    return response.data.module;
+    const response = await api.put(`${this.baseURL}/${courseId}/modules/${moduleId}`, updates);
+    return (response as any).data;
   }
 
   async deleteModule(courseId: string, moduleId: string): Promise<void> {
@@ -53,7 +50,7 @@ class ContentEditorService {
       `${this.baseURL}/${courseId}/modules/${moduleId}/lessons`,
       lesson
     );
-    return response.data.lesson;
+    return (response as any).data;
   }
 
   async updateLesson(
@@ -66,26 +63,17 @@ class ContentEditorService {
       `${this.baseURL}/${courseId}/modules/${moduleId}/lessons/${lessonId}`,
       updates
     );
-    return response.data.lesson;
+    return (response as any).data;
   }
 
   async deleteLesson(courseId: string, moduleId: string, lessonId: string): Promise<void> {
-    await api.delete(
-      `${this.baseURL}/${courseId}/modules/${moduleId}/lessons/${lessonId}`
-    );
+    await api.delete(`${this.baseURL}/${courseId}/modules/${moduleId}/lessons/${lessonId}`);
   }
 
-  async reorderLessons(
-    courseId: string,
-    moduleId: string,
-    lessonIds: string[]
-  ): Promise<void> {
-    await api.put(
-      `${this.baseURL}/${courseId}/modules/${moduleId}/lessons/reorder`,
-      {
-        lessonIds,
-      }
-    );
+  async reorderLessons(courseId: string, moduleId: string, lessonIds: string[]): Promise<void> {
+    await api.put(`${this.baseURL}/${courseId}/modules/${moduleId}/lessons/reorder`, {
+      lessonIds,
+    });
   }
 
   /**
@@ -100,7 +88,7 @@ class ContentEditorService {
       `${this.baseURL}/${courseId}/modules/${moduleId}/quizzes`,
       quiz
     );
-    return response.data.quiz;
+    return (response as any).data;
   }
 
   async updateQuiz(
@@ -113,13 +101,11 @@ class ContentEditorService {
       `${this.baseURL}/${courseId}/modules/${moduleId}/quizzes/${quizId}`,
       updates
     );
-    return response.data.quiz;
+    return (response as any).data;
   }
 
   async deleteQuiz(courseId: string, moduleId: string, quizId: string): Promise<void> {
-    await api.delete(
-      `${this.baseURL}/${courseId}/modules/${moduleId}/quizzes/${quizId}`
-    );
+    await api.delete(`${this.baseURL}/${courseId}/modules/${moduleId}/quizzes/${quizId}`);
   }
 
   /**
@@ -135,7 +121,7 @@ class ContentEditorService {
       `${this.baseURL}/${courseId}/modules/${moduleId}/quizzes/${quizId}/questions`,
       question
     );
-    return response.data.question;
+    return (response as any).data;
   }
 
   async updateQuestion(
@@ -149,7 +135,7 @@ class ContentEditorService {
       `${this.baseURL}/${courseId}/modules/${moduleId}/quizzes/${quizId}/questions/${questionId}`,
       updates
     );
-    return response.data.question;
+    return (response as any).data;
   }
 
   async deleteQuestion(
@@ -171,11 +157,8 @@ class ContentEditorService {
     moduleId: string,
     lab: Omit<CourseLab, 'id'>
   ): Promise<CourseLab> {
-    const response = await api.post(
-      `${this.baseURL}/${courseId}/modules/${moduleId}/labs`,
-      lab
-    );
-    return response.data.lab;
+    const response = await api.post(`${this.baseURL}/${courseId}/modules/${moduleId}/labs`, lab);
+    return (response as any).data;
   }
 
   async updateLab(
@@ -188,7 +171,7 @@ class ContentEditorService {
       `${this.baseURL}/${courseId}/modules/${moduleId}/labs/${labId}`,
       updates
     );
-    return response.data.lab;
+    return (response as any).data;
   }
 
   async deleteLab(courseId: string, moduleId: string, labId: string): Promise<void> {
@@ -208,7 +191,7 @@ class ContentEditorService {
       `${this.baseURL}/${courseId}/modules/${moduleId}/labs/${labId}/test-cases`,
       testCase
     );
-    return response.data.testCase;
+    return (response as any).data;
   }
 
   async updateTestCase(
@@ -222,7 +205,7 @@ class ContentEditorService {
       `${this.baseURL}/${courseId}/modules/${moduleId}/labs/${labId}/test-cases/${testCaseId}`,
       updates
     );
-    return response.data.testCase;
+    return (response as any).data;
   }
 
   async deleteTestCase(
@@ -312,10 +295,7 @@ class ContentEditorService {
    */
   private autoSaveTimeout: NodeJS.Timeout | null = null;
 
-  setupAutoSave(
-    saveFunction: () => Promise<void>,
-    delay: number = 3000
-  ): () => void {
+  setupAutoSave(saveFunction: () => Promise<void>, delay: number = 3000): () => void {
     if (this.autoSaveTimeout) {
       clearTimeout(this.autoSaveTimeout);
     }
@@ -324,7 +304,7 @@ class ContentEditorService {
       try {
         await saveFunction();
       } catch (error) {
-        console.error('Error en auto-guardado:', error);
+        // Auto-save failure is silent; user can save manually
       }
     }, delay);
 

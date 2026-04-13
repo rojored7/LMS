@@ -21,11 +21,9 @@ function isVideoUrl(text: string): boolean {
   const videoPatterns = [
     /^https?:\/\/(www\.)?(youtube\.com|youtu\.be)/,
     /^https?:\/\/(www\.)?vimeo\.com/,
-    /^https?:\/\/(www\.)?loom\.com/,
-    /^https?:\/\/drive\.google\.com\/file/
   ];
 
-  return videoPatterns.some(pattern => pattern.test(text.trim()));
+  return videoPatterns.some((pattern) => pattern.test(text.trim()));
 }
 
 // Helper function to extract text from React children
@@ -107,7 +105,9 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, cla
             );
           },
           td({ children }) {
-            return <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{children}</td>;
+            return (
+              <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{children}</td>
+            );
           },
           // Custom rendering for blockquotes
           blockquote({ children }) {

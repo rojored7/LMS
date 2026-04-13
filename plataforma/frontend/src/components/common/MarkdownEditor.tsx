@@ -55,11 +55,12 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
         if (textarea) {
           const start = textarea.selectionStart;
           const end = textarea.selectionEnd;
-          const newValue = localValue.substring(0, start) + imageMarkdown + localValue.substring(end);
+          const newValue =
+            localValue.substring(0, start) + imageMarkdown + localValue.substring(end);
           handleChange(newValue);
         }
       } catch (error) {
-        console.error('Error uploading image:', error);
+        // Error handled by UI
       }
     }
   };
@@ -85,9 +86,11 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
             handleImagePaste(event.clipboardData);
           }
         }}
-        commands={[
-          // Default commands will be included
-        ]}
+        commands={
+          [
+            // Default commands will be included
+          ]
+        }
       />
 
       <style jsx global>{`
@@ -146,9 +149,15 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
           margin-bottom: 0.5em;
         }
 
-        .markdown-editor-wrapper .wmde-markdown h1 { font-size: 2em; }
-        .markdown-editor-wrapper .wmde-markdown h2 { font-size: 1.5em; }
-        .markdown-editor-wrapper .wmde-markdown h3 { font-size: 1.25em; }
+        .markdown-editor-wrapper .wmde-markdown h1 {
+          font-size: 2em;
+        }
+        .markdown-editor-wrapper .wmde-markdown h2 {
+          font-size: 1.5em;
+        }
+        .markdown-editor-wrapper .wmde-markdown h3 {
+          font-size: 1.25em;
+        }
 
         .markdown-editor-wrapper .wmde-markdown code {
           background-color: #f3f4f6;

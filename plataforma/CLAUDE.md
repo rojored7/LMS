@@ -6,35 +6,34 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Purpose:** Multi-course cybersecurity learning platform (LMS) with executable code labs in Docker sandboxes, role-based access control, and certificate generation.
 
-**Stack:** Node.js 20+ / TypeScript 5.3+ / React 18 / Express / Prisma / PostgreSQL 15 / Redis 7 / Docker
+**Stack:** Python 3.12 / FastAPI / SQLAlchemy / Alembic / React 18 / PostgreSQL 15 / Redis 7 / Docker
 
-**Type:** Monorepo with 3 main services (API, Web, Code Executor) + supporting services
+**Type:** Monorepo with 3 main services (FastAPI API, React Web, Node.js Code Executor)
 
 ## 2. ARCHITECTURE PATTERNS
 
-**Pattern:** Multi-service monorepo with clear separation of concerns.
+**Pattern:** Multi-service monorepo. Backend migrated from Express/Prisma to FastAPI/SQLAlchemy (April 2026).
 
 **Entry points:**
-- Backend API: `backend/src/server.ts`
-- Frontend: `frontend/src/main.tsx` → `App.tsx`
-- Code Executor: `executor/src/server.ts`
-- Content Importer: `content-importer/src/`
+- Backend API: `backend-fastapi/app/main.py`
+- Frontend: `frontend/src/main.tsx` -> `App.tsx`
+- Code Executor: `executor/src/server.ts` (Node.js, unchanged)
 
 **Core packages:**
-- Public API: `backend/src/routes/` (auth.routes, user.routes, course.routes)
-- Backend controllers: `backend/src/controllers/`
-- Backend services: `backend/src/services/`
+- Backend routers: `backend-fastapi/app/routers/` (auth, courses, users, badges, notifications, certificates, progress, training_profiles, admin)
+- Backend services: `backend-fastapi/app/services/`
+- Backend models: `backend-fastapi/app/models/` (SQLAlchemy)
+- Backend schemas: `backend-fastapi/app/schemas/` (Pydantic DTOs)
+- Backend middleware: `backend-fastapi/app/middleware/` (auth, error_handler, rate_limit)
 - Frontend components: `frontend/src/components/`, `frontend/src/pages/`
 - Frontend services: `frontend/src/services/` (API clients)
 - Frontend state: `frontend/src/store/` (Zustand stores)
 - Executor services: `executor/src/services/dockerExecutor.ts`
-- DO NOT MODIFY: `backend/node_modules/`, `frontend/node_modules/`, Prisma generated client
 
 **Database:**
-- Schema: `backend/prisma/schema.prisma`
-- **25 Prisma models**: User, RefreshToken, PasswordResetToken, TrainingProfile, Course, CourseProfile, Module, Lesson, Quiz, Question, QuizAttempt, Lab, LabSubmission, Project, ProjectSubmission, Enrollment, UserProgress, UserLessonProgress, Certificate, Badge, UserBadge, Notification, Translation, ChatMessage, ScormPackage
-- **6 Enums**: UserRole, CourseLevel, LessonType, QuestionType, ProjectStatus, NotificationType
-- Migrations: `backend/prisma/migrations/` (current: 20260308054548_init)
+- Models: `backend-fastapi/app/models/` (24 SQLAlchemy models in 6 files)
+- Migrations: `backend-fastapi/alembic/versions/`
+- **Enums**: UserRole, CourseLevel, LessonType, QuestionType, ProjectStatus, NotificationType
 
 ## 3. DETECTED CONVENTIONS
 

@@ -14,6 +14,7 @@ interface AssignCourseModalProps {
   onAssign: (courseId: string) => Promise<void>;
   userName: string;
   userEmail: string;
+  enrolledCourseIds?: string[];
 }
 
 export default function AssignCourseModal({
@@ -22,6 +23,7 @@ export default function AssignCourseModal({
   onAssign,
   userName,
   userEmail,
+  enrolledCourseIds = [],
 }: AssignCourseModalProps) {
   const [courses, setCourses] = useState<Course[]>([]);
   const [filteredCourses, setFilteredCourses] = useState<Course[]>([]);
@@ -41,7 +43,8 @@ export default function AssignCourseModal({
       setSelectedCourse(null);
       setError(null);
     }
-  }, [isOpen]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, enrolledCourseIds]);
 
   // Filter courses based on search term
   useEffect(() => {
@@ -59,13 +62,13 @@ export default function AssignCourseModal({
     setLoading(true);
     setError(null);
     try {
-      const data = await getCourses({ isPublished: true });
-      // Axios interceptor unwraps response.data, so data.data contains the courses array
-      setCourses(data.data || []);
-      setFilteredCourses(data.data || []);
+      const data = await getCourses();
+      const allCourses: Course[] = (data as any).data || [];
+      const available = allCourses.filter((c) => !enrolledCourseIds.includes(c.id));
+      setCourses(available);
+      setFilteredCourses(available);
     } catch (err) {
       setError('Error al cargar los cursos. Por favor, intenta de nuevo.');
-      console.error('Error loading courses:', err);
     } finally {
       setLoading(false);
     }
@@ -81,7 +84,6 @@ export default function AssignCourseModal({
       onClose();
     } catch (err: any) {
       setError(err?.error?.message || 'Error al asignar el curso. Por favor, intenta de nuevo.');
-      console.error('Error assigning course:', err);
     } finally {
       setAssigning(false);
     }
@@ -92,10 +94,7 @@ export default function AssignCourseModal({
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
-        onClick={onClose}
-      />
+      <div className="fixed inset-0 bg-black bg-opacity-50 transition-opacity" onClick={onClose} />
 
       {/* Modal */}
       <div className="flex min-h-full items-center justify-center p-4">
@@ -103,9 +102,7 @@ export default function AssignCourseModal({
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                Asignar Curso
-              </h2>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Asignar Curso</h2>
               <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                 Usuario: <span className="font-medium">{userName}</span> ({userEmail})
               </p>

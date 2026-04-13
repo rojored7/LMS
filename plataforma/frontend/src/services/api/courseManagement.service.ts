@@ -108,11 +108,15 @@ class CourseManagementService {
       });
     }
 
-    const response = await api.get(`${this.baseURL}?${params.toString()}`);
-    // Backend returns { success: true, data: { courses: [], total: 1, ... } }
-    // We need to unwrap the 'data' field to match CourseListResponse type
-    // If response.data.data doesn't exist, it means the response is already unwrapped or it's an error
-    return response.data.data || response.data;
+    const envelope: any = await api.get(`${this.baseURL}?${params.toString()}`);
+    // Axios interceptor already unwraps to {success, data, meta}
+    return {
+      courses: envelope.data || [],
+      total: envelope.meta?.total || 0,
+      page: envelope.meta?.page || 1,
+      limit: envelope.meta?.limit || 10,
+      totalPages: envelope.meta?.pages || 1,
+    };
   }
 
   /**
@@ -120,7 +124,7 @@ class CourseManagementService {
    */
   async getCourse(id: string): Promise<any> {
     const response = await api.get(`${this.baseURL}/${id}`);
-    return response.data.course;
+    return (response as any).data;
   }
 
   /**
@@ -128,7 +132,7 @@ class CourseManagementService {
    */
   async createCourse(data: CourseCreateData): Promise<any> {
     const response = await api.post(this.baseURL, data);
-    return response.data.course;
+    return (response as any).data;
   }
 
   /**
@@ -136,7 +140,7 @@ class CourseManagementService {
    */
   async updateCourse(id: string, data: CourseUpdateData): Promise<any> {
     const response = await api.put(`${this.baseURL}/${id}`, data);
-    return response.data.course;
+    return (response as any).data;
   }
 
   /**
@@ -151,7 +155,7 @@ class CourseManagementService {
    */
   async duplicateCourse(id: string, newTitle?: string): Promise<any> {
     const response = await api.post(`${this.baseURL}/${id}/duplicate`, { newTitle });
-    return response.data.course;
+    return (response as any).data;
   }
 
   /**
@@ -169,7 +173,7 @@ class CourseManagementService {
    */
   async publishCourse(id: string): Promise<any> {
     const response = await api.post(`${this.baseURL}/${id}/publish`);
-    return response.data.course;
+    return (response as any).data;
   }
 
   /**
@@ -177,7 +181,7 @@ class CourseManagementService {
    */
   async unpublishCourse(id: string): Promise<any> {
     const response = await api.post(`${this.baseURL}/${id}/unpublish`);
-    return response.data.course;
+    return (response as any).data;
   }
 
   /**
@@ -185,15 +189,19 @@ class CourseManagementService {
    */
   async addModule(courseId: string, module: CourseModule): Promise<any> {
     const response = await api.post(`${this.baseURL}/${courseId}/modules`, module);
-    return response.data.module;
+    return (response as any).data;
   }
 
   /**
    * Update module
    */
-  async updateModule(courseId: string, moduleId: string, module: Partial<CourseModule>): Promise<any> {
+  async updateModule(
+    courseId: string,
+    moduleId: string,
+    module: Partial<CourseModule>
+  ): Promise<any> {
     const response = await api.put(`${this.baseURL}/${courseId}/modules/${moduleId}`, module);
-    return response.data.module;
+    return (response as any).data;
   }
 
   /**
@@ -218,7 +226,7 @@ class CourseManagementService {
       `${this.baseURL}/${courseId}/modules/${moduleId}/lessons`,
       lesson
     );
-    return response.data.lesson;
+    return (response as any).data;
   }
 
   /**
@@ -234,7 +242,7 @@ class CourseManagementService {
       `${this.baseURL}/${courseId}/modules/${moduleId}/lessons/${lessonId}`,
       lesson
     );
-    return response.data.lesson;
+    return (response as any).data;
   }
 
   /**
@@ -257,7 +265,7 @@ class CourseManagementService {
       },
     });
 
-    return response.data.thumbnailUrl;
+    return (response as any).data;
   }
 
   /**
@@ -273,7 +281,7 @@ class CourseManagementService {
       },
     });
 
-    return response.data.videoUrl;
+    return (response as any).data;
   }
 
   /**

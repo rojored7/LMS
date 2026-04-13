@@ -1,10 +1,32 @@
 import '@testing-library/jest-dom';
 import { cleanup } from '@testing-library/react';
-import { afterEach, beforeAll, afterAll, vi } from 'vitest';
+import { afterEach, beforeAll, afterAll, vi, beforeEach } from 'vitest';
+import './setup/mocks';
+
+// Setup MSW
+import { server } from './mocks/server';
+
+// Start mock server
+beforeAll(() => {
+  server.listen({ onUnhandledRequest: 'warn' });
+});
+
+// Reset handlers and server after each test
+afterEach(() => {
+  server.resetHandlers();
+});
 
 // Cleanup after each test
 afterEach(() => {
   cleanup();
+  vi.clearAllMocks();
+  localStorage.clear();
+  sessionStorage.clear();
+});
+
+// Reset mocks before each test
+beforeEach(() => {
+  vi.clearAllMocks();
 });
 
 // Mock window.matchMedia
@@ -103,4 +125,5 @@ beforeAll(() => {
 afterAll(() => {
   console.error = originalError;
   console.warn = originalWarn;
+  server.close();
 });

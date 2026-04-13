@@ -30,7 +30,6 @@ export const UsersList: React.FC = () => {
       setUsers(response.data?.users || []);
     } catch (err: any) {
       toast.error('Error al cargar usuarios');
-      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -133,7 +132,10 @@ export const UsersList: React.FC = () => {
                 </tr>
               ) : filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                  <td
+                    colSpan={4}
+                    className="px-6 py-12 text-center text-gray-500 dark:text-gray-400"
+                  >
                     No se encontraron usuarios
                   </td>
                 </tr>
@@ -143,7 +145,8 @@ export const UsersList: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold">
-                          {user.firstName[0]}{user.lastName[0]}
+                          {user.firstName[0]}
+                          {user.lastName[0]}
                         </div>
                         <div className="ml-4">
                           <div className="text-sm font-medium text-gray-900 dark:text-white">

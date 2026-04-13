@@ -1,5 +1,6 @@
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
+import { timingSafeEqual, createHash } from 'crypto';
 import { z } from 'zod';
 import { config, SUPPORTED_LANGUAGES } from './config';
 import { dockerExecutor } from './services/dockerExecutor';
@@ -10,9 +11,36 @@ import { ExecuteRequest } from './types';
 // Create Express app
 const app = express();
 
-// Middleware
-app.use(cors());
+// Middleware - CORS restringido a origenes permitidos
+app.use(
+  cors({
+    origin: config.ALLOWED_ORIGINS,
+    methods: ['GET', 'POST'],
+    credentials: false,
+  })
+);
 app.use(express.json({ limit: '1mb' }));
+
+// Shared secret authentication - protege /execute de acceso no autorizado
+app.use((req: Request, res: Response, next: NextFunction) => {
+  if (req.path === '/health' || req.path === '/languages') {
+    return next();
+  }
+  const secret = String(req.headers['x-executor-secret'] || '');
+  const expected = config.EXECUTOR_SECRET;
+  const isValid = timingSafeEqual(
+    createHash('sha256').update(secret).digest(),
+    createHash('sha256').update(expected).digest()
+  );
+  if (!isValid) {
+    res.status(401).json({
+      success: false,
+      error: 'Unauthorized: invalid or missing executor secret',
+    });
+    return;
+  }
+  next();
+});
 
 // Request logging middleware
 app.use((req: Request, res: Response, next: NextFunction) => {
@@ -34,12 +62,16 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 const executeRequestSchema = z.object({
   code: z.string().min(1).max(50000), // Max 50KB of code
   language: z.enum(['python', 'javascript', 'bash']),
-  tests: z.array(z.object({
-    input: z.string().optional(),
-    expectedOutput: z.string(),
-    type: z.enum(['exact', 'contains', 'regex']),
-    description: z.string().optional(),
-  })).optional(),
+  tests: z
+    .array(
+      z.object({
+        input: z.string().optional(),
+        expectedOutput: z.string(),
+        type: z.enum(['exact', 'contains', 'regex']),
+        description: z.string().optional(),
+      })
+    )
+    .optional(),
   timeout: z.number().min(1000).max(60000).optional(), // 1s to 60s
   userId: z.string().optional(),
 });
@@ -48,7 +80,7 @@ const executeRequestSchema = z.object({
  * POST /execute
  * Executes user code in a secure sandbox
  */
-app.post('/execute', rateLimitMiddleware, async (req: Request, res: Response) => {
+app.post('/execute', rateLimitMiddleware, async (req: Request, res: Response): Promise<void> => {
   try {
     logger.info('Received execution request', {
       language: req.body.language,
@@ -62,11 +94,12 @@ app.post('/execute', rateLimitMiddleware, async (req: Request, res: Response) =>
       logger.warn('Invalid request body', {
         errors: validationResult.error.errors,
       });
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         error: 'Invalid request body',
         details: validationResult.error.errors,
       });
+      return;
     }
 
     const params: ExecuteRequest = validationResult.data;
@@ -85,7 +118,6 @@ app.post('/execute', rateLimitMiddleware, async (req: Request, res: Response) =>
       success: true,
       result,
     });
-
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Execution endpoint error', { error: errorMessage });
@@ -102,19 +134,13 @@ app.post('/execute', rateLimitMiddleware, async (req: Request, res: Response) =>
  * GET /health
  * Health check endpoint
  */
-app.get('/health', async (req: Request, res: Response) => {
+app.get('/health', async (_req: Request, res: Response) => {
   try {
     const dockerHealthy = await dockerExecutor.healthCheck();
 
     const health = {
       status: dockerHealthy ? 'healthy' : 'unhealthy',
       timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      docker: dockerHealthy,
-      memory: {
-        used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
-        total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024),
-      },
     };
 
     const statusCode = dockerHealthy ? 200 : 503;
@@ -134,7 +160,7 @@ app.get('/health', async (req: Request, res: Response) => {
  * GET /languages
  * Returns supported programming languages
  */
-app.get('/languages', (req: Request, res: Response) => {
+app.get('/languages', (_req: Request, res: Response) => {
   res.json({
     success: true,
     languages: SUPPORTED_LANGUAGES,
@@ -155,7 +181,8 @@ app.use((req: Request, res: Response) => {
 /**
  * Error handler
  */
-app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
   logger.error('Unhandled error', {
     error: err.message,
     stack: err.stack,

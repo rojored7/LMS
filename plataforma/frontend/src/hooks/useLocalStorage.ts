@@ -18,7 +18,6 @@ export function useLocalStorage<T>(key: string, initialValue: T) {
       const item = window.localStorage.getItem(key);
       return item ? JSON.parse(item) : initialValue;
     } catch (error) {
-      console.error(`Error reading localStorage key "${key}":`, error);
       return initialValue;
     }
   });
@@ -35,7 +34,7 @@ export function useLocalStorage<T>(key: string, initialValue: T) {
       // Save to localStorage
       window.localStorage.setItem(key, JSON.stringify(valueToStore));
     } catch (error) {
-      console.error(`Error setting localStorage key "${key}":`, error);
+      // localStorage write failure is non-critical
     }
   };
 
@@ -45,7 +44,7 @@ export function useLocalStorage<T>(key: string, initialValue: T) {
       window.localStorage.removeItem(key);
       setStoredValue(initialValue);
     } catch (error) {
-      console.error(`Error removing localStorage key "${key}":`, error);
+      // localStorage remove failure is non-critical
     }
   };
 
@@ -56,7 +55,7 @@ export function useLocalStorage<T>(key: string, initialValue: T) {
         try {
           setStoredValue(JSON.parse(e.newValue));
         } catch (error) {
-          console.error(`Error parsing localStorage change for key "${key}":`, error);
+          // Malformed cross-tab localStorage value; ignore
         }
       }
     };

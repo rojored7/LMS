@@ -51,106 +51,23 @@ export const mockUiStore = {
   removeToast: vi.fn(),
 };
 
-// Create test user objects
-export const createTestUser = (overrides = {}) => ({
-  id: 'test-user-id',
-  email: 'test@example.com',
-  firstName: 'Test',
-  lastName: 'User',
-  role: 'STUDENT',
-  isActive: true,
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
-  ...overrides,
-});
-
-export const createAdminUser = () => createTestUser({
-  id: 'admin-user-id',
-  email: 'admin@example.com',
-  role: 'ADMIN',
-  firstName: 'Admin',
-  lastName: 'User',
-});
-
-export const createInstructorUser = () => createTestUser({
-  id: 'instructor-user-id',
-  email: 'instructor@example.com',
-  role: 'INSTRUCTOR',
-  firstName: 'Instructor',
-  lastName: 'User',
-});
-
-// Create test course objects
-export const createTestCourse = (overrides = {}) => ({
-  id: 'test-course-id',
-  title: 'Test Course',
-  slug: 'test-course',
-  description: 'This is a test course',
-  objectives: ['Learn testing', 'Write good tests'],
-  duration: 10,
-  level: 'BEGINNER',
-  published: true,
-  thumbnail: '/images/course-thumb.jpg',
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
-  instructor: createInstructorUser(),
-  modules: [],
-  enrollmentCount: 0,
-  ...overrides,
-});
-
-// Create test module objects
-export const createTestModule = (overrides = {}) => ({
-  id: 'test-module-id',
-  title: 'Test Module',
-  description: 'Module for testing',
-  order: 1,
-  courseId: 'test-course-id',
-  lessons: [],
-  quizzes: [],
-  labs: [],
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
-  ...overrides,
-});
-
-// Create test quiz objects
-export const createTestQuiz = (overrides = {}) => ({
-  id: 'test-quiz-id',
-  title: 'Test Quiz',
-  description: 'Quiz for testing',
-  moduleId: 'test-module-id',
-  passingScore: 70,
-  questions: [
-    {
-      id: 'q1',
-      text: 'What is React?',
-      type: 'MULTIPLE_CHOICE',
-      options: [
-        { id: 'o1', text: 'A library', isCorrect: true },
-        { id: 'o2', text: 'A framework', isCorrect: false },
-        { id: 'o3', text: 'A language', isCorrect: false },
-        { id: 'o4', text: 'A database', isCorrect: false },
-      ],
-      points: 10,
-    },
-  ],
-  timeLimit: 30,
-  attempts: 3,
-  ...overrides,
-});
-
-// Create test enrollment
-export const createTestEnrollment = (overrides = {}) => ({
-  id: 'test-enrollment-id',
-  userId: 'test-user-id',
-  courseId: 'test-course-id',
-  enrolledAt: new Date().toISOString(),
-  completedAt: null,
-  progress: 0,
-  status: 'ACTIVE',
-  ...overrides,
-});
+// Re-export from mock-data for backward compatibility
+export {
+  createMockUser as createTestUser,
+  createMockAdmin as createAdminUser,
+  createMockInstructor as createInstructorUser,
+  createMockCourse as createTestCourse,
+  createMockModule as createTestModule,
+  createMockLesson as createTestLesson,
+  createMockQuiz as createTestQuiz,
+  createMockQuestion as createTestQuestion,
+  createMockEnrollment as createTestEnrollment,
+  createMockProgress as createTestProgress,
+  createMockCertificate as createTestCertificate,
+  createMockBadge as createTestBadge,
+  createMockNotification as createTestNotification,
+  createMockTrainingProfile as createTestTrainingProfile,
+} from './mock-data';
 
 // Mock API responses
 export const mockApiResponse = (data: any, status = 200) => ({

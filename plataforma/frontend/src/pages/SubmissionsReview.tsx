@@ -46,7 +46,6 @@ export const SubmissionsReview: React.FC = () => {
       setSubmissions(data);
     } catch (err: any) {
       toast.error('Error al cargar entregas');
-      console.error(err);
     } finally {
       setLoading(false);
     }

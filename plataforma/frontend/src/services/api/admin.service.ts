@@ -154,7 +154,7 @@ export async function assignCourseToUser(
     '/admin/enrollments',
     { userId, courseId }
   );
-  return response.data.enrollment;
+  return (response as any).data;
 }
 
 /**
@@ -184,7 +184,7 @@ export async function getAllEnrollments(
  * Get dashboard statistics
  */
 export async function getDashboardStats(): Promise<DashboardStats> {
-  const response = await api.get<ApiResponse<DashboardStats>>('/admin/stats');
+  const response = await api.get<ApiResponse<DashboardStats>>('/admin/dashboard');
   return response.data;
 }
 

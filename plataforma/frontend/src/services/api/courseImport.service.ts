@@ -1,4 +1,3 @@
-import axios from 'axios';
 import api from '../api';
 
 const API_URL = '/admin/courses';
@@ -63,16 +62,17 @@ class CourseImportService {
         },
       });
 
+      const envelope = response as any;
       return {
         success: true,
-        course: response.data.course,
-        message: response.data.message || 'Curso importado exitosamente',
+        course: envelope.data,
+        message: envelope.message || 'Curso importado exitosamente',
       };
     } catch (error: any) {
       return {
         success: false,
-        message: error.response?.data?.message || 'Error al importar el curso',
-        errors: error.response?.data?.errors || [],
+        message: error?.error?.message || 'Error al importar el curso',
+        errors: error?.error?.details || [],
       };
     }
   }
@@ -91,14 +91,14 @@ class CourseImportService {
         },
       });
 
-      return response.data;
+      return (response as any).data || response;
     } catch (error: any) {
       return {
         valid: false,
         errors: [
           {
             field: 'file',
-            message: error.response?.data?.message || 'Error al validar el archivo ZIP',
+            message: error?.error?.message || 'Error al validar el archivo ZIP',
           },
         ],
         warnings: [],
@@ -114,9 +114,7 @@ class CourseImportService {
     const validExtensions = ['.zip'];
 
     const hasValidType = validTypes.includes(file.type);
-    const hasValidExtension = validExtensions.some(ext =>
-      file.name.toLowerCase().endsWith(ext)
-    );
+    const hasValidExtension = validExtensions.some((ext) => file.name.toLowerCase().endsWith(ext));
 
     return hasValidType || hasValidExtension;
   }
@@ -137,7 +135,7 @@ class CourseImportService {
     if (bytes === 0) return '0 Bytes';
 
     const i = Math.floor(Math.log(bytes) / Math.log(1024));
-    return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
+    return Math.round((bytes / Math.pow(1024, i)) * 100) / 100 + ' ' + sizes[i];
   }
 }
 

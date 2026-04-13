@@ -12,7 +12,7 @@ import {
   Image,
   Printer,
   Check,
-  Loader2
+  Loader2,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from './Button';
@@ -46,7 +46,7 @@ const defaultFormats: ExportFormat[] = [
     icon: <FileText className="w-4 h-4" />,
     mimeType: 'application/pdf',
     extension: 'pdf',
-    available: true
+    available: true,
   },
   {
     id: 'excel',
@@ -54,7 +54,7 @@ const defaultFormats: ExportFormat[] = [
     icon: <FileSpreadsheet className="w-4 h-4" />,
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     extension: 'xlsx',
-    available: true
+    available: true,
   },
   {
     id: 'csv',
@@ -62,7 +62,7 @@ const defaultFormats: ExportFormat[] = [
     icon: <FileText className="w-4 h-4" />,
     mimeType: 'text/csv',
     extension: 'csv',
-    available: true
+    available: true,
   },
   {
     id: 'json',
@@ -70,7 +70,7 @@ const defaultFormats: ExportFormat[] = [
     icon: <FileJson className="w-4 h-4" />,
     mimeType: 'application/json',
     extension: 'json',
-    available: true
+    available: true,
   },
   {
     id: 'png',
@@ -78,7 +78,7 @@ const defaultFormats: ExportFormat[] = [
     icon: <Image className="w-4 h-4" />,
     mimeType: 'image/png',
     extension: 'png',
-    available: false
+    available: false,
   },
   {
     id: 'print',
@@ -86,8 +86,8 @@ const defaultFormats: ExportFormat[] = [
     icon: <Printer className="w-4 h-4" />,
     mimeType: 'text/html',
     extension: '',
-    available: true
-  }
+    available: true,
+  },
 ];
 
 export const ExportButton: React.FC<ExportButtonProps> = ({
@@ -99,7 +99,7 @@ export const ExportButton: React.FC<ExportButtonProps> = ({
   variant = 'dropdown',
   size = 'md',
   disabled = false,
-  customExporter
+  customExporter,
 }) => {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
@@ -119,7 +119,7 @@ export const ExportButton: React.FC<ExportButtonProps> = ({
         blob = await customExporter(format.id, data);
       } else if (onExport) {
         await onExport(format.id, data);
-        setExportedFormats(prev => new Set([...prev, format.id]));
+        setExportedFormats((prev) => new Set([...prev, format.id]));
         setExportingFormat(null);
         return;
       } else {
@@ -131,9 +131,8 @@ export const ExportButton: React.FC<ExportButtonProps> = ({
       downloadBlob(blob, `${filename}-${Date.now()}.${format.extension}`, format.mimeType);
 
       // Mark as exported
-      setExportedFormats(prev => new Set([...prev, format.id]));
+      setExportedFormats((prev) => new Set([...prev, format.id]));
     } catch (error) {
-      console.error(`Export failed for format ${format.id}:`, error);
       // Show error toast
     } finally {
       setExportingFormat(null);
@@ -171,13 +170,13 @@ export const ExportButton: React.FC<ExportButtonProps> = ({
 
       const headers = Object.keys(data[0]);
       const csvHeaders = headers.join(',');
-      const csvRows = data.map(row =>
-        headers.map(header => {
-          const value = row[header];
-          return typeof value === 'string' && value.includes(',')
-            ? `"${value}"`
-            : value;
-        }).join(',')
+      const csvRows = data.map((row) =>
+        headers
+          .map((header) => {
+            const value = row[header];
+            return typeof value === 'string' && value.includes(',') ? `"${value}"` : value;
+          })
+          .join(',')
       );
 
       return [csvHeaders, ...csvRows].join('\n');
@@ -205,7 +204,7 @@ export const ExportButton: React.FC<ExportButtonProps> = ({
   const generateExcel = async (data: any): Promise<Blob> => {
     // Simplified Excel generation - in real app, use xlsx library
     return new Blob([convertToCSV(data)], {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     });
   };
 
@@ -266,9 +265,7 @@ export const ExportButton: React.FC<ExportButtonProps> = ({
                         )}
                       </div>
                       <div className="flex-1">
-                        <p className="font-medium text-gray-900 dark:text-white">
-                          {format.label}
-                        </p>
+                        <p className="font-medium text-gray-900 dark:text-white">{format.label}</p>
                         {!format.available && (
                           <p className="text-xs text-gray-500 dark:text-gray-400">
                             {t('export.notAvailable', 'Not available')}
@@ -283,11 +280,7 @@ export const ExportButton: React.FC<ExportButtonProps> = ({
                 </div>
 
                 <div className="mt-6 flex justify-end">
-                  <Button
-                    variant="secondary"
-                    onClick={() => setShowModal(false)}
-                    size="sm"
-                  >
+                  <Button variant="secondary" onClick={() => setShowModal(false)} size="sm">
                     {t('common.close')}
                   </Button>
                 </div>
@@ -357,9 +350,7 @@ export const ExportButton: React.FC<ExportButtonProps> = ({
                 ) : (
                   format.icon
                 )}
-                <span className="text-sm text-gray-700 dark:text-gray-300">
-                  {format.label}
-                </span>
+                <span className="text-sm text-gray-700 dark:text-gray-300">{format.label}</span>
               </button>
             ))}
           </div>

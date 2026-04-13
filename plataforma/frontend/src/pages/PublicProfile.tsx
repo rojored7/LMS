@@ -48,7 +48,6 @@ export const PublicProfile: React.FC = () => {
       // For now, skip if not authenticated
     } catch (err: any) {
       toast.error('Error al cargar perfil');
-      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -69,9 +68,7 @@ export const PublicProfile: React.FC = () => {
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
             Perfil no encontrado
           </h2>
-          <p className="text-gray-600 dark:text-gray-400">
-            El usuario que buscas no existe
-          </p>
+          <p className="text-gray-600 dark:text-gray-400">El usuario que buscas no existe</p>
         </div>
       </div>
     );
@@ -85,7 +82,8 @@ export const PublicProfile: React.FC = () => {
           <div className="flex flex-col md:flex-row items-center gap-6">
             {/* Avatar */}
             <div className="w-32 h-32 rounded-full bg-white flex items-center justify-center text-blue-600 text-4xl font-bold shadow-lg">
-              {user.firstName[0]}{user.lastName[0]}
+              {user.firstName[0]}
+              {user.lastName[0]}
             </div>
 
             {/* User Info */}
@@ -93,11 +91,7 @@ export const PublicProfile: React.FC = () => {
               <h1 className="text-4xl font-bold mb-2">
                 {user.firstName} {user.lastName}
               </h1>
-              {user.bio && (
-                <p className="text-blue-100 mb-4 max-w-2xl">
-                  {user.bio}
-                </p>
-              )}
+              {user.bio && <p className="text-blue-100 mb-4 max-w-2xl">{user.bio}</p>}
 
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-sm">
                 <div className="flex items-center gap-2">
@@ -109,7 +103,7 @@ export const PublicProfile: React.FC = () => {
                   <Calendar className="w-4 h-4" />
                   <span>
                     Miembro desde{' '}
-                    {new Date(user.createdAt).toLocaleDateString('es-ES', {
+                    {new Date(user.created_at || '').toLocaleDateString('es-ES', {
                       year: 'numeric',
                       month: 'long',
                     })}
@@ -167,18 +161,14 @@ export const PublicProfile: React.FC = () => {
 
         {/* Badges Section */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
-            Logros y Badges
-          </h2>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Logros y Badges</h2>
           <PublicBadges userBadges={userBadges} maxDisplay={12} />
         </div>
 
         {/* Certificates Section */}
         {certificates.length > 0 && (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
-              Certificados
-            </h2>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Certificados</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {certificates.map((certificate) => (
                 <CertificateCard key={certificate.id} certificate={certificate} />

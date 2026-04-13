@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # ===== BASE DE DATOS POSTGRESQL =====
   postgres:
@@ -8,7 +6,7 @@ services:
     environment:
       POSTGRES_DB: ${DB_NAME:-ciber_platform}
       POSTGRES_USER: ${DB_USER:-ciber_admin}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme123}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD es requerido en .env}
       POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=es_ES.UTF-8"
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -30,7 +28,7 @@ services:
   redis:
     image: redis:7-alpine
     container_name: ciber-redis
-    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redispass123}
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD es requerido en .env}
     volumes:
       - redis_data:/data
     ports:
@@ -38,49 +36,46 @@ services:
     networks:
       - ciber-network
     healthcheck:
-      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 3s
       retries: 5
     restart: unless-stopped
 
-  # ===== BACKEND API =====
+  # ===== BACKEND API (FastAPI) =====
   backend:
     build:
-      context: ./backend
+      context: ./backend-fastapi
       dockerfile: Dockerfile
       target: ${NODE_ENV:-development}
     container_name: ciber-backend
     environment:
       NODE_ENV: ${NODE_ENV:-development}
       PORT: 4000
-      DATABASE_URL: postgresql://${DB_USER:-ciber_admin}:${DB_PASSWORD:-changeme123}@postgres:5432/${DB_NAME:-ciber_platform}?schema=public
-      REDIS_URL: redis://default:${REDIS_PASSWORD:-redispass123}@redis:6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-redispass123}
-      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-your-super-secret-refresh-key-change-in-production}
-      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1h}
-      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
-      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000,http://localhost}
-      EXECUTOR_URL: http://executor:5000
+      DATABASE_URL: postgresql+asyncpg://${DB_USER:-ciber_admin}:${DB_PASSWORD:?DB_PASSWORD requerido en .env}@postgres:5432/${DB_NAME:-ciber_platform}
+      REDIS_URL: redis://default:${REDIS_PASSWORD:?REDIS_PASSWORD requerido en .env}@redis:6379
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_EXPIRES_IN_MINUTES: ${JWT_EXPIRES_IN_MINUTES:-15}
+      JWT_REFRESH_EXPIRES_IN_DAYS: ${JWT_REFRESH_EXPIRES_IN_DAYS:-7}
+      CORS_ORIGINS: '["http://localhost:3000","http://localhost"]'
+      EXECUTOR_SERVICE_URL: http://executor:5000
+      EXECUTOR_SECRET: ${EXECUTOR_SECRET:?EXECUTOR_SECRET requerido en .env}
       SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
       SMTP_PORT: ${SMTP_PORT:-587}
-      SMTP_USER: ${SMTP_USER}
-      SMTP_PASS: ${SMTP_PASS}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
       SMTP_FROM: ${SMTP_FROM:-noreply@ciberplatform.com}
-      SMTP_SECURE: ${SMTP_SECURE:-false}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
-      RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-900000}
-      RATE_LIMIT_MAX_REQUESTS: ${RATE_LIMIT_MAX_REQUESTS:-1000}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
     ports:
-      - "${BACKEND_PORT:-4000}:4000"
+      - "127.0.0.1:${BACKEND_PORT:-4000}:4000"
     volumes:
-      - ./backend/src:/app/src:delegated
-      - ./backend/prisma:/app/prisma:delegated
-      - ../:/content:ro
+      - ./backend-fastapi/app:/app/app:delegated
+      - ./backend-fastapi/alembic:/app/alembic:delegated
+      - ..:/content:ro
       - backend_uploads:/app/uploads
       - backend_logs:/app/logs
-      - /app/node_modules
     depends_on:
       postgres:
         condition: service_healthy
@@ -88,10 +83,12 @@ services:
         condition: service_healthy
     networks:
       - ciber-network
-    command: npm run dev
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; r=httpx.get('http://localhost:4000/health'); assert r.status_code==200"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
     restart: unless-stopped
-    stdin_open: true
-    tty: true
 
   # ===== CODE EXECUTOR SERVICE =====
   executor:
@@ -108,9 +105,11 @@ services:
       SANDBOX_MEMORY_LIMIT: ${SANDBOX_MEMORY_LIMIT:-256m}
       SANDBOX_CPU_LIMIT: ${SANDBOX_CPU_LIMIT:-1}
       SANDBOX_NETWORK_DISABLED: ${SANDBOX_NETWORK_DISABLED:-true}
-      REDIS_URL: redis://default:${REDIS_PASSWORD:-redispass123}@redis:6379
+      REDIS_URL: redis://default:${REDIS_PASSWORD:?REDIS_PASSWORD requerido en .env}@redis:6379
+      EXECUTOR_SECRET: ${EXECUTOR_SECRET:?EXECUTOR_SECRET requerido en .env}
+      ALLOWED_ORIGINS: ${EXECUTOR_ALLOWED_ORIGINS:-http://localhost:4000}
     ports:
-      - "${EXECUTOR_PORT:-5000}:5000"
+      - "127.0.0.1:${EXECUTOR_PORT:-5000}:5000"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./executor/src:/app/src:delegated
@@ -120,7 +119,6 @@ services:
         condition: service_healthy
     networks:
       - ciber-network
-    privileged: true
     command: npm run dev
     restart: unless-stopped
 
@@ -140,7 +138,7 @@ services:
       WDS_SOCKET_PORT: 0
       WATCHPACK_POLLING: true
     ports:
-      - "${FRONTEND_PORT:-3000}:3000"
+      - "127.0.0.1:${FRONTEND_PORT:-3000}:3000"
     volumes:
       - ./frontend/src:/app/src:delegated
       - ./frontend/public:/app/public:delegated
@@ -187,7 +185,7 @@ services:
     container_name: ciber-importer
     environment:
       NODE_ENV: ${NODE_ENV:-development}
-      DATABASE_URL: postgresql://${DB_USER:-ciber_admin}:${DB_PASSWORD:-changeme123}@postgres:5432/${DB_NAME:-ciber_platform}?schema=public
+      DATABASE_URL: postgresql://${DB_USER:-ciber_admin}:${DB_PASSWORD:?DB_PASSWORD requerido en .env}@postgres:5432/${DB_NAME:-ciber_platform}?schema=public
       CONTENT_PATH: /content
     volumes:
       - ..:/content:ro

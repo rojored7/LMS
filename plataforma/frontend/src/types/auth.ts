@@ -1,8 +1,9 @@
 /**
- * Authentication types
+ * Authentication types - Adapted for FastAPI backend
+ * Tokens are in HttpOnly cookies, NOT in response body
  */
 
-import { User, UserRole } from './user';
+import { User } from './user';
 
 export interface LoginRequest {
   email: string;
@@ -12,30 +13,25 @@ export interface LoginRequest {
 export interface RegisterRequest {
   email: string;
   password: string;
-  confirmPassword: string;
   name: string;
 }
 
 export interface AuthResponse {
   user: User;
-  accessToken: string;
-  refreshToken: string;
-  expiresIn: number; // seconds
+  message: string;
 }
 
 export interface RefreshTokenRequest {
-  refreshToken: string;
+  refresh_token?: string;
 }
 
 export interface RefreshTokenResponse {
-  accessToken: string;
-  refreshToken: string;
-  expiresIn: number;
+  message: string;
 }
 
 export interface ChangePasswordRequest {
-  currentPassword: string;
-  newPassword: string;
+  current_password: string;
+  new_password: string;
 }
 
 export interface ResetPasswordRequest {
@@ -44,17 +40,11 @@ export interface ResetPasswordRequest {
 
 export interface ResetPasswordConfirmRequest {
   token: string;
-  newPassword: string;
-}
-
-export interface VerifyEmailRequest {
-  token: string;
+  password: string;
 }
 
 export interface AuthState {
   user: User | null;
-  accessToken: string | null;
-  refreshToken: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;

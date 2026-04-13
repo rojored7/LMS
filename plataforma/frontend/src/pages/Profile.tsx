@@ -58,9 +58,7 @@ export const Profile: React.FC = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-8">
-          Mi Perfil
-        </h1>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-8">Mi Perfil</h1>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Sidebar */}
@@ -79,15 +77,13 @@ export const Profile: React.FC = () => {
                     {user.firstName} {user.lastName}
                   </h2>
 
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                    {user.email}
-                  </p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">{user.email}</p>
 
                   <Badge variant="info">{ROLE_LABELS[user.role]}</Badge>
 
                   <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
                     <p className="text-xs text-gray-500 dark:text-gray-500">
-                      Miembro desde {formatDate(user.createdAt)}
+                      Miembro desde {formatDate(user.created_at)}
                     </p>
                   </div>
                 </div>
@@ -104,11 +100,7 @@ export const Profile: React.FC = () => {
                     Información Personal
                   </h3>
                   {!isEditing && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setIsEditing(true)}
-                    >
+                    <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
                       Editar
                     </Button>
                   )}
@@ -173,11 +165,7 @@ export const Profile: React.FC = () => {
                     </div>
 
                     <div className="flex gap-2 justify-end">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        onClick={() => setIsEditing(false)}
-                      >
+                      <Button type="button" variant="ghost" onClick={() => setIsEditing(false)}>
                         Cancelar
                       </Button>
                       <Button type="submit" variant="primary" isLoading={isLoading}>
@@ -216,9 +204,7 @@ export const Profile: React.FC = () => {
                       <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Rol
                       </p>
-                      <p className="text-gray-900 dark:text-white">
-                        {ROLE_LABELS[user.role]}
-                      </p>
+                      <p className="text-gray-900 dark:text-white">{ROLE_LABELS[user.role]}</p>
                     </div>
                   </div>
                 )}

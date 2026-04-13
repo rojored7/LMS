@@ -47,7 +47,8 @@ export const getNotifications = async (
  */
 export const getUnreadCount = async (): Promise<number> => {
   const response = await api.get<UnreadCountResponse>('/notifications/unread-count');
-  return response.data.count;
+  const envelope = response as any;
+  return typeof envelope.data === 'number' ? envelope.data : (envelope.data?.count ?? 0);
 };
 
 /**
@@ -55,14 +56,14 @@ export const getUnreadCount = async (): Promise<number> => {
  * @param notificationId - Notification ID
  */
 export const markAsRead = async (notificationId: string): Promise<void> => {
-  await api.put(`/notifications/${notificationId}/read`);
+  await api.post(`/notifications/${notificationId}/read`);
 };
 
 /**
  * Mark all notifications as read
  */
 export const markAllAsRead = async (): Promise<void> => {
-  await api.put('/notifications/read-all');
+  await api.post('/notifications/read-all');
 };
 
 /**

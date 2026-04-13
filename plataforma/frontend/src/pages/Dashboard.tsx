@@ -162,10 +162,10 @@ export const Dashboard: React.FC = () => {
                 <Card key={enrollment.id} variant="outlined">
                   <CardBody>
                     {/* Course Thumbnail */}
-                    {enrollment.course.thumbnail && (
+                    {enrollment.course?.thumbnail && (
                       <img
                         src={enrollment.course.thumbnail}
-                        alt={enrollment.course.title}
+                        alt={enrollment.course?.title || ''}
                         className="w-full h-40 object-cover rounded-md mb-4"
                       />
                     )}
@@ -173,19 +173,21 @@ export const Dashboard: React.FC = () => {
                     {/* Course Info */}
                     <div className="mb-4">
                       <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                        {enrollment.course.title}
+                        {enrollment.course?.title || 'Curso'}
                       </h3>
                       <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mb-3">
-                        {enrollment.course.description}
+                        {enrollment.course?.description || ''}
                       </p>
 
                       {/* Level Badge */}
+                      {enrollment.course?.level && (
                       <Badge
-                        className={COURSE_LEVEL_COLORS[enrollment.course.level]}
+                        className={COURSE_LEVEL_COLORS[enrollment.course.level] || ''}
                         size="sm"
                       >
-                        {COURSE_LEVEL_LABELS[enrollment.course.level]}
+                        {COURSE_LEVEL_LABELS[enrollment.course.level] || enrollment.course.level}
                       </Badge>
+                      )}
                     </div>
 
                     {/* Progress Bar */}

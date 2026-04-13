@@ -15,7 +15,7 @@ import {
   Info,
   Trash2,
   Eye,
-  Download
+  Download,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../common/Button';
@@ -61,7 +61,7 @@ export const ScormUploader: React.FC<ScormUploaderProps> = ({
   onUploadComplete,
   maxSize = MAX_FILE_SIZE,
   acceptedVersions = ACCEPTED_VERSIONS,
-  className
+  className,
 }) => {
   const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -106,13 +106,11 @@ export const ScormUploader: React.FC<ScormUploaderProps> = ({
     for (const file of files) {
       if (!file.name.endsWith('.zip')) {
         // Show error toast
-        console.error('Only ZIP files are accepted');
         continue;
       }
 
       if (file.size > maxSize * 1024 * 1024) {
         // Show error toast
-        console.error(`File size exceeds ${maxSize}MB limit`);
         continue;
       }
 
@@ -123,10 +121,10 @@ export const ScormUploader: React.FC<ScormUploaderProps> = ({
         size: file.size,
         uploadDate: new Date(),
         status: 'uploading',
-        progress: 0
+        progress: 0,
       };
 
-      setPackages(prev => [...prev, newPackage]);
+      setPackages((prev) => [...prev, newPackage]);
 
       // Simulate upload
       await uploadPackage(file, packageId);
@@ -136,18 +134,20 @@ export const ScormUploader: React.FC<ScormUploaderProps> = ({
   const uploadPackage = async (file: File, packageId: string) => {
     // Simulate upload progress
     const progressInterval = setInterval(() => {
-      setPackages(prev => prev.map(pkg => {
-        if (pkg.id === packageId) {
-          const newProgress = Math.min(pkg.progress + 10, 100);
-          if (newProgress === 100) {
-            clearInterval(progressInterval);
-            validatePackage(packageId);
-            return { ...pkg, progress: newProgress, status: 'validating' };
+      setPackages((prev) =>
+        prev.map((pkg) => {
+          if (pkg.id === packageId) {
+            const newProgress = Math.min(pkg.progress + 10, 100);
+            if (newProgress === 100) {
+              clearInterval(progressInterval);
+              validatePackage(packageId);
+              return { ...pkg, progress: newProgress, status: 'validating' };
+            }
+            return { ...pkg, progress: newProgress };
           }
-          return { ...pkg, progress: newProgress };
-        }
-        return pkg;
-      }));
+          return pkg;
+        })
+      );
     }, 300);
   };
 
@@ -163,20 +163,22 @@ export const ScormUploader: React.FC<ScormUploaderProps> = ({
           title: 'Sample SCORM Course',
           description: 'This is a sample SCORM course for testing',
           duration: '2 hours',
-          objectives: ['Objective 1', 'Objective 2', 'Objective 3']
-        }
+          objectives: ['Objective 1', 'Objective 2', 'Objective 3'],
+        },
       };
 
-      setPackages(prev => prev.map(pkg => {
-        if (pkg.id === packageId) {
-          return {
-            ...pkg,
-            status: validation.isValid ? 'valid' : 'invalid',
-            validation
-          };
-        }
-        return pkg;
-      }));
+      setPackages((prev) =>
+        prev.map((pkg) => {
+          if (pkg.id === packageId) {
+            return {
+              ...pkg,
+              status: validation.isValid ? 'valid' : 'invalid',
+              validation,
+            };
+          }
+          return pkg;
+        })
+      );
 
       if (validation.isValid) {
         processPackage(packageId);
@@ -187,21 +189,25 @@ export const ScormUploader: React.FC<ScormUploaderProps> = ({
   const processPackage = async (packageId: string) => {
     // Simulate processing
     setTimeout(() => {
-      setPackages(prev => prev.map(pkg => {
-        if (pkg.id === packageId) {
-          return { ...pkg, status: 'processing' };
-        }
-        return pkg;
-      }));
+      setPackages((prev) =>
+        prev.map((pkg) => {
+          if (pkg.id === packageId) {
+            return { ...pkg, status: 'processing' };
+          }
+          return pkg;
+        })
+      );
     }, 1000);
 
     setTimeout(() => {
-      setPackages(prev => prev.map(pkg => {
-        if (pkg.id === packageId) {
-          return { ...pkg, status: 'ready' };
-        }
-        return pkg;
-      }));
+      setPackages((prev) =>
+        prev.map((pkg) => {
+          if (pkg.id === packageId) {
+            return { ...pkg, status: 'ready' };
+          }
+          return pkg;
+        })
+      );
 
       if (onUploadComplete) {
         onUploadComplete(packageId);
@@ -210,7 +216,7 @@ export const ScormUploader: React.FC<ScormUploaderProps> = ({
   };
 
   const removePackage = (packageId: string) => {
-    setPackages(prev => prev.filter(pkg => pkg.id !== packageId));
+    setPackages((prev) => prev.filter((pkg) => pkg.id !== packageId));
     if (selectedPackage?.id === packageId) {
       setSelectedPackage(null);
     }
@@ -278,10 +284,7 @@ export const ScormUploader: React.FC<ScormUploaderProps> = ({
             {t('scorm.dragDropText', 'Drag and drop your SCORM package here, or click to browse')}
           </p>
 
-          <Button
-            variant="primary"
-            onClick={() => fileInputRef.current?.click()}
-          >
+          <Button variant="primary" onClick={() => fileInputRef.current?.click()}>
             <Upload className="w-4 h-4 mr-2" />
             {t('scorm.selectFile', 'Select File')}
           </Button>
@@ -302,7 +305,7 @@ export const ScormUploader: React.FC<ScormUploaderProps> = ({
           </h3>
 
           <div className="space-y-3">
-            {packages.map(pkg => (
+            {packages.map((pkg) => (
               <div
                 key={pkg.id}
                 className={cn(
@@ -313,9 +316,7 @@ export const ScormUploader: React.FC<ScormUploaderProps> = ({
                 )}
                 onClick={() => setSelectedPackage(pkg)}
               >
-                <div className="flex-shrink-0">
-                  {getStatusIcon(pkg.status)}
-                </div>
+                <div className="flex-shrink-0">{getStatusIcon(pkg.status)}</div>
 
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-gray-900 dark:text-white truncate">
@@ -452,7 +453,10 @@ export const ScormUploader: React.FC<ScormUploaderProps> = ({
                       {t('scorm.ready', 'Package Ready')}
                     </p>
                     <p className="text-sm text-green-700 dark:text-green-400 mt-1">
-                      {t('scorm.readyMessage', 'The SCORM package has been validated and is ready to use.')}
+                      {t(
+                        'scorm.readyMessage',
+                        'The SCORM package has been validated and is ready to use.'
+                      )}
                     </p>
                   </div>
                 </div>
@@ -471,13 +475,20 @@ export const ScormUploader: React.FC<ScormUploaderProps> = ({
               {t('scorm.aboutTitle', 'About SCORM Packages')}
             </h4>
             <p className="text-sm text-blue-700 dark:text-blue-400 mt-1">
-              {t('scorm.aboutText', 'SCORM (Sharable Content Object Reference Model) is a set of technical standards for e-learning software products. SCORM packages allow you to import external course content that can track learner progress and completion.')}
+              {t(
+                'scorm.aboutText',
+                'SCORM (Sharable Content Object Reference Model) is a set of technical standards for e-learning software products. SCORM packages allow you to import external course content that can track learner progress and completion.'
+              )}
             </p>
             <ul className="mt-3 space-y-1 text-sm text-blue-700 dark:text-blue-400">
               <li>• {t('scorm.benefit1', 'Track learner progress and completion')}</li>
-              <li>• {t('scorm.benefit2', 'Import content from any SCORM-compliant authoring tool')}</li>
+              <li>
+                • {t('scorm.benefit2', 'Import content from any SCORM-compliant authoring tool')}
+              </li>
               <li>• {t('scorm.benefit3', 'Standardized format ensures compatibility')}</li>
-              <li>• {t('scorm.benefit4', 'Includes quizzes, interactions, and multimedia content')}</li>
+              <li>
+                • {t('scorm.benefit4', 'Includes quizzes, interactions, and multimedia content')}
+              </li>
             </ul>
           </div>
         </div>

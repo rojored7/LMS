@@ -50,7 +50,6 @@ export const UserProgressDetail: React.FC = () => {
       setAllBadges(allBadgesData);
     } catch (err: any) {
       toast.error('Error al cargar datos del usuario');
-      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -91,7 +90,8 @@ export const UserProgressDetail: React.FC = () => {
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
         <div className="flex items-center gap-4">
           <div className="w-20 h-20 rounded-full bg-blue-600 flex items-center justify-center text-white text-2xl font-bold">
-            {user.firstName[0]}{user.lastName[0]}
+            {user.firstName[0]}
+            {user.lastName[0]}
           </div>
           <div className="flex-1">
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -128,8 +128,10 @@ export const UserProgressDetail: React.FC = () => {
               <p className="text-2xl font-bold text-gray-900 dark:text-white">
                 {userEnrollments?.enrollments?.length > 0
                   ? Math.round(
-                      userEnrollments.enrollments.reduce((acc: number, e: any) => acc + e.progress, 0) /
-                        userEnrollments.enrollments.length
+                      userEnrollments.enrollments.reduce(
+                        (acc: number, e: any) => acc + e.progress,
+                        0
+                      ) / userEnrollments.enrollments.length
                     )
                   : 0}
                 %
@@ -155,26 +157,23 @@ export const UserProgressDetail: React.FC = () => {
 
       {/* Badges Showcase */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-8">
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-          Logros y Badges
-        </h2>
+        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Logros y Badges</h2>
         <BadgesShowcase userBadges={userBadges} allBadges={allBadges} />
       </div>
 
       {/* Course Progress */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-          Progreso por Curso
-        </h2>
+        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Progreso por Curso</h2>
 
         {userEnrollments?.enrollments?.length === 0 ? (
-          <p className="text-center py-8 text-gray-500 dark:text-gray-400">
-            Sin cursos asignados
-          </p>
+          <p className="text-center py-8 text-gray-500 dark:text-gray-400">Sin cursos asignados</p>
         ) : (
           <div className="space-y-4">
             {userEnrollments?.enrollments?.map((enrollment: any) => (
-              <div key={enrollment.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+              <div
+                key={enrollment.id}
+                className="border border-gray-200 dark:border-gray-700 rounded-lg p-4"
+              >
                 <div className="flex items-start justify-between mb-3">
                   <div>
                     <h3 className="font-semibold text-gray-900 dark:text-white">

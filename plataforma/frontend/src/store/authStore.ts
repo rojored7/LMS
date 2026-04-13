@@ -1,27 +1,41 @@
 /**
  * Authentication store using Zustand
- * Manages user authentication state
+ * Tokens se manejan via HttpOnly cookies (no localStorage)
+ * Solo se persiste user e isAuthenticated en Zustand
  */
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { User, AuthResponse } from '../types';
-import { STORAGE_KEYS } from '../utils/constants';
+import type { User } from '../types';
 import authService from '../services/auth.service';
+
+function mapUser(raw: any): User {
+  const name = raw.name || '';
+  const parts = name.split(' ');
+  return {
+    ...raw,
+    name,
+    firstName: parts[0] || '',
+    lastName: parts.slice(1).join(' ') || '',
+    isActive: true,
+  };
+}
+
+interface RegisterData {
+  email: string;
+  password: string;
+  name: string;
+}
 
 interface AuthState {
   user: User | null;
-  accessToken: string | null;
-  refreshToken: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
 
-  // Actions
   setUser: (user: User | null) => void;
-  setTokens: (accessToken: string, refreshToken: string) => void;
   login: (email: string, password: string) => Promise<void>;
-  register: (data: any) => Promise<void>;
+  register: (data: RegisterData) => Promise<void>;
   logout: () => Promise<void>;
   clearError: () => void;
   setLoading: (isLoading: boolean) => void;
@@ -32,8 +46,6 @@ export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
       user: null,
-      accessToken: null,
-      refreshToken: null,
       isAuthenticated: false,
       isLoading: false,
       error: null,
@@ -42,36 +54,25 @@ export const useAuthStore = create<AuthState>()(
         set({ user, isAuthenticated: !!user });
       },
 
-      setTokens: (accessToken, refreshToken) => {
-        set({ accessToken, refreshToken });
-
-        // Store tokens in localStorage
-        localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
-        localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
-      },
-
       login: async (email, password) => {
         set({ isLoading: true, error: null });
 
         try {
-          const response: AuthResponse = await authService.login({ email, password });
+          const response = await authService.login({ email, password });
 
-          // Update store with user and tokens
           set({
-            user: response.user,
-            accessToken: response.accessToken,
-            refreshToken: response.refreshToken,
+            user: mapUser(response.user),
             isAuthenticated: true,
             isLoading: false,
           });
-
-          // Store tokens in localStorage
-          localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, response.accessToken);
-          localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, response.refreshToken);
-          localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(response.user));
-        } catch (error: any) {
+          // Tokens quedan en HttpOnly cookies (seteadas por el backend)
+        } catch (error: unknown) {
+          const message =
+            error && typeof error === 'object' && 'error' in error
+              ? (error as { error: { message: string } }).error.message
+              : 'Error al iniciar sesion';
           set({
-            error: error?.error?.message || 'Error al iniciar sesión',
+            error: message,
             isLoading: false,
             isAuthenticated: false,
           });
@@ -79,28 +80,24 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      register: async (data) => {
+      register: async (data: RegisterData) => {
         set({ isLoading: true, error: null });
 
         try {
-          const response: AuthResponse = await authService.register(data);
+          const response = await authService.register(data);
 
-          // Update store with user and tokens
           set({
-            user: response.user,
-            accessToken: response.accessToken,
-            refreshToken: response.refreshToken,
+            user: mapUser(response.user),
             isAuthenticated: true,
             isLoading: false,
           });
-
-          // Store tokens in localStorage
-          localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, response.accessToken);
-          localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, response.refreshToken);
-          localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(response.user));
-        } catch (error: any) {
+        } catch (error: unknown) {
+          const message =
+            error && typeof error === 'object' && 'error' in error
+              ? (error as { error: { message: string } }).error.message
+              : 'Error al registrarse';
           set({
-            error: error?.error?.message || 'Error al registrarse',
+            error: message,
             isLoading: false,
             isAuthenticated: false,
           });
@@ -111,23 +108,15 @@ export const useAuthStore = create<AuthState>()(
       logout: async () => {
         try {
           await authService.logout();
-        } catch (error) {
-          console.error('Logout error:', error);
+        } catch {
+          // Ignorar error de logout, limpiar estado local de todas formas
         } finally {
-          // Clear store
           set({
             user: null,
-            accessToken: null,
-            refreshToken: null,
             isAuthenticated: false,
             isLoading: false,
             error: null,
           });
-
-          // Clear localStorage
-          localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
-          localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
-          localStorage.removeItem(STORAGE_KEYS.USER);
         }
       },
 
@@ -142,21 +131,17 @@ export const useAuthStore = create<AuthState>()(
       refreshUser: async () => {
         try {
           const user = await authService.getCurrentUser();
-          set({ user });
-          localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
-        } catch (error) {
-          console.error('Error refreshing user:', error);
-          // If refresh fails, logout
-          get().logout();
+          set({ user: mapUser(user) });
+        } catch {
+          await get().logout();
         }
       },
     }),
     {
       name: 'auth-storage',
+      version: 2,
       partialize: (state) => ({
         user: state.user,
-        accessToken: state.accessToken,
-        refreshToken: state.refreshToken,
         isAuthenticated: state.isAuthenticated,
       }),
     }

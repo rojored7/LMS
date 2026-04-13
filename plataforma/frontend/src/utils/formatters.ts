@@ -8,11 +8,15 @@
  * @param format - Format type ('short', 'long', 'time')
  * @returns Formatted date string
  */
-export function formatDate(date: string | Date, format: 'short' | 'long' | 'time' = 'short'): string {
+export function formatDate(
+  date: string | Date | undefined | null,
+  format: 'short' | 'long' | 'time' = 'short'
+): string {
+  if (!date) return 'Sin fecha';
   const dateObj = typeof date === 'string' ? new Date(date) : date;
 
   if (isNaN(dateObj.getTime())) {
-    return 'Fecha inválida';
+    return 'Fecha invalida';
   }
 
   const options: Intl.DateTimeFormatOptions = {

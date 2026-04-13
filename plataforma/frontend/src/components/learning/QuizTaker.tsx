@@ -66,7 +66,10 @@ export const QuizTaker: React.FC<QuizTakerProps> = ({ quiz, onComplete }) => {
       if (isChecked) {
         newAnswers.set(questionId, [...currentAnswer, optionId]);
       } else {
-        newAnswers.set(questionId, currentAnswer.filter((id) => id !== optionId));
+        newAnswers.set(
+          questionId,
+          currentAnswer.filter((id) => id !== optionId)
+        );
       }
     }
 
@@ -101,7 +104,7 @@ export const QuizTaker: React.FC<QuizTakerProps> = ({ quiz, onComplete }) => {
       setQuizResult(result);
       setShowResults(true);
     } catch (error) {
-      console.error('Error submitting quiz:', error);
+      // Error handled by UI
     }
   };
 
@@ -148,9 +151,7 @@ export const QuizTaker: React.FC<QuizTakerProps> = ({ quiz, onComplete }) => {
           {timeRemaining !== null && (
             <div className="flex items-center space-x-2 bg-white/20 px-4 py-2 rounded-lg">
               <ClockIcon className="h-5 w-5" />
-              <span className="text-lg font-mono font-semibold">
-                {formatTime(timeRemaining)}
-              </span>
+              <span className="text-lg font-mono font-semibold">{formatTime(timeRemaining)}</span>
             </div>
           )}
         </div>
@@ -162,9 +163,7 @@ export const QuizTaker: React.FC<QuizTakerProps> = ({ quiz, onComplete }) => {
           <span className="text-sm font-medium text-gray-700">
             Pregunta {currentQuestion + 1} de {quiz.questions.length}
           </span>
-          <span className="text-sm text-gray-500">
-            Puntuación mínima: {quiz.passingScore}%
-          </span>
+          <span className="text-sm text-gray-500">Puntuación mínima: {quiz.passingScore}%</span>
         </div>
         <div className="w-full bg-gray-200 rounded-full h-2">
           <div

@@ -31,7 +31,8 @@ export const Register: React.FC = () => {
   // Submit handler
   const onSubmit = async (data: RegisterFormData) => {
     try {
-      await authService.register(data);
+      const { confirmPassword: _, ...registerData } = data;
+      await authService.register(registerData);
 
       // AC6: Mensaje de confirmación visible tras registro exitoso
       toast.success('Usuario registrado exitosamente');
@@ -54,15 +55,10 @@ export const Register: React.FC = () => {
         <Card>
           <CardHeader>
             <div className="text-center">
-              <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
-                Crear Cuenta
-              </h2>
+              <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Crear Cuenta</h2>
               <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
                 ¿Ya tienes una cuenta?{' '}
-                <Link
-                  to={ROUTES.LOGIN}
-                  className="font-medium text-blue-600 hover:text-blue-500"
-                >
+                <Link to={ROUTES.LOGIN} className="font-medium text-blue-600 hover:text-blue-500">
                   Inicia sesión aquí
                 </Link>
               </p>
@@ -91,12 +87,7 @@ export const Register: React.FC = () => {
                 disabled={isSubmitting}
                 autoComplete="email"
                 leftIcon={
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -118,12 +109,7 @@ export const Register: React.FC = () => {
                 autoComplete="new-password"
                 helperText="Mínimo 8 caracteres: 1 mayúscula, 1 minúscula, 1 número y 1 carácter especial"
                 leftIcon={
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -144,12 +130,7 @@ export const Register: React.FC = () => {
                 disabled={isSubmitting}
                 autoComplete="new-password"
                 leftIcon={
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"

@@ -1,32 +1,24 @@
 /**
- * Gamification Types
+ * Gamification Types - Adapted for FastAPI backend
  */
 
 export interface Badge {
   id: string;
   name: string;
+  slug: string;
   description: string;
-  iconUrl?: string;
-  category: BadgeCategory;
-  requirement: string;
-  xpReward: number;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export enum BadgeCategory {
-  PROGRESS = 'PROGRESS',
-  ACHIEVEMENT = 'ACHIEVEMENT',
-  SKILL = 'SKILL',
-  SPECIAL = 'SPECIAL',
+  icon?: string;
+  color?: string;
+  xp_reward: number;
+  created_at?: string;
 }
 
 export interface UserBadge {
   id: string;
-  userId: string;
-  badgeId: string;
-  badge: Badge;
-  earnedAt: string;
+  user_id: string;
+  badge_id: string;
+  badge?: Badge;
+  awarded_at: string;
 }
 
 export interface XPLevel {
@@ -37,35 +29,23 @@ export interface XPLevel {
   progressPercentage: number;
 }
 
-export interface XPBreakdown {
-  lessons: number;
-  quizzes: number;
-  labs: number;
-  projects: number;
-  badges: number;
-  total: number;
-}
-
 export interface Notification {
   id: string;
-  userId: string;
+  user_id: string;
   type: NotificationType;
   title: string;
   message: string;
-  linkUrl?: string;
-  isRead: boolean;
-  createdAt: string;
+  read: boolean;
+  data?: Record<string, unknown>;
+  created_at: string;
 }
 
 export enum NotificationType {
-  COURSE_ENROLLMENT = 'COURSE_ENROLLMENT',
-  LESSON_COMPLETED = 'LESSON_COMPLETED',
-  QUIZ_PASSED = 'QUIZ_PASSED',
-  QUIZ_FAILED = 'QUIZ_FAILED',
-  LAB_COMPLETED = 'LAB_COMPLETED',
-  PROJECT_SUBMITTED = 'PROJECT_SUBMITTED',
-  PROJECT_GRADED = 'PROJECT_GRADED',
-  BADGE_EARNED = 'BADGE_EARNED',
+  BADGE_AWARDED = 'BADGE_AWARDED',
+  COURSE_COMPLETED = 'COURSE_COMPLETED',
   CERTIFICATE_ISSUED = 'CERTIFICATE_ISSUED',
-  SYSTEM = 'SYSTEM',
+  QUIZ_PASSED = 'QUIZ_PASSED',
+  LAB_PASSED = 'LAB_PASSED',
+  PROJECT_GRADED = 'PROJECT_GRADED',
+  COURSE_ASSIGNED = 'COURSE_ASSIGNED',
 }

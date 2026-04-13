@@ -1,14 +1,17 @@
 import { setupServer } from 'msw/node';
-import { handlers } from './handlers';
+import { handlers, errorHandlers } from './handlers';
 
 // Setup mock server for testing
 export const server = setupServer(...handlers);
 
-// Start server before all tests
-beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
+// Helper to use error handlers for testing error scenarios
+export function useErrorHandlers() {
+  server.use(...errorHandlers);
+}
 
-// Reset handlers after each test
-afterEach(() => server.resetHandlers());
+// Helper to add custom handlers for specific tests
+export function useCustomHandlers(...customHandlers: any[]) {
+  server.use(...customHandlers);
+}
 
-// Clean up after all tests
-afterAll(() => server.close());
+export default server;

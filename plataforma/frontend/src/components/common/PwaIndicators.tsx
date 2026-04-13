@@ -13,7 +13,7 @@ import {
   AlertCircle,
   X,
   RefreshCw,
-  Home
+  Home,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from './Button';
@@ -115,7 +115,7 @@ export const PwaIndicators: React.FC = () => {
             setCacheStatus('ready');
           }
         } catch (error) {
-          console.error('Cache check failed:', error);
+          // Cache check failure is non-critical
         }
       }
     };
@@ -151,7 +151,7 @@ export const PwaIndicators: React.FC = () => {
         setShowInstallPrompt(false);
       }
     } catch (error) {
-      console.error('Install failed:', error);
+      // Install failure is non-critical
     }
 
     setDeferredPrompt(null);
@@ -180,7 +180,10 @@ export const PwaIndicators: React.FC = () => {
                   {t('pwa.offlineMode', 'Offline Mode')}
                 </h4>
                 <p className="text-sm text-yellow-700 dark:text-yellow-400 mt-1">
-                  {t('pwa.offlineMessage', 'You are currently offline. Some features may be limited.')}
+                  {t(
+                    'pwa.offlineMessage',
+                    'You are currently offline. Some features may be limited.'
+                  )}
                 </p>
               </div>
               <button
@@ -207,22 +210,17 @@ export const PwaIndicators: React.FC = () => {
                   {t('pwa.installTitle', 'Install App')}
                 </h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                  {t('pwa.installMessage', 'Install our app for a better experience with offline access and faster loading.')}
+                  {t(
+                    'pwa.installMessage',
+                    'Install our app for a better experience with offline access and faster loading.'
+                  )}
                 </p>
                 <div className="flex gap-3 mt-4">
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    onClick={handleInstallClick}
-                  >
+                  <Button variant="primary" size="sm" onClick={handleInstallClick}>
                     <Download className="w-4 h-4 mr-2" />
                     {t('pwa.installButton', 'Install')}
                   </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={dismissInstallPrompt}
-                  >
+                  <Button variant="secondary" size="sm" onClick={dismissInstallPrompt}>
                     {t('pwa.notNow', 'Not now')}
                   </Button>
                 </div>
@@ -251,12 +249,7 @@ export const PwaIndicators: React.FC = () => {
                 <p className="text-sm text-blue-700 dark:text-blue-400 mt-1">
                   {t('pwa.updateMessage', 'A new version is available. Refresh to update.')}
                 </p>
-                <Button
-                  variant="primary"
-                  size="sm"
-                  className="mt-3"
-                  onClick={handleUpdateClick}
-                >
+                <Button variant="primary" size="sm" className="mt-3" onClick={handleUpdateClick}>
                   <RefreshCw className="w-4 h-4 mr-2" />
                   {t('pwa.updateButton', 'Refresh')}
                 </Button>
@@ -302,17 +295,15 @@ export const PwaIndicators: React.FC = () => {
                   {cacheStatus === 'ready'
                     ? t('pwa.cacheReady', 'Cached')
                     : cacheStatus === 'updating'
-                    ? t('pwa.cacheUpdating', 'Updating')
-                    : t('pwa.cacheChecking', 'Checking')}
+                      ? t('pwa.cacheUpdating', 'Updating')
+                      : t('pwa.cacheChecking', 'Checking')}
                 </span>
               </div>
 
               {/* PWA Badge */}
               <div className="flex items-center gap-1.5">
                 <Smartphone className="w-4 h-4 text-blue-500" />
-                <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
-                  PWA
-                </span>
+                <span className="text-xs font-medium text-gray-600 dark:text-gray-400">PWA</span>
               </div>
             </div>
           </div>
@@ -364,7 +355,7 @@ export const PwaInstallBanner: React.FC = () => {
         setShow(false);
       }
     } catch (error) {
-      console.error('Install failed:', error);
+      // Install failure is non-critical
     }
 
     setDeferredPrompt(null);
@@ -396,10 +387,7 @@ export const PwaInstallBanner: React.FC = () => {
             >
               {t('pwa.install', 'Install')}
             </Button>
-            <button
-              onClick={handleDismiss}
-              className="text-white/80 hover:text-white"
-            >
+            <button onClick={handleDismiss} className="text-white/80 hover:text-white">
               <X className="w-4 h-4" />
             </button>
           </div>

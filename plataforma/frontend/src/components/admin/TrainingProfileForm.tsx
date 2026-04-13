@@ -6,7 +6,10 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '../common/Button';
 import { XMarkIcon } from '@heroicons/react/24/outline';
-import type { TrainingProfile, CreateTrainingProfileRequest } from '../../services/api/trainingProfile.service';
+import type {
+  TrainingProfile,
+  CreateTrainingProfileRequest,
+} from '../../services/api/trainingProfile.service';
 
 export interface TrainingProfileFormProps {
   profile?: TrainingProfile | null;
@@ -44,9 +47,7 @@ export const TrainingProfileForm: React.FC<TrainingProfileFormProps> = ({
     }
   }, [profile]);
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
 
@@ -114,7 +115,7 @@ export const TrainingProfileForm: React.FC<TrainingProfileFormProps> = ({
     try {
       await onSubmit(formData);
     } catch (error) {
-      console.error('Error submitting form:', error);
+      // Error handled by caller
     }
   };
 
@@ -141,7 +142,9 @@ export const TrainingProfileForm: React.FC<TrainingProfileFormProps> = ({
           }`}
           placeholder="Ej: Analista de Ciberseguridad"
         />
-        {errors.name && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.name}</p>}
+        {errors.name && (
+          <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.name}</p>
+        )}
       </div>
 
       {/* Slug */}
@@ -166,7 +169,9 @@ export const TrainingProfileForm: React.FC<TrainingProfileFormProps> = ({
           placeholder="analista-ciberseguridad"
           disabled={!!profile} // Disable slug editing
         />
-        {errors.slug && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.slug}</p>}
+        {errors.slug && (
+          <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.slug}</p>
+        )}
         {profile && (
           <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
             El slug no se puede cambiar después de crear el perfil
@@ -231,9 +236,7 @@ export const TrainingProfileForm: React.FC<TrainingProfileFormProps> = ({
                       <p className="text-sm font-medium text-gray-900 dark:text-white">
                         {course.title}
                       </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        {course.slug}
-                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{course.slug}</p>
                     </div>
                   </label>
                 );

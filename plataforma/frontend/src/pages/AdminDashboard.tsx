@@ -23,7 +23,9 @@ export const AdminDashboard = () => {
   // State
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [users, setUsers] = useState<User[]>([]);
-  const [usersWithEnrollments, setUsersWithEnrollments] = useState<Map<string, UserWithEnrollments>>(new Map());
+  const [usersWithEnrollments, setUsersWithEnrollments] = useState<
+    Map<string, UserWithEnrollments>
+  >(new Map());
   const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
   const [modalState, setModalState] = useState<{
     isOpen: boolean;
@@ -49,7 +51,6 @@ export const AdminDashboard = () => {
       setStats(data);
     } catch (err: any) {
       toast.error('Error al cargar estadísticas');
-      console.error(err);
     } finally {
       setIsLoadingStats(false);
     }
@@ -58,13 +59,12 @@ export const AdminDashboard = () => {
   const loadUsers = async () => {
     try {
       setIsLoadingUsers(true);
-      const response = await userService.getUsers({ page: 1, limit: 100 });
-      // Axios interceptor unwraps response.data, so response.data contains {users, total}
-      const usersData = response.data?.users || [];
-      setUsers(usersData);
+      const envelope = await userService.getUsers({ page: 1, limit: 500 });
+      // Axios interceptor unwraps to {success, data: [...users], meta: {...}}
+      const usersData = (envelope as any).data || [];
+      setUsers(Array.isArray(usersData) ? usersData : []);
     } catch (err: any) {
       toast.error('Error al cargar usuarios');
-      console.error(err);
     } finally {
       setIsLoadingUsers(false);
     }
@@ -81,7 +81,6 @@ export const AdminDashboard = () => {
       setUsersWithEnrollments((prev) => new Map(prev).set(userId, data));
     } catch (err: any) {
       toast.error('Error al cargar inscripciones del usuario');
-      console.error(err);
     } finally {
       setLoadingEnrollments((prev) => {
         const next = new Set(prev);
@@ -286,7 +285,10 @@ export const AdminDashboard = () => {
                 const isLoading = loadingEnrollments.has(user.id);
 
                 return (
-                  <div key={user.id} className="border border-gray-200 dark:border-gray-700 rounded-lg">
+                  <div
+                    key={user.id}
+                    className="border border-gray-200 dark:border-gray-700 rounded-lg"
+                  >
                     <div className="p-4 flex items-center justify-between">
                       <div className="flex items-center gap-4 flex-1">
                         <button
@@ -297,7 +299,9 @@ export const AdminDashboard = () => {
                             {user.name ? user.name[0].toUpperCase() : user.email[0].toUpperCase()}
                           </div>
                           <div>
-                            <p className="font-medium text-gray-900 dark:text-white">{user.name || user.email}</p>
+                            <p className="font-medium text-gray-900 dark:text-white">
+                              {user.name || user.email}
+                            </p>
                             <p className="text-sm text-gray-500 dark:text-gray-400">{user.email}</p>
                           </div>
                         </button>
@@ -305,14 +309,16 @@ export const AdminDashboard = () => {
 
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={() =>
-                            setModalState({
-                              isOpen: true,
-                              userId: user.id,
-                              userName: user.name || user.email,
-                              userEmail: user.email,
-                            })
-                          }
+                          onClick={() => {
+                            loadUserEnrollments(user.id).then(() => {
+                              setModalState({
+                                isOpen: true,
+                                userId: user.id,
+                                userName: user.name || user.email,
+                                userEmail: user.email,
+                              });
+                            });
+                          }}
                           className="px-3 py-1.5 text-sm font-medium text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition-colors flex items-center gap-1"
                         >
                           <Plus className="w-4 h-4" />
@@ -336,7 +342,10 @@ export const AdminDashboard = () => {
                         ) : (
                           <div className="space-y-3">
                             {userEnrollments.enrollments.map((enrollment) => (
-                              <div key={enrollment.id} className="bg-white dark:bg-gray-800 rounded-lg p-4">
+                              <div
+                                key={enrollment.id}
+                                className="bg-white dark:bg-gray-800 rounded-lg p-4"
+                              >
                                 <div className="flex items-start justify-between">
                                   <div className="flex-1">
                                     <h4 className="font-medium text-gray-900 dark:text-white">
@@ -344,8 +353,12 @@ export const AdminDashboard = () => {
                                     </h4>
                                     <div className="mt-2">
                                       <div className="flex items-center justify-between text-sm mb-1">
-                                        <span className="text-gray-600 dark:text-gray-400">Progreso</span>
-                                        <span className="font-semibold">{enrollment.progress}%</span>
+                                        <span className="text-gray-600 dark:text-gray-400">
+                                          Progreso
+                                        </span>
+                                        <span className="font-semibold">
+                                          {enrollment.progress}%
+                                        </span>
                                       </div>
                                       <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                                         <div
@@ -379,10 +392,17 @@ export const AdminDashboard = () => {
       {/* Assign Course Modal */}
       <AssignCourseModal
         isOpen={modalState.isOpen}
-        onClose={() => setModalState(prev => ({ ...prev, isOpen: false }))}
+        onClose={() => setModalState((prev) => ({ ...prev, isOpen: false }))}
         onAssign={(courseId) => handleAssignCourse(modalState.userId!, courseId)}
         userName={modalState.userName || ''}
         userEmail={modalState.userEmail || ''}
+        enrolledCourseIds={
+          modalState.userId
+            ? (usersWithEnrollments.get(modalState.userId)?.enrollments || [])
+                .map((e: any) => e.courseId || e.course?.id)
+                .filter(Boolean)
+            : []
+        }
       />
     </div>
   );

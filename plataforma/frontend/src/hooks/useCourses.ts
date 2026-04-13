@@ -18,6 +18,7 @@ const courseKeys = {
   details: () => [...courseKeys.all, 'detail'] as const,
   detail: (id: string) => [...courseKeys.details(), id] as const,
   enrolled: () => [...courseKeys.all, 'enrolled'] as const,
+  modules: (courseId: string) => [...courseKeys.all, 'modules', courseId] as const,
 };
 
 /**
@@ -37,6 +38,17 @@ export function useCourse(courseId: string) {
   return useQuery({
     queryKey: courseKeys.detail(courseId),
     queryFn: () => courseService.getCourseById(courseId),
+    enabled: !!courseId,
+  });
+}
+
+/**
+ * Fetch course modules
+ */
+export function useCourseModules(courseId: string) {
+  return useQuery({
+    queryKey: courseKeys.modules(courseId),
+    queryFn: () => courseService.getCourseModules(courseId),
     enabled: !!courseId,
   });
 }

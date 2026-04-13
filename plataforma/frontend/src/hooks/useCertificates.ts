@@ -33,7 +33,6 @@ export const useCertificates = (): UseCertificatesReturn => {
       const data = await certificateService.getMyCertificates();
       setCertificates(data);
     } catch (err: any) {
-      console.error('Error fetching certificates:', err);
       setError(err?.error?.message || 'Error al cargar certificados');
     } finally {
       setLoading(false);
@@ -50,22 +49,18 @@ export const useCertificates = (): UseCertificatesReturn => {
   /**
    * Generate certificate for a completed course
    */
-  const generateCertificate = useCallback(
-    async (courseId: string): Promise<Certificate> => {
-      try {
-        const newCertificate = await certificateService.generateCertificate(courseId);
+  const generateCertificate = useCallback(async (courseId: string): Promise<Certificate> => {
+    try {
+      const newCertificate = await certificateService.generateCertificate(courseId);
 
-        // Add to local state
-        setCertificates((prev) => [newCertificate, ...prev]);
+      // Add to local state
+      setCertificates((prev) => [newCertificate, ...prev]);
 
-        return newCertificate;
-      } catch (err: any) {
-        console.error('Error generating certificate:', err);
-        throw err;
-      }
-    },
-    []
-  );
+      return newCertificate;
+    } catch (err: any) {
+      throw err;
+    }
+  }, []);
 
   /**
    * Download certificate as PDF
@@ -86,7 +81,6 @@ export const useCertificates = (): UseCertificatesReturn => {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
     } catch (err: any) {
-      console.error('Error downloading certificate:', err);
       throw err;
     }
   }, []);

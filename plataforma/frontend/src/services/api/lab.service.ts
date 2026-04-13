@@ -82,9 +82,13 @@ export const getLab = async (labId: string): Promise<Lab> => {
  * @param labId - Lab ID
  * @param code - User's code
  */
-export const submitLab = async (labId: string, code: string): Promise<LabSubmissionResult> => {
-  const response = await api.post(`/labs/${labId}/submit`, { code });
-  return response.data;
+export const submitLab = async (
+  labId: string,
+  code: string,
+  language: string = 'python'
+): Promise<LabSubmissionResult> => {
+  const response = await api.post(`/labs/${labId}/submit`, { code, language });
+  return (response as any).data;
 };
 
 /**

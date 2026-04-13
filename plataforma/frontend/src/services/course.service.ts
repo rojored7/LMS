@@ -36,7 +36,8 @@ export async function getCourseById(courseId: string): Promise<Course> {
   // Backend returns _count.enrollments, frontend expects enrollmentCount
   return {
     ...response.data,
-    enrollmentCount: response.data._count?.enrollments || 0,
+    enrollmentCount: response.data._count?.enrollments || response.data.enrollmentCount || 0,
+    isEnrolled: response.data.isEnrolled || response.data.is_enrolled || false,
   };
 }
 
@@ -91,8 +92,9 @@ export async function getEnrolledCourses(): Promise<EnrollmentWithCourse[]> {
  * Get course modules
  */
 export async function getCourseModules(courseId: string): Promise<Module[]> {
-  const response = await api.get<ApiResponse<Module[]>>(`/courses/${courseId}/modules`);
-  return response.data;
+  const response = await api.get(`/courses/${courseId}/modules`);
+  const data = (response as any).data || response;
+  return Array.isArray(data) ? data : [];
 }
 
 /**
@@ -114,7 +116,7 @@ export async function getLessonById(lessonId: string): Promise<Lesson> {
 /**
  * Mark lesson as completed
  */
-export async function completLesson(lessonId: string): Promise<void> {
+export async function completeLesson(lessonId: string): Promise<void> {
   await api.post(`/lessons/${lessonId}/complete`);
 }
 
@@ -130,7 +132,9 @@ export async function getQuizByLessonId(lessonId: string): Promise<Quiz> {
  * Submit quiz attempt
  */
 export async function submitQuizAttempt(quizId: string, answers: any[]): Promise<QuizAttempt> {
-  const response = await api.post<ApiResponse<QuizAttempt>>(`/quizzes/${quizId}/attempt`, { answers });
+  const response = await api.post<ApiResponse<QuizAttempt>>(`/quizzes/${quizId}/attempt`, {
+    answers,
+  });
   return response.data;
 }
 
@@ -154,7 +158,7 @@ export async function getLabByLessonId(lessonId: string): Promise<Lab> {
  * Get course progress
  */
 export async function getCourseProgress(courseId: string): Promise<CourseProgress> {
-  const response = await api.get<ApiResponse<CourseProgress>>(`/courses/${courseId}/progress`);
+  const response = await api.get<ApiResponse<CourseProgress>>(`/progress/courses/${courseId}`);
   return response.data;
 }
 
@@ -165,7 +169,10 @@ export async function updateCourseProgress(
   courseId: string,
   data: Partial<CourseProgress>
 ): Promise<CourseProgress> {
-  const response = await api.put<ApiResponse<CourseProgress>>(`/courses/${courseId}/progress`, data);
+  const response = await api.put<ApiResponse<CourseProgress>>(
+    `/courses/${courseId}/progress`,
+    data
+  );
   return response.data;
 }
 
@@ -180,7 +187,10 @@ export async function getCertificate(courseId: string): Promise<Certificate> {
 /**
  * Search courses
  */
-export async function searchCourses(query: string, params?: QueryParams): Promise<PaginatedResponse<Course>> {
+export async function searchCourses(
+  query: string,
+  params?: QueryParams
+): Promise<PaginatedResponse<Course>> {
   const response = await api.get<PaginatedResponse<Course>>('/courses/search', {
     params: { ...params, query },
   });
@@ -199,7 +209,7 @@ const courseService = {
   getCourseModules,
   getModuleLessons,
   getLessonById,
-  completLesson,
+  completeLesson,
   getQuizByLessonId,
   submitQuizAttempt,
   getQuizAttempts,

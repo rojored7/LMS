@@ -9,7 +9,9 @@ import { Button } from '../components/common/Button';
 import { Modal } from '../components/common/Modal';
 import { TrainingProfileForm } from '../components/admin/TrainingProfileForm';
 import { useToast } from '../hooks/useToast';
-import trainingProfileService, { type TrainingProfile } from '../services/api/trainingProfile.service';
+import trainingProfileService, {
+  type TrainingProfile,
+} from '../services/api/trainingProfile.service';
 import courseService from '../services/course.service';
 
 export const TrainingProfiles: React.FC = () => {
@@ -40,7 +42,6 @@ export const TrainingProfiles: React.FC = () => {
       setAvailableCourses(coursesResponse.data?.courses || []);
     } catch (err: any) {
       toast.error('Error al cargar datos');
-      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -123,9 +124,7 @@ export const TrainingProfiles: React.FC = () => {
                   <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-1">
                     {profile.name}
                   </h3>
-                  <code className="text-xs text-gray-500 dark:text-gray-400">
-                    {profile.slug}
-                  </code>
+                  <code className="text-xs text-gray-500 dark:text-gray-400">{profile.slug}</code>
                 </div>
 
                 <div className="flex gap-2">
