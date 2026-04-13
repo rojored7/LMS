@@ -1,110 +1,126 @@
-import json
-import re
-
+import structlog
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.assessment import Lab, Project, Question, Quiz
-from app.models.course import Course, Lesson, Module
-from app.scripts.parsers.types import CourseData
+from app.models.course import Course, CourseLevel, Lesson, LessonType, Module
+from app.scripts.parsers.types import ParsedCourse
+
+logger = structlog.get_logger()
+
+LEVEL_MAP = {
+    "BEGINNER": CourseLevel.BEGINNER,
+    "INTERMEDIATE": CourseLevel.INTERMEDIATE,
+    "ADVANCED": CourseLevel.ADVANCED,
+    "EXPERT": CourseLevel.EXPERT,
+}
+
+LESSON_TYPE_MAP = {
+    "TEXT": LessonType.TEXT,
+    "VIDEO": LessonType.VIDEO,
+    "INTERACTIVE": LessonType.INTERACTIVE,
+    "READING": LessonType.READING,
+}
 
 
-def _slugify(text: str) -> str:
-    slug = text.lower().strip()
-    slug = re.sub(r"[^\w\s-]", "", slug)
-    slug = re.sub(r"[-\s]+", "-", slug)
-    return slug
-
-
-async def import_course_to_db(db: AsyncSession, course_data: CourseData) -> str:
-    slug = course_data.slug or _slugify(course_data.title)
-
-    existing = await db.execute(select(Course).where(Course.slug == slug))
+async def import_course_to_db(
+    parsed: ParsedCourse,
+    db: AsyncSession,
+    publish: bool = False,
+    force: bool = False,
+) -> str:
+    existing = await db.execute(select(Course).where(Course.slug == parsed.slug))
     if existing.scalar_one_or_none():
-        slug = f"{slug}-{__import__('uuid').uuid4().hex[:6]}"
+        if force:
+            old = (await db.execute(select(Course).where(Course.slug == parsed.slug))).scalar_one()
+            await db.delete(old)
+            await db.flush()
+        else:
+            raise ValueError(f"Curso con slug '{parsed.slug}' ya existe. Usa force para sobreescribir.")
 
     course = Course(
-        title=course_data.title,
-        slug=slug,
-        description=course_data.description or course_data.title,
-        short_description=course_data.short_description or "",
-        level=course_data.level,
-        duration_hours=course_data.duration_hours,
-        published=False,
+        slug=parsed.slug,
+        title=parsed.title,
+        description=parsed.description,
+        duration=parsed.duration,
+        level=LEVEL_MAP.get(parsed.level, CourseLevel.BEGINNER),
+        tags=parsed.tags,
+        author=parsed.author,
+        version=parsed.version,
+        is_published=publish,
     )
     db.add(course)
     await db.flush()
+    await db.refresh(course)
 
-    for mod_data in course_data.modules:
+    for pm in parsed.modules:
         module = Module(
-            title=mod_data.title,
-            description=mod_data.description or "",
-            order=mod_data.order,
             course_id=course.id,
+            order=pm.order,
+            title=pm.title,
+            description=pm.description or "",
+            duration=pm.duration,
+            is_published=publish,
         )
         db.add(module)
         await db.flush()
+        await db.refresh(module)
 
-        for lesson_data in mod_data.lessons:
-            lesson = Lesson(
-                title=lesson_data.title,
-                content=lesson_data.content,
-                type=lesson_data.type,
-                order=lesson_data.order,
-                duration_minutes=lesson_data.duration_minutes,
-                video_url=lesson_data.video_url or None,
+        for pl in pm.lessons:
+            db.add(Lesson(
                 module_id=module.id,
-            )
-            db.add(lesson)
+                order=pl.order,
+                title=pl.title,
+                content=pl.content,
+                type=LESSON_TYPE_MAP.get(pl.type, LessonType.TEXT),
+                estimated_time=pl.estimated_time,
+            ))
 
-        for quiz_data in mod_data.quizzes:
+        for pq in pm.quizzes:
             quiz = Quiz(
-                title=quiz_data.title,
-                description=quiz_data.description or "",
-                passing_score=quiz_data.passing_score,
-                max_attempts=quiz_data.max_attempts,
                 module_id=module.id,
+                title=pq.title,
+                description=pq.description,
+                passing_score=pq.passing_score,
+                time_limit=pq.time_limit,
+                attempts=pq.attempts,
             )
             db.add(quiz)
             await db.flush()
+            await db.refresh(quiz)
 
-            for q_data in quiz_data.questions:
-                question = Question(
-                    text=q_data.text,
-                    type=q_data.type,
-                    options=q_data.options,
-                    correct_answer=q_data.correct_answer,
-                    explanation=q_data.explanation or "",
-                    points=q_data.points,
-                    order=q_data.order,
+            for pquest in pq.questions:
+                db.add(Question(
                     quiz_id=quiz.id,
-                )
-                db.add(question)
+                    order=pquest.order,
+                    type=pquest.type,
+                    question=pquest.question,
+                    options=pquest.options,
+                    correct_answer=pquest.correct_answer,
+                    explanation=pquest.explanation,
+                ))
 
-        for lab_data in mod_data.labs:
-            lab = Lab(
-                title=lab_data.title,
-                description=lab_data.description or "",
-                instructions=lab_data.instructions or "",
-                starter_code=lab_data.starter_code or "",
-                solution_code=lab_data.solution_code or "",
-                test_code=lab_data.test_code or "",
-                language=lab_data.language,
-                timeout_seconds=lab_data.timeout_seconds,
+        for plab in pm.labs:
+            db.add(Lab(
                 module_id=module.id,
-            )
-            db.add(lab)
+                title=plab.title,
+                description=plab.description,
+                language=plab.language,
+                starter_code=plab.starter_code,
+                solution=plab.solution,
+                tests=plab.tests,
+                hints=plab.hints,
+            ))
 
-        for proj_data in mod_data.projects:
-            project = Project(
-                title=proj_data.title,
-                description=proj_data.description or "",
-                requirements=proj_data.requirements or "",
-                rubric=proj_data.rubric or "",
-                module_id=module.id,
-            )
-            db.add(project)
+    for pp in parsed.projects:
+        db.add(Project(
+            course_id=course.id,
+            title=pp.title,
+            description=pp.description,
+            requirements=pp.requirements,
+            rubric=pp.rubric,
+        ))
 
-        await db.flush()
-
+    await db.flush()
+    logger.info("import_complete", course_id=course.id, slug=course.slug)
     return course.id

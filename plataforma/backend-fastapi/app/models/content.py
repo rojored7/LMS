@@ -50,6 +50,8 @@ class ScormPackage(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)
 
+    course: Mapped["Course"] = relationship(back_populates="scorm_packages")  # type: ignore[name-defined]
+
 
 class AuditLog(Base):
     __tablename__ = "audit_logs"

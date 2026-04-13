@@ -1,39 +1,43 @@
+import re
 from pathlib import Path
 
-from app.scripts.parsers.types import LessonData
+from app.scripts.parsers.types import ParsedLesson
 
 
-def parse_lesson_file(filepath: Path, order: int = 0) -> LessonData:
-    content = filepath.read_text(encoding="utf-8")
-    lines = content.strip().split("\n")
+def parse_lessons(module_dir: Path) -> list[ParsedLesson]:
+    lessons_dir = module_dir / "lessons"
+    if not lessons_dir.exists():
+        md_files = sorted(module_dir.glob("*.md"))
+        return [_parse_lesson_file(f, i + 1) for i, f in enumerate(md_files)] if md_files else []
 
-    title = filepath.stem.replace("_", " ").replace("-", " ").title()
-    num_prefix = title.split(" ")[0]
-    if num_prefix.isdigit():
-        title = " ".join(title.split(" ")[1:])
+    md_files = sorted(lessons_dir.glob("*.md"))
+    return [_parse_lesson_file(f, i + 1) for i, f in enumerate(md_files)]
 
+
+def _parse_lesson_file(path: Path, default_order: int) -> ParsedLesson:
+    content = path.read_text(encoding="utf-8", errors="replace")
+    lines = content.splitlines()
+
+    title = path.stem.replace("_", " ").replace("-", " ").title()
     if lines and lines[0].startswith("#"):
-        title = lines[0].lstrip("#").strip()
+        title = lines[0].lstrip("# ").strip()
+
+    order = default_order
+    match = re.match(r"^(\d+)", path.stem)
+    if match:
+        order = int(match.group(1))
+
+    words = len(content.split())
+    estimated_time = max(5, words // 200 * 5)
 
     lesson_type = "TEXT"
-    video_url = ""
-    for line in lines:
-        if "youtube.com" in line or "vimeo.com" in line:
-            lesson_type = "VIDEO"
-            import re
-            urls = re.findall(r'https?://[^\s\)]+', line)
-            if urls:
-                video_url = urls[0]
-            break
+    if any(kw in content.lower() for kw in ["```python", "```javascript", "```bash"]):
+        lesson_type = "INTERACTIVE"
 
-    word_count = len(content.split())
-    duration = max(1, word_count // 200)
-
-    return LessonData(
+    return ParsedLesson(
+        order=order,
         title=title,
         content=content,
         type=lesson_type,
-        order=order,
-        duration_minutes=duration,
-        video_url=video_url,
+        estimated_time=estimated_time,
     )

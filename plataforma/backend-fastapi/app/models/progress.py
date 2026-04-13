@@ -1,8 +1,7 @@
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from sqlalchemy import DateTime, Float, Integer, String, UniqueConstraint
-from sqlalchemy import ForeignKey
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -21,33 +20,35 @@ class Enrollment(Base):
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_gen_id)
     user_id: Mapped[str] = mapped_column(String(32), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     course_id: Mapped[str] = mapped_column(String(32), ForeignKey("courses.id", ondelete="CASCADE"), nullable=False)
-    progress: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    progress: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    last_accessed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    enrolled_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)
+    certificate: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
-    user: Mapped["User"] = relationship(back_populates="enrollments")
-    course: Mapped["Course"] = relationship(back_populates="enrollments")
+    user: Mapped["User"] = relationship(back_populates="enrollments")  # type: ignore[name-defined]
+    course: Mapped["Course"] = relationship(back_populates="enrollments")  # type: ignore[name-defined]
+    user_progress: Mapped[list["UserProgress"]] = relationship(back_populates="enrollment")
 
-    __table_args__ = (UniqueConstraint("user_id", "course_id", name="uq_enrollment_user_course"),)
+    __table_args__ = (Index("ix_enrollments_user_id", "user_id"), Index("ix_enrollments_course_id", "course_id"))
 
 
 class UserProgress(Base):
     __tablename__ = "user_progress"
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_gen_id)
     user_id: Mapped[str] = mapped_column(String(32), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    enrollment_id: Mapped[str | None] = mapped_column(String(32), ForeignKey("enrollments.id", ondelete="CASCADE"), nullable=True)
     module_id: Mapped[str] = mapped_column(String(32), ForeignKey("modules.id", ondelete="CASCADE"), nullable=False)
-    completed_lessons: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    total_lessons: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    quiz_score: Mapped[float | None] = mapped_column(Float, nullable=True)
-    quiz_attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    lab_completed: Mapped[bool] = mapped_column(default=False, nullable=False)
-    project_status: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    lesson_id: Mapped[str | None] = mapped_column(String(32), ForeignKey("lessons.id", ondelete="CASCADE"), nullable=True)
+    status: Mapped[str] = mapped_column(String(20), default="not_started", nullable=False)
+    progress: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    completed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)
+    time_spent: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
-    user: Mapped["User"] = relationship(back_populates="user_progress")
-    module: Mapped["Module"] = relationship(back_populates="user_progress")
+    user: Mapped["User"] = relationship(back_populates="user_progress")  # type: ignore[name-defined]
+    enrollment: Mapped["Enrollment | None"] = relationship(back_populates="user_progress")
+    module: Mapped["Module"] = relationship(back_populates="user_progress")  # type: ignore[name-defined]
+    lesson: Mapped["Lesson | None"] = relationship(back_populates="user_progress")  # type: ignore[name-defined]
 
-    __table_args__ = (UniqueConstraint("user_id", "module_id", name="uq_progress_user_module"),)
+    __table_args__ = (Index("ix_user_progress_user_id", "user_id"), Index("ix_user_progress_module_id", "module_id"))

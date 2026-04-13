@@ -1,165 +1,199 @@
-import io
-import json
+import math
+import shutil
+import tempfile
 import zipfile
+from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, UploadFile
+from fastapi import APIRouter, Depends, Query, UploadFile, File
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+import structlog
 
 from app.database import get_db
-from app.middleware.auth import require_admin
+from app.middleware.auth import require_instructor
+from app.middleware.error_handler import NotFoundError
+from app.models.course import Course, Module, Lesson, LessonType
 from app.models.user import User
-from app.schemas.common import ApiResponse
-from app.services.course_service import CourseService
-from app.services.module_service import ModuleService
-from app.services.lesson_service import LessonService
+from app.schemas.common import PaginationMeta
+from app.schemas.course import CourseResponse
 
-router = APIRouter(prefix="/api/course-management", tags=["course-management"])
+logger = structlog.get_logger()
 
-
-def _parse_course_zip(zip_bytes: bytes) -> dict:
-    """Parse a course ZIP file and extract course structure."""
-    course_data = {"modules": []}
-    with zipfile.ZipFile(io.BytesIO(zip_bytes), "r") as zf:
-        names = sorted(zf.namelist())
-
-        manifest_candidates = [n for n in names if n.endswith("course.json") or n.endswith("manifest.json")]
-        if manifest_candidates:
-            with zf.open(manifest_candidates[0]) as f:
-                manifest = json.loads(f.read().decode("utf-8"))
-                course_data.update(manifest)
-
-        md_files = [n for n in names if n.endswith(".md")]
-        module_map: dict[str, dict] = {}
-        for md_path in md_files:
-            parts = md_path.strip("/").split("/")
-            if len(parts) >= 2:
-                module_name = parts[-2] if len(parts) >= 2 else "default"
-                if module_name not in module_map:
-                    module_map[module_name] = {"title": module_name, "lessons": []}
-                with zf.open(md_path) as f:
-                    content = f.read().decode("utf-8")
-                    lesson_title = parts[-1].replace(".md", "").replace("-", " ").replace("_", " ").title()
-                    module_map[module_name]["lessons"].append({
-                        "title": lesson_title,
-                        "content": content,
-                        "type": "TEXT",
-                    })
-
-        for idx, (name, mod_data) in enumerate(module_map.items()):
-            mod_data["order"] = idx
-            course_data["modules"].append(mod_data)
-
-    return course_data
+router = APIRouter(prefix="/api/admin/courses", tags=["course-management"])
 
 
-@router.post("/import-zip")
-async def import_course_from_zip(
-    file: UploadFile = File(...),
-    user: User = Depends(require_admin),
+def _extract_zip_to_temp(upload: UploadFile) -> Path:
+    tmp = Path(tempfile.mkdtemp(prefix="course_import_"))
+    zip_path = tmp / "upload.zip"
+    content = upload.file.read()
+    if not content:
+        raise ValueError("Archivo vacio")
+    with open(zip_path, "wb") as f:
+        f.write(content)
+    if not zipfile.is_zipfile(zip_path):
+        raise ValueError("El archivo no es un ZIP valido.")
+    with zipfile.ZipFile(zip_path, "r") as zf:
+        # Handle Windows-style backslash paths in ZIP entries
+        for info in zf.infolist():
+            info.filename = info.filename.replace("\\", "/")
+            zf.extract(info, tmp / "extracted")
+    extracted = tmp / "extracted"
+    for candidate in [extracted] + list(extracted.iterdir()):
+        if candidate.is_dir() and (candidate / "config.json").exists():
+            return candidate
+    dirs = [d for d in extracted.iterdir() if d.is_dir()]
+    return dirs[0] if dirs else extracted
+
+
+def _parse_course_dir(course_dir: Path):
+    from app.scripts.parsers.course_parser import find_module_dirs, parse_course
+    from app.scripts.parsers.lesson_parser import parse_lessons
+    from app.scripts.parsers.module_parser import parse_module
+    from app.scripts.parsers.quiz_parser import parse_quizzes
+    from app.scripts.parsers.lab_parser import parse_labs
+    from app.scripts.parsers.project_parser import parse_projects
+
+    course = parse_course(course_dir)
+    for mdir in find_module_dirs(course_dir):
+        pm = parse_module(mdir)
+        pm.lessons = parse_lessons(mdir)
+        pm.quizzes = parse_quizzes(mdir)
+        pm.labs = parse_labs(mdir)
+        course.modules.append(pm)
+    course.projects = parse_projects(course_dir)
+    return course
+
+
+@router.post("/import/validate")
+async def validate_import(
+    courseZip: UploadFile = File(...),
+    _user: User = Depends(require_instructor),
+) -> dict:
+    tmp_dir = None
+    try:
+        course_dir = _extract_zip_to_temp(courseZip)
+        tmp_dir = course_dir
+        while tmp_dir.parent != tmp_dir and not str(tmp_dir.parent).endswith(tempfile.gettempdir()):
+            tmp_dir = tmp_dir.parent
+
+        parsed = _parse_course_dir(course_dir)
+        preview = {
+            "title": parsed.title,
+            "description": parsed.description,
+            "level": parsed.level,
+            "duration": parsed.duration,
+            "modules": [
+                {"title": m.title, "lessons": len(m.lessons), "quizzes": len(m.quizzes), "labs": len(m.labs)}
+                for m in parsed.modules
+            ],
+        }
+        return {"success": True, "data": {"valid": True, "errors": [], "warnings": [], "preview": preview}}
+    except Exception as e:
+        logger.error("import_validation_failed", error=str(e))
+        return {"success": True, "data": {"valid": False, "errors": [{"field": "courseZip", "message": str(e)}], "warnings": []}}
+    finally:
+        if tmp_dir and tmp_dir.exists():
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+
+
+@router.post("/import")
+async def import_course_zip(
+    courseZip: UploadFile = File(...),
+    _user: User = Depends(require_instructor),
     db: AsyncSession = Depends(get_db),
-):
-    if not file.filename or not file.filename.endswith(".zip"):
-        return ApiResponse(
-            success=False,
-            error={"code": "VALIDATION_ERROR", "message": "El archivo debe ser un ZIP"},
-        ).model_dump()
-
-    content = await file.read()
-    if len(content) > 50 * 1024 * 1024:
-        return ApiResponse(
-            success=False,
-            error={"code": "VALIDATION_ERROR", "message": "El archivo no debe superar 50MB"},
-        ).model_dump()
-
+) -> dict:
+    tmp_dir = None
     try:
-        course_data = _parse_course_zip(content)
+        tmp_dir = Path(tempfile.mkdtemp(prefix="course_import_"))
+        zip_path = tmp_dir / "upload.zip"
+        with open(zip_path, "wb") as f:
+            f.write(courseZip.file.read())
+        with zipfile.ZipFile(zip_path, "r") as zf:
+            for info in zf.infolist():
+                info.filename = info.filename.replace("\\", "/")
+                zf.extract(info, tmp_dir / "extracted")
+
+        extracted = tmp_dir / "extracted"
+        course_dir = None
+        for candidate in [extracted] + list(extracted.iterdir()):
+            if candidate.is_dir() and (candidate / "config.json").exists():
+                course_dir = candidate
+                break
+        if course_dir is None:
+            dirs = [d for d in extracted.iterdir() if d.is_dir()]
+            course_dir = dirs[0] if dirs else extracted
+
+        parsed = _parse_course_dir(course_dir)
+
+        from app.scripts.importers.db_importer import import_course_to_db
+        course_id = await import_course_to_db(parsed, db, publish=True, force=True)
+        await db.flush()
+
+        return {"success": True, "data": {"courseId": course_id, "title": parsed.title, "message": f"Curso '{parsed.title}' importado exitosamente"}}
     except Exception as e:
-        return ApiResponse(
-            success=False,
-            error={"code": "PARSE_ERROR", "message": f"Error al parsear el ZIP: {str(e)}"},
-        ).model_dump()
-
-    course_service = CourseService(db)
-    module_service = ModuleService(db)
-    lesson_service = LessonService(db)
-
-    title = course_data.get("title", file.filename.replace(".zip", ""))
-    slug = course_data.get("slug", title.lower().replace(" ", "-"))
-    description = course_data.get("description", f"Curso importado desde {file.filename}")
-
-    course = await course_service.create({
-        "title": title,
-        "slug": slug,
-        "description": description,
-        "instructor_id": user.id,
-    })
-
-    modules_created = 0
-    lessons_created = 0
-
-    for mod_data in course_data.get("modules", []):
-        module = await module_service.create(course.id, {
-            "title": mod_data["title"],
-            "order": mod_data.get("order", 0),
-            "description": mod_data.get("description"),
-        })
-        modules_created += 1
-
-        for idx, lesson_data in enumerate(mod_data.get("lessons", [])):
-            await lesson_service.create(module.id, {
-                "title": lesson_data["title"],
-                "content": lesson_data.get("content", ""),
-                "type": lesson_data.get("type", "TEXT"),
-                "order": idx,
-            })
-            lessons_created += 1
-
-    return ApiResponse(
-        success=True,
-        data={
-            "courseId": course.id,
-            "title": course.title,
-            "modulesCreated": modules_created,
-            "lessonsCreated": lessons_created,
-        },
-    ).model_dump()
+        logger.error("course_import_failed", error=str(e))
+        return {"success": False, "error": {"code": "IMPORT_ERROR", "message": str(e)}}
+    finally:
+        if tmp_dir and tmp_dir.exists():
+            shutil.rmtree(tmp_dir, ignore_errors=True)
 
 
-@router.post("/validate-zip")
-async def validate_course_zip(
-    file: UploadFile = File(...),
-    user: User = Depends(require_admin),
-):
-    if not file.filename or not file.filename.endswith(".zip"):
-        return ApiResponse(
-            success=False,
-            error={"code": "VALIDATION_ERROR", "message": "El archivo debe ser un ZIP"},
-        ).model_dump()
+@router.get("")
+async def list_all_courses(
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
+    _user: User = Depends(require_instructor),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    total = (await db.execute(select(func.count()).select_from(Course))).scalar() or 0
+    offset = (page - 1) * limit
+    result = await db.execute(select(Course).offset(offset).limit(limit).order_by(Course.created_at.desc()))
+    courses = result.scalars().all()
+    return {
+        "success": True,
+        "data": [CourseResponse.model_validate(c).model_dump() for c in courses],
+        "meta": PaginationMeta(total=total, page=page, limit=limit, pages=math.ceil(total / limit) if limit else 0),
+    }
 
-    content = await file.read()
-    try:
-        course_data = _parse_course_zip(content)
-        total_modules = len(course_data.get("modules", []))
-        total_lessons = sum(len(m.get("lessons", [])) for m in course_data.get("modules", []))
 
-        return ApiResponse(
-            success=True,
-            data={
-                "valid": True,
-                "title": course_data.get("title", "Sin titulo"),
-                "modulesFound": total_modules,
-                "lessonsFound": total_lessons,
-                "modules": [
-                    {
-                        "title": m["title"],
-                        "lessonCount": len(m.get("lessons", [])),
-                    }
-                    for m in course_data.get("modules", [])
-                ],
-            },
-        ).model_dump()
-    except Exception as e:
-        return ApiResponse(
-            success=False,
-            error={"code": "PARSE_ERROR", "message": f"ZIP invalido: {str(e)}"},
-        ).model_dump()
+@router.get("/{course_id}")
+async def get_course_admin(
+    course_id: str,
+    _user: User = Depends(require_instructor),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    result = await db.execute(select(Course).where(Course.id == course_id))
+    course = result.scalar_one_or_none()
+    if course is None:
+        raise NotFoundError("Curso no encontrado")
+    return {"success": True, "data": CourseResponse.model_validate(course).model_dump()}
+
+
+@router.post("/{course_id}/publish")
+async def publish_course(
+    course_id: str,
+    _user: User = Depends(require_instructor),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    result = await db.execute(select(Course).where(Course.id == course_id))
+    course = result.scalar_one_or_none()
+    if course is None:
+        raise NotFoundError("Curso no encontrado")
+    course.is_published = True
+    await db.flush()
+    return {"success": True, "data": CourseResponse.model_validate(course).model_dump()}
+
+
+@router.post("/{course_id}/unpublish")
+async def unpublish_course(
+    course_id: str,
+    _user: User = Depends(require_instructor),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    result = await db.execute(select(Course).where(Course.id == course_id))
+    course = result.scalar_one_or_none()
+    if course is None:
+        raise NotFoundError("Curso no encontrado")
+    course.is_published = False
+    await db.flush()
+    return {"success": True, "data": CourseResponse.model_validate(course).model_dump()}

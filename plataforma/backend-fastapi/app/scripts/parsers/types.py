@@ -2,72 +2,73 @@ from dataclasses import dataclass, field
 
 
 @dataclass
-class QuizQuestionData:
-    text: str
-    type: str = "MULTIPLE_CHOICE"
-    options: str = ""
-    correct_answer: str = ""
-    explanation: str = ""
-    points: int = 1
+class ParsedQuestion:
     order: int = 0
+    type: str = "MULTIPLE_CHOICE"
+    question: str = ""
+    options: list[str] | None = None
+    correct_answer: str = ""
+    explanation: str | None = None
 
 
 @dataclass
-class QuizData:
-    title: str
+class ParsedQuiz:
+    title: str = ""
     description: str = ""
     passing_score: int = 70
-    max_attempts: int = 3
-    questions: list[QuizQuestionData] = field(default_factory=list)
+    time_limit: int | None = None
+    attempts: int = 3
+    questions: list[ParsedQuestion] = field(default_factory=list)
 
 
 @dataclass
-class LabData:
-    title: str
+class ParsedLab:
+    title: str = ""
     description: str = ""
-    instructions: str = ""
-    starter_code: str = ""
-    solution_code: str = ""
-    test_code: str = ""
     language: str = "python"
-    timeout_seconds: int = 30
+    starter_code: str = ""
+    solution: str = ""
+    tests: dict = field(default_factory=dict)
+    hints: list[str] | None = None
 
 
 @dataclass
-class ProjectData:
-    title: str
+class ParsedProject:
+    title: str = ""
     description: str = ""
-    requirements: str = ""
-    rubric: str = ""
+    requirements: dict = field(default_factory=dict)
+    rubric: dict = field(default_factory=dict)
 
 
 @dataclass
-class LessonData:
-    title: str
+class ParsedLesson:
+    order: int = 0
+    title: str = ""
     content: str = ""
     type: str = "TEXT"
-    order: int = 0
-    duration_minutes: int = 5
-    video_url: str = ""
+    estimated_time: int = 5
 
 
 @dataclass
-class ModuleData:
-    title: str
+class ParsedModule:
+    order: int = 0
+    title: str = ""
     description: str = ""
-    order: int = 0
-    lessons: list[LessonData] = field(default_factory=list)
-    quizzes: list[QuizData] = field(default_factory=list)
-    labs: list[LabData] = field(default_factory=list)
-    projects: list[ProjectData] = field(default_factory=list)
+    duration: int = 60
+    lessons: list[ParsedLesson] = field(default_factory=list)
+    quizzes: list[ParsedQuiz] = field(default_factory=list)
+    labs: list[ParsedLab] = field(default_factory=list)
 
 
 @dataclass
-class CourseData:
-    title: str
+class ParsedCourse:
     slug: str = ""
+    title: str = ""
     description: str = ""
-    short_description: str = ""
+    duration: int = 2400
     level: str = "BEGINNER"
-    duration_hours: int = 0
-    modules: list[ModuleData] = field(default_factory=list)
+    tags: list[str] = field(default_factory=list)
+    author: str = "Platform"
+    version: str = "1.0"
+    modules: list[ParsedModule] = field(default_factory=list)
+    projects: list[ParsedProject] = field(default_factory=list)

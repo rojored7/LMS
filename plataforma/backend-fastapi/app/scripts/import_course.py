@@ -7,7 +7,12 @@ import sys
 from pathlib import Path
 
 from app.database import get_session_factory
-from app.scripts.parsers.course_parser import parse_course_directory
+from app.scripts.parsers.course_parser import find_module_dirs, parse_course
+from app.scripts.parsers.lesson_parser import parse_lessons
+from app.scripts.parsers.module_parser import parse_module
+from app.scripts.parsers.quiz_parser import parse_quizzes
+from app.scripts.parsers.lab_parser import parse_labs
+from app.scripts.parsers.project_parser import parse_projects
 from app.scripts.importers.db_importer import import_course_to_db
 
 
@@ -18,7 +23,16 @@ async def main(course_dir: str):
         sys.exit(1)
 
     print(f"Parsing course from: {path}")
-    course_data = parse_course_directory(path)
+    course_data = parse_course(path)
+
+    for mdir in find_module_dirs(path):
+        pm = parse_module(mdir)
+        pm.lessons = parse_lessons(mdir)
+        pm.quizzes = parse_quizzes(mdir)
+        pm.labs = parse_labs(mdir)
+        course_data.modules.append(pm)
+
+    course_data.projects = parse_projects(path)
 
     print(f"Course: {course_data.title}")
     print(f"Modules: {len(course_data.modules)}")
@@ -28,7 +42,7 @@ async def main(course_dir: str):
     session_factory = get_session_factory()
     async with session_factory() as db:
         try:
-            course_id = await import_course_to_db(db, course_data)
+            course_id = await import_course_to_db(course_data, db)
             await db.commit()
             print(f"Course imported successfully. ID: {course_id}")
         except Exception as e:
