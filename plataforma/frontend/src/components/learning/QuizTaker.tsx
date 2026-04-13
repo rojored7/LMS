@@ -7,7 +7,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { Quiz, QuizResult } from '../../services/api/quiz.service';
 import { useSubmitQuiz } from '../../hooks/useQuizzes';
 import { QuizQuestion } from './QuizQuestion';
-import { ClockIcon, AcademicCapIcon, CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline';
+import {
+  ClockIcon,
+  AcademicCapIcon,
+  CheckCircleIcon,
+  XCircleIcon,
+} from '@heroicons/react/24/outline';
 
 interface QuizTakerProps {
   quiz: Quiz;
@@ -90,7 +95,10 @@ export const QuizTaker: React.FC<QuizTakerProps> = ({ quiz, onComplete }) => {
       if (isChecked) {
         newAnswers.set(questionId, [...currentAnswer, optionId]);
       } else {
-        newAnswers.set(questionId, currentAnswer.filter((id) => id !== optionId));
+        newAnswers.set(
+          questionId,
+          currentAnswer.filter((id) => id !== optionId)
+        );
       }
     }
 

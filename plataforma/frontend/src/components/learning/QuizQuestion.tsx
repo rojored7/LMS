@@ -36,7 +36,8 @@ export const QuizQuestion: React.FC<QuizQuestionProps> = ({
   };
 
   const getOptionClassName = (optionId: string) => {
-    const baseClasses = 'flex items-start space-x-3 p-4 rounded-lg border-2 cursor-pointer transition-all';
+    const baseClasses =
+      'flex items-start space-x-3 p-4 rounded-lg border-2 cursor-pointer transition-all';
     const isSelected = selectedOptions.includes(optionId);
     const isCorrect = correctOptions.includes(optionId);
     const wasSelected = showResults && isSelected;
