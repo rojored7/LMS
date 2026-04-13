@@ -60,52 +60,67 @@ class QuizService:
         logger.info("quiz_deleted", quiz_id=quiz_id)
 
     async def submit_attempt(self, quiz_id: str, user_id: str, answers: dict[str, str]) -> dict:
+        from app.models.assessment import QuizAttempt
         quiz = await self.get_by_id(quiz_id)
 
-        progress_result = await self.db.execute(
-            select(UserProgress).where(
-                UserProgress.user_id == user_id,
-                UserProgress.module_id == quiz.module_id,
+        # Count previous attempts from QuizAttempt table
+        attempt_count_result = await self.db.execute(
+            select(func.count()).select_from(QuizAttempt).where(
+                QuizAttempt.quiz_id == quiz_id,
+                QuizAttempt.user_id == user_id,
             )
         )
-        progress = progress_result.scalar_one_or_none()
-        current_attempts = progress.quiz_attempts if progress else 0
+        current_attempts = attempt_count_result.scalar() or 0
 
-        if current_attempts >= quiz.max_attempts:
-            raise ValidationError(f"Has alcanzado el maximo de intentos ({quiz.max_attempts})")
+        if current_attempts >= quiz.attempts:
+            raise ValidationError(f"Has alcanzado el maximo de intentos ({quiz.attempts})")
 
-        total_points = 0
-        earned_points = 0
+        total_questions = len(quiz.questions)
         correct_count = 0
 
         for question in quiz.questions:
-            total_points += question.points
             user_answer = answers.get(question.id, "").strip().lower()
-            correct = question.correct_answer.strip().lower()
-            if user_answer == correct:
-                earned_points += question.points
-                correct_count += 1
+            correct = question.correct_answer
+            if isinstance(correct, str):
+                if user_answer == correct.strip().lower():
+                    correct_count += 1
+            elif isinstance(correct, dict):
+                answer_val = correct.get("value", correct)
+                if user_answer == str(answer_val).strip().lower():
+                    correct_count += 1
+            elif isinstance(correct, list):
+                user_list = answers.get(question.id)
+                if isinstance(user_list, list) and sorted(str(a).lower() for a in user_list) == sorted(str(e).lower() for e in correct):
+                    correct_count += 1
 
-        score = round((earned_points / total_points) * 100, 2) if total_points > 0 else 0.0
+        score = round((correct_count / total_questions) * 100) if total_questions > 0 else 0
         passed = score >= quiz.passing_score
         attempt_number = current_attempts + 1
 
-        if not progress:
+        # Store attempt in QuizAttempt
+        attempt = QuizAttempt(
+            quiz_id=quiz_id,
+            user_id=user_id,
+            answers=answers,
+            score=score,
+            passed=passed,
+        )
+        self.db.add(attempt)
+        await self.db.flush()
+
+        # Recalculate progress if passed
+        if passed:
             from app.services.progress_service import ProgressService
             ps = ProgressService(self.db)
-            progress = await ps.get_or_create_progress(user_id, quiz.module_id)
-
-        progress.quiz_score = score
-        progress.quiz_attempts = attempt_number
-        await self.db.flush()
+            await ps._recalculate_course_progress(user_id, quiz.module_id)
 
         return {
             "score": score,
             "passed": passed,
-            "totalQuestions": len(quiz.questions),
+            "totalQuestions": total_questions,
             "correctAnswers": correct_count,
             "attemptNumber": attempt_number,
-            "maxAttempts": quiz.max_attempts,
+            "maxAttempts": quiz.attempts,
         }
 
     async def add_question(self, quiz_id: str, data: dict) -> Question:

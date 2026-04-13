@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -30,7 +30,11 @@ class Enrollment(Base):
     course: Mapped["Course"] = relationship(back_populates="enrollments")  # type: ignore[name-defined]
     user_progress: Mapped[list["UserProgress"]] = relationship(back_populates="enrollment")
 
-    __table_args__ = (Index("ix_enrollments_user_id", "user_id"), Index("ix_enrollments_course_id", "course_id"))
+    __table_args__ = (
+        Index("ix_enrollments_user_id", "user_id"),
+        Index("ix_enrollments_course_id", "course_id"),
+        UniqueConstraint("user_id", "course_id", name="uq_enrollments_user_course"),
+    )
 
 
 class UserProgress(Base):

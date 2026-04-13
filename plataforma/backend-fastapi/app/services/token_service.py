@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, timezone
 
-from jose import jwt, JWTError
+from jose import jwt, JWTError, ExpiredSignatureError
 import structlog
 
 from app.config import get_settings
@@ -44,7 +44,7 @@ class TokenService:
             if payload.get("type") != "access":
                 return None
             return payload
-        except JWTError:
+        except ExpiredSignatureError:
             logger.debug("token_expired")
             return None
         except JWTError:
@@ -57,9 +57,11 @@ class TokenService:
             if payload.get("type") != "refresh":
                 return None
             return payload
-        except JWTError:
+        except ExpiredSignatureError:
+            logger.debug("refresh_token_expired")
             return None
         except JWTError:
+            logger.debug("refresh_token_invalid")
             return None
 
     async def blacklist_token(self, token: str, expires_in: int | None = None) -> None:

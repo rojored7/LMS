@@ -40,7 +40,8 @@ export const Profile: React.FC = () => {
     setIsLoading(true);
 
     try {
-      await userService.updateProfile(formData);
+      const name = `${formData.firstName} ${formData.lastName}`.trim();
+      await userService.updateProfile({ name });
       await refreshUser();
       toast.success('Perfil actualizado correctamente');
       setIsEditing(false);
@@ -83,7 +84,7 @@ export const Profile: React.FC = () => {
 
                   <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
                     <p className="text-xs text-gray-500 dark:text-gray-500">
-                      Miembro desde {formatDate(user.created_at)}
+                      Miembro desde {formatDate(user.createdAt)}
                     </p>
                   </div>
                 </div>

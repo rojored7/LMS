@@ -137,10 +137,8 @@ interface PaginatedResponse<T> {
  * Get user with enrollments and progress
  */
 export async function getUserEnrollments(userId: string): Promise<UserWithEnrollments> {
-  const response = await api.get<ApiResponse<UserWithEnrollments>>(
-    `/admin/users/${userId}/enrollments`
-  );
-  return response.data;
+  const response = await api.get(`/admin/users/${userId}/enrollments`);
+  return (response as any).data || response;
 }
 
 /**
@@ -154,7 +152,7 @@ export async function assignCourseToUser(
     '/admin/enrollments',
     { userId, courseId }
   );
-  return (response as any).data;
+  return (response as any).data || response;
 }
 
 /**
@@ -171,21 +169,48 @@ export async function getAllEnrollments(
   page: number = 1,
   limit: number = 20
 ): Promise<PaginatedResponse<EnrollmentWithProgress>> {
-  const response = await api.get<ApiResponse<PaginatedResponse<EnrollmentWithProgress>>>(
-    '/admin/enrollments',
-    {
-      params: { page, limit },
-    }
-  );
-  return response.data;
+  const response = await api.get('/admin/enrollments', {
+    params: { page, limit },
+  });
+  return (response as any).data || response;
 }
 
 /**
  * Get dashboard statistics
  */
 export async function getDashboardStats(): Promise<DashboardStats> {
-  const response = await api.get<ApiResponse<DashboardStats>>('/admin/dashboard');
-  return response.data;
+  const response = await api.get('/admin/dashboard');
+  const raw = (response as any).data || response;
+
+  // Backend retorna flat: {totalUsers, totalStudents, ...}
+  // Frontend espera nested: {users: {total, byRole}, courses: {...}, ...}
+  if (raw.totalUsers !== undefined) {
+    return {
+      users: {
+        total: raw.totalUsers ?? 0,
+        byRole: {
+          ADMIN: (raw.totalUsers ?? 0) - (raw.totalStudents ?? 0) - (raw.totalInstructors ?? 0),
+          INSTRUCTOR: raw.totalInstructors ?? 0,
+          STUDENT: raw.totalStudents ?? 0,
+        },
+      },
+      courses: {
+        total: raw.totalCourses ?? 0,
+        published: raw.publishedCourses ?? 0,
+      },
+      enrollments: {
+        total: raw.totalEnrollments ?? 0,
+        active: (raw.totalEnrollments ?? 0) - (raw.totalCertificates ?? 0),
+        completed: raw.totalCertificates ?? 0,
+      },
+      systemHealth: {
+        averageProgress: raw.averageProgress ?? 0,
+        activeUsers: raw.totalStudents ?? 0,
+      },
+    };
+  }
+
+  return raw;
 }
 
 /**
@@ -195,10 +220,8 @@ export async function getUserCourseProgress(
   userId: string,
   courseId: string
 ): Promise<UserCourseProgress> {
-  const response = await api.get<ApiResponse<UserCourseProgress>>(
-    `/admin/users/${userId}/courses/${courseId}/progress`
-  );
-  return response.data;
+  const response = await api.get(`/admin/users/${userId}/courses/${courseId}/progress`);
+  return (response as any).data || response;
 }
 
 const adminService = {

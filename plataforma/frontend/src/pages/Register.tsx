@@ -13,11 +13,12 @@ import { Card, CardBody, CardHeader } from '../components/common/Card';
 import { useToast } from '../hooks/useToast';
 import { registerSchema, RegisterFormData } from '../utils/validators';
 import { ROUTES } from '../utils/constants';
-import { authService } from '../services';
+import { useAuthStore } from '../store/authStore';
 
 export const Register: React.FC = () => {
   const navigate = useNavigate();
   const toast = useToast();
+  const authRegister = useAuthStore((s) => s.register);
 
   const {
     register,
@@ -25,22 +26,18 @@ export const Register: React.FC = () => {
     formState: { errors, isSubmitting },
   } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
-    mode: 'onBlur', // Validar al perder el foco (AC5: Validación en frontend)
+    mode: 'onBlur',
   });
 
   // Submit handler
   const onSubmit = async (data: RegisterFormData) => {
     try {
       const { confirmPassword: _, ...registerData } = data;
-      await authService.register(registerData);
+      await authRegister(registerData);
 
-      // AC6: Mensaje de confirmación visible tras registro exitoso
       toast.success('Usuario registrado exitosamente');
-
-      // AC7: Redirección automática a página de login tras registro exitoso
-      navigate(ROUTES.LOGIN);
+      navigate(ROUTES.DASHBOARD);
     } catch (error: any) {
-      // Manejo de errores
       const errorMessage =
         error?.error?.message ||
         error?.message ||

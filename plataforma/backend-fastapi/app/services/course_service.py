@@ -98,6 +98,14 @@ class CourseService:
         await self.db.delete(enrollment)
         await self.db.flush()
 
+    async def delete_enrollment_by_id(self, enrollment_id: str) -> None:
+        result = await self.db.execute(select(Enrollment).where(Enrollment.id == enrollment_id))
+        enrollment = result.scalar_one_or_none()
+        if enrollment is None:
+            raise NotFoundError("Inscripcion no encontrada")
+        await self.db.delete(enrollment)
+        await self.db.flush()
+
     async def get_user_enrollments(self, user_id: str) -> list[Enrollment]:
         result = await self.db.execute(select(Enrollment).options(selectinload(Enrollment.course)).where(Enrollment.user_id == user_id).order_by(Enrollment.enrolled_at.desc()))
         return list(result.scalars().all())

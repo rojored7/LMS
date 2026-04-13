@@ -54,7 +54,7 @@ class AdminService:
 
     async def get_recent_enrollments(self, limit: int = 10) -> list[dict]:
         result = await self.db.execute(
-            select(Enrollment).order_by(Enrollment.created_at.desc()).limit(limit)
+            select(Enrollment).order_by(Enrollment.enrolled_at.desc()).limit(limit)
         )
         enrollments = list(result.scalars().all())
         return [
@@ -63,7 +63,7 @@ class AdminService:
                 "userId": e.user_id,
                 "courseId": e.course_id,
                 "progress": e.progress,
-                "createdAt": e.created_at.isoformat(),
+                "createdAt": e.enrolled_at.isoformat() if e.enrolled_at else None,
             }
             for e in enrollments
         ]

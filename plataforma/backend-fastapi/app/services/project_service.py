@@ -1,4 +1,5 @@
 import structlog
+from datetime import datetime, timezone
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -19,17 +20,17 @@ class ProjectService:
             raise NotFoundError("Proyecto no encontrado")
         return project
 
-    async def list_by_module(self, module_id: str) -> list[Project]:
+    async def list_by_course(self, course_id: str) -> list[Project]:
         result = await self.db.execute(
-            select(Project).where(Project.module_id == module_id).order_by(Project.created_at)
+            select(Project).where(Project.course_id == course_id)
         )
         return list(result.scalars().all())
 
-    async def create(self, module_id: str, data: dict) -> Project:
-        project = Project(module_id=module_id, **data)
+    async def create(self, course_id: str, data: dict) -> Project:
+        project = Project(course_id=course_id, **data)
         self.db.add(project)
         await self.db.flush()
-        logger.info("project_created", project_id=project.id, module_id=module_id)
+        logger.info("project_created", project_id=project.id, course_id=course_id)
         return project
 
     async def update(self, project_id: str, data: dict) -> Project:
@@ -46,13 +47,13 @@ class ProjectService:
         await self.db.flush()
         logger.info("project_deleted", project_id=project_id)
 
-    async def submit(self, project_id: str, user_id: str, content: str | None = None, file_url: str | None = None) -> ProjectSubmission:
+    async def submit(self, project_id: str, user_id: str, content: str = "", files: dict | None = None) -> ProjectSubmission:
         await self.get_by_id(project_id)
         submission = ProjectSubmission(
             user_id=user_id,
             project_id=project_id,
-            content=content,
-            file_url=file_url,
+            content=content or "",
+            files=files,
             status=ProjectStatus.PENDING,
         )
         self.db.add(submission)
@@ -75,7 +76,7 @@ class ProjectService:
             query = query.where(ProjectSubmission.user_id == user_id)
         if status:
             query = query.where(ProjectSubmission.status == ProjectStatus(status))
-        query = query.order_by(ProjectSubmission.created_at.desc())
+        query = query.order_by(ProjectSubmission.submitted_at.desc())
         result = await self.db.execute(query)
         return list(result.scalars().all())
 
@@ -85,16 +86,24 @@ class ProjectService:
             raise ValidationError("Esta entrega ya fue revisada")
 
         sub.status = ProjectStatus(status)
-        sub.reviewer_id = reviewer_id
         sub.score = score
         sub.feedback = feedback
+        sub.reviewed_at = datetime.now(timezone.utc)
         await self.db.flush()
 
         if sub.status == ProjectStatus.APPROVED:
             project = await self.get_by_id(sub.project_id)
             from app.services.progress_service import ProgressService
             ps = ProgressService(self.db)
-            await ps.update_project_status(sub.user_id, project.module_id, "APPROVED")
+            # Use course-level progress tracking since Project links to course_id
+            # Find the first module of the course for progress tracking
+            from app.models.course import Module
+            module_result = await self.db.execute(
+                select(Module).where(Module.course_id == project.course_id).order_by(Module.order).limit(1)
+            )
+            first_module = module_result.scalar_one_or_none()
+            if first_module:
+                await ps.update_project_status(sub.user_id, first_module.id, "APPROVED")
 
         logger.info("submission_reviewed", submission_id=submission_id, status=status)
         return sub

@@ -22,7 +22,7 @@ class LabService:
 
     async def list_by_module(self, module_id: str) -> list[Lab]:
         result = await self.db.execute(
-            select(Lab).where(Lab.module_id == module_id).order_by(Lab.created_at)
+            select(Lab).where(Lab.module_id == module_id)
         )
         return list(result.scalars().all())
 
@@ -47,15 +47,18 @@ class LabService:
         await self.db.flush()
         logger.info("lab_deleted", lab_id=lab_id)
 
-    async def submit(self, lab_id: str, user_id: str, code: str, output: str | None, passed: bool, execution_time_ms: int | None = None) -> LabSubmission:
+    async def submit(self, lab_id: str, user_id: str, code: str, language: str = "python", passed: bool = False, stdout: str = "", stderr: str = "", exit_code: int = 0, execution_time: int = 0) -> LabSubmission:
         lab = await self.get_by_id(lab_id)
         submission = LabSubmission(
             user_id=user_id,
             lab_id=lab_id,
             code=code,
-            output=output,
+            language=language,
             passed=passed,
-            execution_time_ms=execution_time_ms,
+            stdout=stdout,
+            stderr=stderr,
+            exit_code=exit_code,
+            execution_time=execution_time,
         )
         self.db.add(submission)
         await self.db.flush()
@@ -72,6 +75,6 @@ class LabService:
         query = select(LabSubmission).where(LabSubmission.lab_id == lab_id)
         if user_id:
             query = query.where(LabSubmission.user_id == user_id)
-        query = query.order_by(LabSubmission.created_at.desc())
+        query = query.order_by(LabSubmission.submitted_at.desc())
         result = await self.db.execute(query)
         return list(result.scalars().all())

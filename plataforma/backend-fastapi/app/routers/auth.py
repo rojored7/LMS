@@ -68,7 +68,6 @@ async def register(
         success=True,
         data={
             "user": AuthUserResponse.model_validate(user).model_dump(),
-            "tokens": TokenResponse(**tokens).model_dump(),
         },
     ).model_dump()
 
@@ -91,7 +90,6 @@ async def login(
         success=True,
         data={
             "user": AuthUserResponse.model_validate(user).model_dump(),
-            "tokens": TokenResponse(**tokens).model_dump(),
         },
     ).model_dump()
 
@@ -122,7 +120,6 @@ async def refresh_tokens(
         success=True,
         data={
             "user": AuthUserResponse.model_validate(result["user"]).model_dump(),
-            "tokens": TokenResponse(**tokens).model_dump(),
         },
     ).model_dump()
 

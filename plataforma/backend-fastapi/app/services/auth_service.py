@@ -92,9 +92,10 @@ class AuthService:
         self.db.add(reset_token)
         await self.db.flush()
 
-        reset_url = f"{settings.FRONTEND_URL}/reset-password?token={token_value}"
-        logger.info("password_reset_requested", user_id=user.id, reset_url=reset_url)
-        return {"message": "Si el email existe, se enviara un enlace de restablecimiento", "reset_url": reset_url}
+        # TODO: enviar reset_url por email en vez de retornarlo
+        # reset_url = f"{settings.FRONTEND_URL}/reset-password?token={token_value}"
+        logger.info("password_reset_requested", user_id=user.id)
+        return {"message": "Si el email existe, se enviara un enlace de restablecimiento"}
 
     async def reset_password(self, token_value: str, new_password: str) -> None:
         result = await self.db.execute(

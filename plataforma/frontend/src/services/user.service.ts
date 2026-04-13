@@ -49,10 +49,8 @@ export async function deleteUser(userId: string): Promise<void> {
  * Update user role (admin only)
  */
 export async function updateUserRole(userId: string, role: string): Promise<User> {
-  const envelope = await api.post<ApiResponse<User>>(`/admin/users/${userId}/role`, null, {
-    params: { role },
-  });
-  return (envelope as any).data;
+  const envelope = await api.put(`/admin/users/${userId}/role`, { role });
+  return (envelope as any).data || envelope;
 }
 
 const userService = {

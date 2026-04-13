@@ -142,8 +142,9 @@ export async function submitQuizAttempt(quizId: string, answers: any[]): Promise
  * Get quiz attempts
  */
 export async function getQuizAttempts(quizId: string): Promise<QuizAttempt[]> {
-  const response = await api.get<ApiResponse<QuizAttempt[]>>(`/quizzes/${quizId}/attempts`);
-  return response.data;
+  // Quiz attempts are tracked per-quiz via POST /quizzes/:id/attempt
+  // This endpoint returns empty array as a placeholder since no GET endpoint exists
+  return [];
 }
 
 /**
@@ -158,30 +159,28 @@ export async function getLabByLessonId(lessonId: string): Promise<Lab> {
  * Get course progress
  */
 export async function getCourseProgress(courseId: string): Promise<CourseProgress> {
-  const response = await api.get<ApiResponse<CourseProgress>>(`/progress/courses/${courseId}`);
-  return response.data;
+  const response = await api.get(`/progress/course/${courseId}`);
+  return (response as any).data || response;
 }
 
 /**
  * Update course progress
  */
 export async function updateCourseProgress(
-  courseId: string,
-  data: Partial<CourseProgress>
+  _courseId: string,
+  _data: Partial<CourseProgress>
 ): Promise<CourseProgress> {
-  const response = await api.put<ApiResponse<CourseProgress>>(
-    `/courses/${courseId}/progress`,
-    data
-  );
-  return response.data;
+  // Progress updates happen via mark_lesson_complete, submit_quiz, etc.
+  // No direct PUT endpoint exists for course progress
+  return { progress: 0 } as CourseProgress;
 }
 
 /**
  * Get certificate
  */
 export async function getCertificate(courseId: string): Promise<Certificate> {
-  const response = await api.get<ApiResponse<Certificate>>(`/courses/${courseId}/certificate`);
-  return response.data;
+  const response = await api.get(`/certificates`, { params: { courseId } });
+  return (response as any).data || response;
 }
 
 /**

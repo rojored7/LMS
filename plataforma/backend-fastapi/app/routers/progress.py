@@ -38,15 +38,5 @@ async def get_module_progress(
     db: AsyncSession = Depends(get_db),
 ):
     service = ProgressService(db)
-    progress = await service.get_or_create_progress(user.id, module_id)
-    data = {
-        "moduleId": progress.module_id,
-        "completedLessons": progress.completed_lessons,
-        "totalLessons": progress.total_lessons,
-        "quizScore": progress.quiz_score,
-        "quizAttempts": progress.quiz_attempts,
-        "labCompleted": progress.lab_completed,
-        "projectStatus": progress.project_status,
-        "completedAt": progress.completed_at.isoformat() if progress.completed_at else None,
-    }
+    data = await service.get_module_progress(user.id, module_id)
     return ApiResponse(success=True, data=data).model_dump()

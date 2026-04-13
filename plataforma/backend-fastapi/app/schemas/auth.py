@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel, EmailStr, Field
 
 from app.schemas.common import CamelModel
@@ -49,3 +51,4 @@ class AuthUserResponse(CamelModel):
     theme: str = "system"
     locale: str = "es"
     training_profile_id: str | None = None
+    created_at: datetime | None = None

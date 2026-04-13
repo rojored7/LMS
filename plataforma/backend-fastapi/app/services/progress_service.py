@@ -158,3 +158,54 @@ class ProgressService:
                 if str(user_answer).strip().lower() == str(expected).strip().lower():
                     correct_count += 1
         return round((correct_count / len(questions)) * 100)
+
+    async def get_detailed_progress(self, user_id: str) -> list[dict]:
+        result = await self.db.execute(
+            select(Enrollment).options(selectinload(Enrollment.course)).where(Enrollment.user_id == user_id)
+        )
+        enrollments = list(result.scalars().all())
+        data = []
+        for e in enrollments:
+            course_progress = await self.get_detailed_course_progress(user_id, e.course_id)
+            data.append({
+                "courseId": e.course_id,
+                "courseTitle": e.course.title if e.course else "",
+                "progress": e.progress or 0,
+                "enrolledAt": e.enrolled_at.isoformat() if e.enrolled_at else None,
+                "modules": course_progress.get("modules", []),
+            })
+        return data
+
+    async def get_or_create_progress(self, user_id: str, module_id: str) -> UserProgress:
+        result = await self.db.execute(
+            select(UserProgress).where(UserProgress.user_id == user_id, UserProgress.module_id == module_id)
+        )
+        progress = result.scalar_one_or_none()
+        if progress is None:
+            progress = UserProgress(user_id=user_id, module_id=module_id, progress=0)
+            self.db.add(progress)
+            await self.db.flush()
+            result = await self.db.execute(
+                select(UserProgress).where(UserProgress.id == progress.id)
+            )
+            progress = result.scalar_one()
+        return progress
+
+    async def get_module_progress(self, user_id: str, module_id: str) -> dict:
+        result = await self.db.execute(
+            select(UserProgress).where(UserProgress.user_id == user_id, UserProgress.module_id == module_id)
+        )
+        progress = result.scalar_one_or_none()
+        if progress is None:
+            return {"moduleId": module_id, "progress": 0, "completedAt": None}
+        return {
+            "moduleId": progress.module_id,
+            "progress": progress.progress or 0,
+            "completedAt": progress.completed_at.isoformat() if progress.completed_at else None,
+        }
+
+    async def mark_lab_complete(self, user_id: str, module_id: str) -> None:
+        await self._recalculate_course_progress(user_id, module_id)
+
+    async def update_project_status(self, user_id: str, module_id: str, status: str) -> None:
+        await self._recalculate_course_progress(user_id, module_id)

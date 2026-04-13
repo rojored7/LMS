@@ -130,7 +130,7 @@ class UserBadgeResponse(CamelModel):
     id: str
     user_id: str
     badge_id: str
-    awarded_at: datetime
+    earned_at: datetime
 
 
 class NotificationResponse(CamelModel):

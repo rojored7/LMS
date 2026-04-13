@@ -33,7 +33,7 @@ export interface CourseProgressDetail {
  * @param courseId - Course ID
  */
 export const getCourseProgress = async (courseId: string): Promise<CourseProgressDetail> => {
-  const response = await api.get(`/progress/courses/${courseId}`);
+  const response = await api.get(`/progress/course/${courseId}`);
   const data = (response as any).data || response;
   return {
     overallProgress: data.progress ?? data.overallProgress ?? 0,
