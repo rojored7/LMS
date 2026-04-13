@@ -113,4 +113,82 @@ def parse_labs(module_dir: Path) -> list[ParsedLab]:
         except (json.JSONDecodeError, KeyError):
             continue
 
+    # Also parse lab subdirectories (lab_01_name/README.md format)
+    for subdir in sorted(labs_dir.iterdir()):
+        if not subdir.is_dir():
+            continue
+        readme = subdir / "README.md"
+        if not readme.exists():
+            continue
+
+        try:
+            content = readme.read_text(encoding="utf-8", errors="replace")
+            lines = content.splitlines()
+
+            title = subdir.name.replace("_", " ").replace("-", " ").title()
+            if lines and lines[0].startswith("#"):
+                title = lines[0].lstrip("# ").strip()
+
+            description = ""
+            language = "python"
+            hints_list = []
+
+            # Extract metadata and content
+            in_objectives = False
+            for line in lines[1:]:
+                low = line.lower().strip()
+                if low.startswith("**duracion**") or low.startswith("**dificultad**"):
+                    continue
+                if "python" in low and ("lenguaje" in low or "language" in low):
+                    language = "python"
+                elif "bash" in low or "shell" in low:
+                    language = "bash"
+
+                if "## objetivos" in low or "## objetivo" in low:
+                    in_objectives = True
+                    continue
+                if in_objectives and line.startswith("- "):
+                    hints_list.append(line.lstrip("- ").strip())
+                elif in_objectives and line.startswith("#"):
+                    in_objectives = False
+
+                if not description and line.strip() and not line.startswith("#") and not line.startswith("**"):
+                    description = line.strip()
+
+            # Extract code blocks as starter_code
+            code_blocks = []
+            in_code = False
+            current_block = []
+            for line in lines:
+                if line.startswith("```") and not in_code:
+                    in_code = True
+                    lang = line[3:].strip()
+                    if lang:
+                        language = lang
+                    continue
+                if line.startswith("```") and in_code:
+                    in_code = False
+                    if current_block:
+                        code_blocks.append("\n".join(current_block))
+                        current_block = []
+                    continue
+                if in_code:
+                    current_block.append(line)
+
+            starter_code = "\n\n".join(code_blocks) if code_blocks else content
+
+            labs.append(
+                ParsedLab(
+                    title=title,
+                    description=description,
+                    language=language,
+                    starter_code=starter_code,
+                    solution="",
+                    tests={},
+                    hints=hints_list if hints_list else None,
+                )
+            )
+        except Exception:
+            continue
+
     return labs
