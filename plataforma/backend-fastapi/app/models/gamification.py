@@ -2,7 +2,7 @@ import enum
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from sqlalchemy import Boolean, DateTime, Integer, String, Text
+from sqlalchemy import Boolean, DateTime, Integer, JSON, String, Text
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -19,7 +19,13 @@ def _utcnow() -> datetime:
 
 
 class NotificationType(str, enum.Enum):
-    SYSTEM = "SYSTEM"
+    BADGE_AWARDED = "BADGE_AWARDED"
+    COURSE_COMPLETED = "COURSE_COMPLETED"
+    CERTIFICATE_ISSUED = "CERTIFICATE_ISSUED"
+    QUIZ_PASSED = "QUIZ_PASSED"
+    LAB_PASSED = "LAB_PASSED"
+    PROJECT_GRADED = "PROJECT_GRADED"
+    COURSE_ASSIGNED = "COURSE_ASSIGNED"
     ACHIEVEMENT = "ACHIEVEMENT"
     COURSE = "COURSE"
     REMINDER = "REMINDER"
@@ -67,11 +73,11 @@ class Notification(Base):
     __tablename__ = "notifications"
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_gen_id)
     user_id: Mapped[str] = mapped_column(String(32), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    title: Mapped[str] = mapped_column(String(500), nullable=False)
     message: Mapped[str] = mapped_column(Text, nullable=False)
-    type: Mapped[NotificationType] = mapped_column(SAEnum(NotificationType), default=NotificationType.SYSTEM, nullable=False)
+    type: Mapped[NotificationType] = mapped_column(SAEnum(NotificationType, create_constraint=False, native_enum=False), nullable=False)
     read: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    link: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    data: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
 
     user: Mapped["User"] = relationship(back_populates="notifications")
