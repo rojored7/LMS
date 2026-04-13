@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from sqlalchemy import DateTime, Integer, String, Text
+from sqlalchemy import DateTime, Integer, JSON, String, Text
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -43,12 +43,11 @@ class ScormPackage(Base):
     __tablename__ = "scorm_packages"
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_gen_id)
     course_id: Mapped[str] = mapped_column(String(32), ForeignKey("courses.id", ondelete="CASCADE"), nullable=False)
-    title: Mapped[str] = mapped_column(String(255), nullable=False)
     version: Mapped[str] = mapped_column(String(20), default="1.2", nullable=False)
-    file_url: Mapped[str] = mapped_column(String(500), nullable=False)
-    manifest: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)
+    manifest: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
+    files: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
+    uploaded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    uploaded_by: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
     course: Mapped["Course"] = relationship(back_populates="scorm_packages")  # type: ignore[name-defined]
 

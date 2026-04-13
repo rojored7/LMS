@@ -61,10 +61,10 @@ class Certificate(Base):
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_gen_id)
     user_id: Mapped[str] = mapped_column(String(32), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     course_id: Mapped[str] = mapped_column(String(32), ForeignKey("courses.id", ondelete="CASCADE"), nullable=False)
-    certificate_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
-    verification_code: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
-    issued: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     issued_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    certificate_url: Mapped[str] = mapped_column(String(500), default="", nullable=False)
+    verification_code: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
+    email_sent: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     user: Mapped["User"] = relationship(back_populates="certificates")
     course: Mapped["Course"] = relationship(back_populates="certificates")
