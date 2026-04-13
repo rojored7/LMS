@@ -81,9 +81,23 @@ class QuizService:
         for question in quiz.questions:
             user_answer = answers.get(question.id, "").strip().lower()
             correct = question.correct_answer
-            if isinstance(correct, str):
+            opts = question.options if isinstance(question.options, list) else []
+
+            if isinstance(correct, int):
+                # correct_answer is an index into options list
+                if 0 <= correct < len(opts):
+                    correct_text = str(opts[correct]).strip().lower()
+                    if user_answer == correct_text:
+                        correct_count += 1
+            elif isinstance(correct, str):
+                # Try direct string match first
                 if user_answer == correct.strip().lower():
                     correct_count += 1
+                # Also try as index string (e.g., "1")
+                elif correct.isdigit():
+                    idx = int(correct)
+                    if 0 <= idx < len(opts) and user_answer == str(opts[idx]).strip().lower():
+                        correct_count += 1
             elif isinstance(correct, dict):
                 answer_val = correct.get("value", correct)
                 if user_answer == str(answer_val).strip().lower():
@@ -98,12 +112,15 @@ class QuizService:
         attempt_number = current_attempts + 1
 
         # Store attempt in QuizAttempt
+        from datetime import datetime, timezone
         attempt = QuizAttempt(
             quiz_id=quiz_id,
             user_id=user_id,
             answers=answers,
             score=score,
             passed=passed,
+            started_at=datetime.now(timezone.utc),
+            completed_at=datetime.now(timezone.utc),
         )
         self.db.add(attempt)
         await self.db.flush()

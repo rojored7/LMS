@@ -67,7 +67,8 @@ class QuizAttempt(Base):
     answers: Mapped[dict] = mapped_column(JSON, nullable=False)
     score: Mapped[int] = mapped_column(Integer, nullable=False)
     passed: Mapped[bool] = mapped_column(Boolean, nullable=False)
-    completed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     quiz: Mapped[Quiz] = relationship(back_populates="quiz_attempts")
     __table_args__ = (Index("ix_quiz_attempts_user_id", "user_id"), Index("ix_quiz_attempts_quiz_id", "quiz_id"))
 
