@@ -5,8 +5,13 @@ from app.scripts.parsers.types import ParsedLab
 
 
 def parse_labs(module_dir: Path) -> list[ParsedLab]:
-    labs_dir = module_dir / "labs"
-    if not labs_dir.exists():
+    labs_dir = None
+    for dirname in ["labs", "laboratorios"]:
+        candidate = module_dir / dirname
+        if candidate.exists() and candidate.is_dir():
+            labs_dir = candidate
+            break
+    if labs_dir is None:
         return []
 
     labs = []
@@ -43,10 +48,11 @@ def parse_labs(module_dir: Path) -> list[ParsedLab]:
                         code_blocks.append(f"{comment_char} --- {title} ---\n{code}")
                 starter_code = "\n\n".join(code_blocks)
 
-            # Format C: Try to read content_file as starter_code
+            # Format C: Try to read content_file as starter_code (with path traversal guard)
             if content_file and not starter_code:
                 content_path = (lf.parent / content_file).resolve()
-                if content_path.exists():
+                base_dir = lf.parent.resolve()
+                if content_path.exists() and content_path.is_relative_to(base_dir):
                     starter_code = content_path.read_text(encoding="utf-8")
 
             # If still no starter_code, build from setup instructions + description

@@ -5,13 +5,23 @@ from app.scripts.parsers.types import ParsedLesson
 
 
 def parse_lessons(module_dir: Path) -> list[ParsedLesson]:
-    lessons_dir = module_dir / "lessons"
-    if not lessons_dir.exists():
-        md_files = sorted(module_dir.glob("*.md"))
-        return [_parse_lesson_file(f, i + 1) for i, f in enumerate(md_files)] if md_files else []
+    # Search in multiple possible subdirectory names
+    candidate_dirs = ["lessons", "teoria", "content", "lecciones"]
+    for dirname in candidate_dirs:
+        candidate = module_dir / dirname
+        if candidate.exists() and candidate.is_dir():
+            md_files = sorted(candidate.glob("*.md"))
+            if md_files:
+                return [_parse_lesson_file(f, i + 1) for i, f in enumerate(md_files)]
 
-    md_files = sorted(lessons_dir.glob("*.md"))
-    return [_parse_lesson_file(f, i + 1) for i, f in enumerate(md_files)]
+    # Fallback: look for .md files in module root (exclude README)
+    md_files = sorted(f for f in module_dir.glob("*.md") if f.stem.lower() != "readme")
+    if md_files:
+        return [_parse_lesson_file(f, i + 1) for i, f in enumerate(md_files)]
+
+    # Last resort: include README.md if it's the only content
+    md_files = sorted(module_dir.glob("*.md"))
+    return [_parse_lesson_file(f, i + 1) for i, f in enumerate(md_files)] if md_files else []
 
 
 def _parse_lesson_file(path: Path, default_order: int) -> ParsedLesson:

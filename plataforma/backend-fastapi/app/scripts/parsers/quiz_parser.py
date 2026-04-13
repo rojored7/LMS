@@ -5,8 +5,13 @@ from app.scripts.parsers.types import ParsedQuestion, ParsedQuiz
 
 
 def parse_quizzes(module_dir: Path) -> list[ParsedQuiz]:
-    quizzes_dir = module_dir / "quizzes"
-    if not quizzes_dir.exists():
+    quizzes_dir = None
+    for dirname in ["quizzes", "evaluacion", "evaluaciones"]:
+        candidate = module_dir / dirname
+        if candidate.exists() and candidate.is_dir():
+            quizzes_dir = candidate
+            break
+    if quizzes_dir is None:
         return []
 
     quizzes = []
