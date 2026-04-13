@@ -39,17 +39,22 @@ export const useCompleteLesson = () => {
   const { showToast } = useToast();
 
   return useMutation({
-    mutationFn: ({ lessonId, timeSpent }: { lessonId: string; timeSpent?: number }) =>
-      completeLesson(lessonId, timeSpent),
-    onSuccess: (data, variables) => {
-      // Invalidate lesson query to refresh progress
+    mutationFn: ({
+      lessonId,
+      courseId,
+      timeSpent,
+    }: {
+      lessonId: string;
+      courseId: string;
+      timeSpent?: number;
+    }) => completeLesson(lessonId, timeSpent),
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['lesson', variables.lessonId] });
       queryClient.invalidateQueries({ queryKey: ['lessonProgress', variables.lessonId] });
-      // Invalidate module and course progress
-      queryClient.invalidateQueries({ queryKey: ['modules'] });
-      queryClient.invalidateQueries({ queryKey: ['courseProgress'] });
+      queryClient.invalidateQueries({ queryKey: ['modules', variables.courseId] });
+      queryClient.invalidateQueries({ queryKey: ['courseProgress', variables.courseId] });
 
-      showToast('Lección completada exitosamente', 'success');
+      showToast('Leccion completada exitosamente', 'success');
     },
     onError: (error: any) => {
       showToast(error.response?.data?.message || 'Error al completar lección', 'error');

@@ -17,7 +17,7 @@ async def get_course_progress(
     db: AsyncSession = Depends(get_db),
 ):
     service = ProgressService(db)
-    progress = await service.get_course_progress(user.id, course_id)
+    progress = await service.get_detailed_course_progress(user.id, course_id)
     return ApiResponse(success=True, data=progress).model_dump()
 
 

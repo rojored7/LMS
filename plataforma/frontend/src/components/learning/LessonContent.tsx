@@ -12,9 +12,10 @@ import { CheckCircleIcon as CheckCircleSolidIcon } from '@heroicons/react/24/sol
 
 interface LessonContentProps {
   lesson: LessonDetail;
+  courseId?: string;
 }
 
-export const LessonContent: React.FC<LessonContentProps> = ({ lesson }) => {
+export const LessonContent: React.FC<LessonContentProps> = ({ lesson, courseId }) => {
   const [timeSpent, setTimeSpent] = useState(0);
   const [startTime, setStartTime] = useState<number>(Date.now());
   const completeLesson = useCompleteLesson();
@@ -34,6 +35,7 @@ export const LessonContent: React.FC<LessonContentProps> = ({ lesson }) => {
   const handleComplete = () => {
     completeLesson.mutate({
       lessonId: lesson.id,
+      courseId: courseId || lesson.module?.courseId || '',
       timeSpent,
     });
   };
@@ -65,14 +67,10 @@ export const LessonContent: React.FC<LessonContentProps> = ({ lesson }) => {
       <div className="border-b border-gray-200 bg-gray-50 px-6 py-4">
         <div className="flex items-start justify-between">
           <div className="flex items-start space-x-3">
-            <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
-              {getLessonIcon()}
-            </div>
+            <div className="p-2 bg-blue-100 rounded-lg text-blue-600">{getLessonIcon()}</div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900">{lesson.title}</h1>
-              {lesson.description && (
-                <p className="mt-1 text-gray-600">{lesson.description}</p>
-              )}
+              {lesson.description && <p className="mt-1 text-gray-600">{lesson.description}</p>}
               <div className="mt-2 flex items-center space-x-4 text-sm text-gray-500">
                 <div className="flex items-center space-x-1">
                   <ClockIcon className="h-4 w-4" />

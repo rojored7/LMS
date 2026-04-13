@@ -36,7 +36,7 @@ export const getCourseProgress = async (courseId: string): Promise<CourseProgres
   const response = await api.get(`/progress/course/${courseId}`);
   const data = (response as any).data || response;
   return {
-    overallProgress: data.progress ?? data.overallProgress ?? 0,
+    overallProgress: data.overallProgress ?? data.progress ?? 0,
     modules: data.modules || [],
   };
 };

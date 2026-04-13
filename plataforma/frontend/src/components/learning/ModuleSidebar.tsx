@@ -7,8 +7,15 @@ import { useState } from 'react';
 import { Module } from '../../services/api/module.service';
 import { ChevronDownIcon, ChevronRightIcon, CheckCircleIcon, BookOpenIcon, BeakerIcon, AcademicCapIcon } from '@heroicons/react/24/outline';
 
+interface ModuleProgressInfo {
+  moduleId: string;
+  progress: number;
+  lessons?: { total: number; completed: number };
+}
+
 interface ModuleSidebarProps {
   modules: Module[];
+  moduleProgress?: ModuleProgressInfo[];
   currentModuleId?: string;
   currentLessonId?: string;
   currentQuizId?: string;
@@ -21,6 +28,7 @@ interface ModuleSidebarProps {
 
 export const ModuleSidebar: React.FC<ModuleSidebarProps> = ({
   modules,
+  moduleProgress,
   currentModuleId,
   currentLessonId,
   currentQuizId,
@@ -51,7 +59,8 @@ export const ModuleSidebar: React.FC<ModuleSidebarProps> = ({
         <div className="space-y-2">
           {modules.map((module) => {
             const isExpanded = expandedModules.has(module.id);
-            const progress = module.userProgress || 0;
+            const progressEntry = moduleProgress?.find((p) => p.moduleId === module.id);
+            const progress = progressEntry?.progress ?? 0;
 
             return (
               <div key={module.id} className="border border-gray-200 rounded-lg overflow-hidden">

@@ -230,6 +230,7 @@ export const CourseLearning: React.FC = () => {
           {modules && (
             <ModuleSidebar
               modules={modules}
+              moduleProgress={progressData?.modules}
               currentModuleId={contentType === 'module' ? contentId! : undefined}
               currentLessonId={contentType === 'lesson' ? contentId! : undefined}
               currentQuizId={contentType === 'quiz' ? contentId! : undefined}
@@ -287,7 +288,9 @@ export const CourseLearning: React.FC = () => {
                   />
                 )}
 
-                {contentType === 'lesson' && lesson && <LessonContent lesson={lesson} />}
+                {contentType === 'lesson' && lesson && (
+                  <LessonContent lesson={lesson} courseId={courseId!} />
+                )}
 
                 {contentType === 'quiz' && quiz && <QuizTaker quiz={quiz} />}
 

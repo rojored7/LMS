@@ -42,29 +42,28 @@ export interface LessonProgress {
  */
 export const getLesson = async (lessonId: string): Promise<LessonDetail> => {
   const response = await api.get(`/lessons/${lessonId}`);
-  return response.data;
+  // Axios interceptor returns response.data (the API envelope {success, data})
+  // .data accesses the inner payload
+  return (response as any).data || response;
 };
 
 /**
  * Mark a lesson as complete
- * @param lessonId - Lesson ID
- * @param timeSpent - Time spent on lesson in seconds (optional)
  */
 export const completeLesson = async (
   lessonId: string,
   timeSpent?: number
 ): Promise<LessonProgress> => {
   const response = await api.post(`/lessons/${lessonId}/complete`, { timeSpent });
-  return response.data;
+  return (response as any).data || response;
 };
 
 /**
  * Get lesson progress for current user
- * @param lessonId - Lesson ID
  */
 export const getLessonProgress = async (lessonId: string): Promise<LessonProgress> => {
   const response = await api.get(`/lessons/${lessonId}/progress`);
-  return response.data;
+  return (response as any).data || response;
 };
 
 export default {

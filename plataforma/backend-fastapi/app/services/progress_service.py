@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 import structlog
 
 from app.middleware.error_handler import ConflictError, NotFoundError
@@ -16,7 +17,7 @@ class ProgressService:
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
 
-    async def mark_lesson_complete(self, user_id: str, lesson_id: str) -> UserProgress:
+    async def mark_lesson_complete(self, user_id: str, lesson_id: str, time_spent: int = 0) -> UserProgress:
         result = await self.db.execute(select(Lesson).where(Lesson.id == lesson_id))
         lesson = result.scalar_one_or_none()
         if lesson is None:
@@ -24,13 +25,15 @@ class ProgressService:
         existing = await self.db.execute(select(UserProgress).where(UserProgress.user_id == user_id, UserProgress.module_id == lesson.module_id, UserProgress.lesson_id == lesson_id))
         progress = existing.scalar_one_or_none()
         if progress is None:
-            progress = UserProgress(user_id=user_id, module_id=lesson.module_id, lesson_id=lesson_id, status="completed", completed=True, progress=100, completed_at=datetime.now(timezone.utc))
+            progress = UserProgress(user_id=user_id, module_id=lesson.module_id, lesson_id=lesson_id, status="completed", completed=True, progress=100, completed_at=datetime.now(timezone.utc), time_spent=time_spent, last_access=datetime.now(timezone.utc))
             self.db.add(progress)
         else:
             progress.status = "completed"
             progress.completed = True
             progress.progress = 100
             progress.completed_at = datetime.now(timezone.utc)
+            progress.time_spent = (progress.time_spent or 0) + time_spent
+            progress.last_access = datetime.now(timezone.utc)
         await self.db.flush()
         await self.db.refresh(progress)
         await self._recalculate_course_progress(user_id, lesson.module_id)
@@ -80,16 +83,18 @@ class ProgressService:
         return result.scalar_one_or_none() or 0
 
     async def get_detailed_course_progress(self, user_id: str, course_id: str) -> dict:
-        overall = await self.get_course_progress(user_id, course_id)
         modules_result = await self.db.execute(select(Module).where(Module.course_id == course_id).order_by(Module.order))
         modules = modules_result.scalars().all()
         module_ids = [m.id for m in modules]
         if not module_ids:
-            return {"overallProgress": overall, "modules": []}
+            return {"overallProgress": 0, "modules": []}
         totals_result = await self.db.execute(select(Lesson.module_id, func.count().label("cnt")).where(Lesson.module_id.in_(module_ids)).group_by(Lesson.module_id))
         totals_map = {row.module_id: row.cnt for row in totals_result}
         completed_result = await self.db.execute(select(UserProgress.module_id, func.count().label("cnt")).where(UserProgress.user_id == user_id, UserProgress.module_id.in_(module_ids), UserProgress.completed == True).group_by(UserProgress.module_id))  # noqa: E712
         completed_map = {row.module_id: row.cnt for row in completed_result}
+        total_all = sum(totals_map.values())
+        completed_all = sum(completed_map.values())
+        overall = round((completed_all / total_all) * 100) if total_all > 0 else 0
         module_progress = []
         for mod in modules:
             total = totals_map.get(mod.id, 0)
@@ -182,7 +187,7 @@ class ProgressService:
         )
         progress = result.scalar_one_or_none()
         if progress is None:
-            progress = UserProgress(user_id=user_id, module_id=module_id, progress=0)
+            progress = UserProgress(user_id=user_id, module_id=module_id, progress=0, last_access=datetime.now(timezone.utc))
             self.db.add(progress)
             await self.db.flush()
             result = await self.db.execute(

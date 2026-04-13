@@ -47,8 +47,10 @@ class UserProgress(Base):
     status: Mapped[str] = mapped_column(String(20), default="not_started", nullable=False)
     progress: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     completed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    score: Mapped[int | None] = mapped_column(Integer, nullable=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     time_spent: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    last_access: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
 
     user: Mapped["User"] = relationship(back_populates="user_progress")  # type: ignore[name-defined]
     enrollment: Mapped["Enrollment | None"] = relationship(back_populates="user_progress")

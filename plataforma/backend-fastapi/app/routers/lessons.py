@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -31,13 +32,18 @@ async def get_lesson(lesson_id: str, user: User = Depends(get_current_user), db:
     return {"success": True, "data": data}
 
 
+class CompleteLessonBody(BaseModel):
+    timeSpent: int = 0
+
+
 @router.post("/{lesson_id}/complete")
-async def complete_lesson(lesson_id: str, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)) -> dict:
+async def complete_lesson(lesson_id: str, body: CompleteLessonBody | None = None, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)) -> dict:
     lesson_service = LessonService(db)
     lesson = await lesson_service.get_lesson(lesson_id)
     await _verify_lesson_enrollment(lesson, user, db)
     service = ProgressService(db)
-    progress = await service.mark_lesson_complete(user.id, lesson_id)
+    time_spent = body.timeSpent if body else 0
+    progress = await service.mark_lesson_complete(user.id, lesson_id, time_spent)
     return {"success": True, "data": {"completed": progress.completed, "completedAt": progress.completed_at.isoformat() if progress.completed_at else None, "progress": progress.progress}}
 
 

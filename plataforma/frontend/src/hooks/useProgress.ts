@@ -15,6 +15,6 @@ export const useCourseProgress = (courseId: string | undefined) => {
     queryKey: ['courseProgress', courseId],
     queryFn: () => getCourseProgress(courseId!),
     enabled: !!courseId,
-    staleTime: 30000, // Consider data fresh for 30 seconds
+    staleTime: 0, // Always refetch on invalidation to reflect lesson completions immediately
   });
 };
