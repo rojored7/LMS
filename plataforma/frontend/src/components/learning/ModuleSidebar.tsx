@@ -5,7 +5,14 @@
 
 import { useState } from 'react';
 import { Module } from '../../services/api/module.service';
-import { ChevronDownIcon, ChevronRightIcon, CheckCircleIcon, BookOpenIcon, BeakerIcon, AcademicCapIcon } from '@heroicons/react/24/outline';
+import {
+  ChevronDownIcon,
+  ChevronRightIcon,
+  CheckCircleIcon,
+  BookOpenIcon,
+  BeakerIcon,
+  AcademicCapIcon,
+} from '@heroicons/react/24/outline';
 
 interface ModuleProgressInfo {
   moduleId: string;
@@ -89,9 +96,11 @@ export const ModuleSidebar: React.FC<ModuleSidebarProps> = ({
                     className="flex-1 min-w-0 text-left py-3 pr-4 hover:text-blue-600 transition-colors"
                     title="Ver información del módulo"
                   >
-                    <p className={`text-sm font-medium truncate ${
-                      currentModuleId === module.id ? 'text-blue-600' : 'text-gray-900'
-                    }`}>
+                    <p
+                      className={`text-sm font-medium truncate ${
+                        currentModuleId === module.id ? 'text-blue-600' : 'text-gray-900'
+                      }`}
+                    >
                       {module.title}
                     </p>
                     <div className="flex items-center space-x-2 mt-1">
@@ -120,8 +129,12 @@ export const ModuleSidebar: React.FC<ModuleSidebarProps> = ({
                             isActive ? 'bg-blue-50 border-l-4 border-blue-600' : ''
                           }`}
                         >
-                          <BookOpenIcon className={`h-4 w-4 flex-shrink-0 ${isActive ? 'text-blue-600' : 'text-gray-400'}`} />
-                          <span className={`text-sm text-left flex-1 ${isActive ? 'text-blue-600 font-medium' : 'text-gray-700'}`}>
+                          <BookOpenIcon
+                            className={`h-4 w-4 flex-shrink-0 ${isActive ? 'text-blue-600' : 'text-gray-400'}`}
+                          />
+                          <span
+                            className={`text-sm text-left flex-1 ${isActive ? 'text-blue-600 font-medium' : 'text-gray-700'}`}
+                          >
                             {lesson.title}
                           </span>
                           <div className="flex items-center space-x-2 flex-shrink-0">
@@ -129,7 +142,10 @@ export const ModuleSidebar: React.FC<ModuleSidebarProps> = ({
                               {lesson.estimatedTime} min
                             </span>
                             {lesson.isCompleted && (
-                              <CheckCircleIcon className="h-4 w-4 text-green-500" title="Completado" />
+                              <CheckCircleIcon
+                                className="h-4 w-4 text-green-500"
+                                title="Completado"
+                              />
                             )}
                           </div>
                         </button>
@@ -147,18 +163,23 @@ export const ModuleSidebar: React.FC<ModuleSidebarProps> = ({
                             isActive ? 'bg-purple-50 border-l-4 border-purple-600' : ''
                           }`}
                         >
-                          <AcademicCapIcon className={`h-4 w-4 flex-shrink-0 ${isActive ? 'text-purple-600' : 'text-gray-400'}`} />
-                          <span className={`text-sm text-left flex-1 ${isActive ? 'text-purple-600 font-medium' : 'text-gray-700'}`}>
+                          <AcademicCapIcon
+                            className={`h-4 w-4 flex-shrink-0 ${isActive ? 'text-purple-600' : 'text-gray-400'}`}
+                          />
+                          <span
+                            className={`text-sm text-left flex-1 ${isActive ? 'text-purple-600 font-medium' : 'text-gray-700'}`}
+                          >
                             {quiz.title}
                           </span>
                           <div className="flex items-center space-x-2 flex-shrink-0">
                             {quiz.timeLimit && (
-                              <span className="text-xs text-gray-400">
-                                {quiz.timeLimit} min
-                              </span>
+                              <span className="text-xs text-gray-400">{quiz.timeLimit} min</span>
                             )}
                             {quiz.isPassed && (
-                              <CheckCircleIcon className="h-4 w-4 text-green-500" title="Aprobado" />
+                              <CheckCircleIcon
+                                className="h-4 w-4 text-green-500"
+                                title="Aprobado"
+                              />
                             )}
                           </div>
                         </button>
@@ -176,8 +197,12 @@ export const ModuleSidebar: React.FC<ModuleSidebarProps> = ({
                             isActive ? 'bg-green-50 border-l-4 border-green-600' : ''
                           }`}
                         >
-                          <BeakerIcon className={`h-4 w-4 flex-shrink-0 ${isActive ? 'text-green-600' : 'text-gray-400'}`} />
-                          <span className={`text-sm text-left flex-1 ${isActive ? 'text-green-600 font-medium' : 'text-gray-700'}`}>
+                          <BeakerIcon
+                            className={`h-4 w-4 flex-shrink-0 ${isActive ? 'text-green-600' : 'text-gray-400'}`}
+                          />
+                          <span
+                            className={`text-sm text-left flex-1 ${isActive ? 'text-green-600 font-medium' : 'text-gray-700'}`}
+                          >
                             {lab.title}
                           </span>
                           <div className="flex items-center space-x-2 flex-shrink-0">
@@ -185,7 +210,10 @@ export const ModuleSidebar: React.FC<ModuleSidebarProps> = ({
                               {lab.language}
                             </span>
                             {lab.isPassed && (
-                              <CheckCircleIcon className="h-4 w-4 text-green-500" title="Aprobado" />
+                              <CheckCircleIcon
+                                className="h-4 w-4 text-green-500"
+                                title="Aprobado"
+                              />
                             )}
                           </div>
                         </button>
