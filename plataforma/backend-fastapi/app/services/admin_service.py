@@ -32,7 +32,7 @@ class AdminService:
         total_courses = total_courses_result.scalar() or 0
 
         published_courses_result = await self.db.execute(
-            select(func.count()).select_from(Course).where(Course.published.is_(True))
+            select(func.count()).select_from(Course).where(Course.is_published.is_(True))
         )
         published_courses = published_courses_result.scalar() or 0
 
