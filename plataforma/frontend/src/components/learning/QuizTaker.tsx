@@ -3,12 +3,11 @@
  * Main container for taking a quiz
  */
 
-import { useState, useEffect } from 'react';
-import { Quiz, QuizAnswer, QuizResult } from '../../services/api/quiz.service';
+import { useState, useEffect, useCallback } from 'react';
+import { Quiz, QuizResult } from '../../services/api/quiz.service';
 import { useSubmitQuiz } from '../../hooks/useQuizzes';
 import { QuizQuestion } from './QuizQuestion';
-import { QuizResults } from './QuizResults';
-import { ClockIcon, AcademicCapIcon } from '@heroicons/react/24/outline';
+import { ClockIcon, AcademicCapIcon, CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline';
 
 interface QuizTakerProps {
   quiz: Quiz;
@@ -26,6 +25,33 @@ export const QuizTaker: React.FC<QuizTakerProps> = ({ quiz, onComplete }) => {
 
   const submitQuiz = useSubmitQuiz();
 
+  const handleSubmit = useCallback(async () => {
+    // Convert answers Map to flat dict: { questionId: "selectedOptionId" }
+    const flatAnswers: Record<string, string> = {};
+    for (const [questionId, selectedIds] of answers.entries()) {
+      if (selectedIds.length > 0) {
+        // For single choice, send the option text (what backend compares against correct_answer)
+        const question = quiz.questions.find((q) => q.id === questionId);
+        if (question) {
+          const selectedOption = question.options.find((o) => o.id === selectedIds[0]);
+          flatAnswers[questionId] = selectedOption?.text || selectedIds[0];
+        }
+      }
+    }
+
+    try {
+      const result = await submitQuiz.mutateAsync({
+        quizId: quiz.id,
+        answers: flatAnswers,
+      });
+
+      setQuizResult(result);
+      setShowResults(true);
+    } catch {
+      // Error handled by mutation onError
+    }
+  }, [answers, quiz, submitQuiz]);
+
   // Timer countdown
   useEffect(() => {
     if (timeRemaining === null || showResults) return;
@@ -33,7 +59,6 @@ export const QuizTaker: React.FC<QuizTakerProps> = ({ quiz, onComplete }) => {
     const timer = setInterval(() => {
       setTimeRemaining((prev) => {
         if (prev === null || prev <= 0) {
-          // Auto-submit when time runs out
           handleSubmit();
           return 0;
         }
@@ -42,9 +67,8 @@ export const QuizTaker: React.FC<QuizTakerProps> = ({ quiz, onComplete }) => {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [timeRemaining, showResults]);
+  }, [showResults, handleSubmit]);
 
-  // Format time as MM:SS
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -58,18 +82,15 @@ export const QuizTaker: React.FC<QuizTakerProps> = ({ quiz, onComplete }) => {
     const newAnswers = new Map(answers);
     const currentAnswer = newAnswers.get(questionId) || [];
 
-    if (question.type === 'SINGLE_CHOICE' || question.type === 'TRUE_FALSE') {
-      // Single choice: replace answer
+    if (question.type === 'MULTIPLE_CHOICE' || question.type === 'TRUE_FALSE') {
+      // Single choice: replace
       newAnswers.set(questionId, isChecked ? [optionId] : []);
     } else {
-      // Multiple choice: toggle option
+      // Multiple select: toggle
       if (isChecked) {
         newAnswers.set(questionId, [...currentAnswer, optionId]);
       } else {
-        newAnswers.set(
-          questionId,
-          currentAnswer.filter((id) => id !== optionId)
-        );
+        newAnswers.set(questionId, currentAnswer.filter((id) => id !== optionId));
       }
     }
 
@@ -88,26 +109,6 @@ export const QuizTaker: React.FC<QuizTakerProps> = ({ quiz, onComplete }) => {
     }
   };
 
-  const handleSubmit = async () => {
-    // Convert answers to API format
-    const formattedAnswers: QuizAnswer[] = quiz.questions.map((q) => ({
-      questionId: q.id,
-      selectedOptions: answers.get(q.id) || [],
-    }));
-
-    try {
-      const result = await submitQuiz.mutateAsync({
-        quizId: quiz.id,
-        answers: formattedAnswers,
-      });
-
-      setQuizResult(result);
-      setShowResults(true);
-    } catch (error) {
-      // Error handled by UI
-    }
-  };
-
   const handleRetry = () => {
     setAnswers(new Map());
     setCurrentQuestion(0);
@@ -116,25 +117,56 @@ export const QuizTaker: React.FC<QuizTakerProps> = ({ quiz, onComplete }) => {
     setTimeRemaining(quiz.timeLimit ? quiz.timeLimit * 60 : null);
   };
 
-  // Check if all questions answered
   const allQuestionsAnswered = quiz.questions.every((q) => {
     const answer = answers.get(q.id);
     return answer && answer.length > 0;
   });
 
-  // If showing results
+  // Results view
   if (showResults && quizResult) {
     return (
-      <QuizResults
-        result={quizResult}
-        onRetry={quiz.canAttempt ? handleRetry : undefined}
-        onContinue={onComplete}
-        canRetry={quiz.canAttempt}
-      />
+      <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+        <div className={`px-6 py-8 text-center ${quizResult.passed ? 'bg-green-50' : 'bg-red-50'}`}>
+          {quizResult.passed ? (
+            <CheckCircleIcon className="h-16 w-16 text-green-500 mx-auto mb-4" />
+          ) : (
+            <XCircleIcon className="h-16 w-16 text-red-500 mx-auto mb-4" />
+          )}
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            {quizResult.passed ? 'Quiz Aprobado' : 'Quiz No Aprobado'}
+          </h2>
+          <p className="text-4xl font-bold text-gray-900 mb-2">{quizResult.score}%</p>
+          <p className="text-gray-600">
+            {quizResult.correctAnswers} de {quizResult.totalQuestions} respuestas correctas
+          </p>
+          <p className="text-sm text-gray-500 mt-1">
+            Intento {quizResult.attemptNumber} de {quizResult.maxAttempts}
+          </p>
+        </div>
+        <div className="px-6 py-4 flex justify-center space-x-4">
+          {quizResult.attemptNumber < quizResult.maxAttempts && (
+            <button
+              onClick={handleRetry}
+              className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+            >
+              Reintentar
+            </button>
+          )}
+          {onComplete && (
+            <button
+              onClick={onComplete}
+              className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+            >
+              Continuar
+            </button>
+          )}
+        </div>
+      </div>
     );
   }
 
   const currentQuestionData = quiz.questions[currentQuestion];
+  if (!currentQuestionData) return null;
 
   return (
     <div className="bg-white rounded-lg shadow-lg overflow-hidden">
@@ -163,7 +195,7 @@ export const QuizTaker: React.FC<QuizTakerProps> = ({ quiz, onComplete }) => {
           <span className="text-sm font-medium text-gray-700">
             Pregunta {currentQuestion + 1} de {quiz.questions.length}
           </span>
-          <span className="text-sm text-gray-500">Puntuación mínima: {quiz.passingScore}%</span>
+          <span className="text-sm text-gray-500">Puntuacion minima: {quiz.passingScore}%</span>
         </div>
         <div className="w-full bg-gray-200 rounded-full h-2">
           <div
@@ -214,16 +246,6 @@ export const QuizTaker: React.FC<QuizTakerProps> = ({ quiz, onComplete }) => {
           )}
         </div>
       </div>
-
-      {/* Attempts Info */}
-      {quiz.attempts.length > 0 && (
-        <div className="px-6 py-3 bg-blue-50 border-t border-blue-200">
-          <p className="text-sm text-blue-800">
-            Intentos anteriores: {quiz.attempts.length}
-            {quiz.maxAttempts && ` de ${quiz.maxAttempts}`}
-          </p>
-        </div>
-      )}
     </div>
   );
 };

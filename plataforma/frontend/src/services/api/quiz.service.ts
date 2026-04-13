@@ -5,27 +5,18 @@
 
 import api from '../api';
 
-export interface QuizQuestion {
-  id: string;
-  question: string;
-  type: 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE' | 'TRUE_FALSE';
-  options: QuizOption[];
-  points: number;
-  order: number;
-}
-
 export interface QuizOption {
   id: string;
   text: string;
-  // isCorrect is NOT included when fetching quiz (security)
 }
 
-export interface QuizAttemptSummary {
+export interface QuizQuestion {
   id: string;
-  attemptNumber: number;
-  score: number;
-  passed: boolean;
-  completedAt: Date;
+  question: string;
+  type: 'MULTIPLE_CHOICE' | 'MULTIPLE_SELECT' | 'TRUE_FALSE' | 'SHORT_ANSWER';
+  options: QuizOption[];
+  order: number;
+  explanation?: string;
 }
 
 export interface Quiz {
@@ -34,109 +25,80 @@ export interface Quiz {
   description?: string;
   passingScore: number;
   timeLimit?: number;
-  maxAttempts?: number;
+  attempts: number; // max allowed attempts (int from backend)
+  moduleId: string;
   questions: QuizQuestion[];
-  attempts: QuizAttemptSummary[];
-  canAttempt: boolean;
-  hasPassed: boolean;
-}
-
-export interface QuizAnswer {
-  questionId: string;
-  selectedOptions: string[]; // Array of option IDs
 }
 
 export interface QuizResult {
-  attemptId: string;
-  attemptNumber: number;
   score: number;
   passed: boolean;
-  passingScore: number;
-  results: QuestionResult[];
-  totalPoints: number;
-  earnedPoints: number;
-}
-
-export interface QuestionResult {
-  questionId: string;
-  isCorrect: boolean;
-  selectedOptions: string[];
-  correctOptions: string[];
-  points: number;
-}
-
-export interface QuizAttemptDetail {
-  attemptId: string;
+  totalQuestions: number;
+  correctAnswers: number;
   attemptNumber: number;
-  score: number;
-  passed: boolean;
-  completedAt: Date;
-  quiz: {
-    id: string;
-    title: string;
-    passingScore: number;
-  };
-  results: DetailedQuestionResult[];
-}
-
-export interface DetailedQuestionResult {
-  questionId: string;
-  question: string;
-  type: string;
-  options: {
-    id: string;
-    text: string;
-    isCorrect: boolean;
-    wasSelected: boolean;
-  }[];
-  isCorrect: boolean;
-  points: number;
-  earnedPoints: number;
+  maxAttempts: number;
 }
 
 /**
- * Get a quiz with questions (without correct answers)
- * @param quizId - Quiz ID
+ * Normalize options from backend format (string[]) to QuizOption[]
+ */
+function normalizeOptions(raw: unknown): QuizOption[] {
+  if (!raw) return [];
+  if (Array.isArray(raw)) {
+    return raw.map((item, index) => {
+      if (typeof item === 'string') {
+        return { id: String(index), text: item };
+      }
+      if (typeof item === 'object' && item !== null && 'text' in item) {
+        return { id: (item as any).id || String(index), text: (item as any).text };
+      }
+      return { id: String(index), text: String(item) };
+    });
+  }
+  if (typeof raw === 'object') {
+    return Object.entries(raw as Record<string, string>).map(([key, value]) => ({
+      id: key,
+      text: String(value),
+    }));
+  }
+  return [];
+}
+
+/**
+ * Normalize quiz response from backend
+ */
+function normalizeQuiz(data: any): Quiz {
+  return {
+    ...data,
+    questions: (data.questions || []).map((q: any) => ({
+      ...q,
+      options: normalizeOptions(q.options),
+    })),
+  };
+}
+
+/**
+ * Get a quiz with questions
  */
 export const getQuiz = async (quizId: string): Promise<Quiz> => {
   const response = await api.get(`/quizzes/${quizId}`);
-  return response.data;
+  const data = (response as any).data || response;
+  return normalizeQuiz(data);
 };
 
 /**
  * Submit a quiz attempt
- * @param quizId - Quiz ID
- * @param answers - User's answers
+ * Backend expects: { answers: { "questionId": "selectedOptionIndex" } }
  */
 export const submitQuiz = async (
   quizId: string,
-  answers: QuizAnswer[]
+  answers: Record<string, string>
 ): Promise<QuizResult> => {
-  const response = await api.post(`/quizzes/${quizId}/submit`, { answers });
-  return response.data;
-};
-
-/**
- * Get all attempts for a quiz
- * @param quizId - Quiz ID
- */
-export const getQuizAttempts = async (quizId: string): Promise<QuizAttemptSummary[]> => {
-  const response = await api.get(`/quizzes/${quizId}/attempts`);
-  return response.data;
-};
-
-/**
- * Get quiz attempt details
- * @param attemptId - Attempt ID
- */
-export const getQuizAttempt = async (attemptId: string): Promise<QuizAttemptDetail> => {
-  const response = await api.get(`/quizzes/attempts/${attemptId}`);
-  return response.data;
+  const response = await api.post(`/quizzes/${quizId}/attempt`, { answers });
+  return (response as any).data || response;
 };
 
 export default {
   getQuiz,
   submitQuiz,
-  getQuizAttempts,
-  getQuizAttempt,
 };

@@ -22,16 +22,14 @@ export const QuizQuestion: React.FC<QuizQuestionProps> = ({
   showResults = false,
   correctOptions = [],
 }) => {
-  const isSingleChoice = question.type === 'SINGLE_CHOICE' || question.type === 'TRUE_FALSE';
+  const isSingleChoice = question.type === 'MULTIPLE_CHOICE' || question.type === 'TRUE_FALSE';
 
   const handleChange = (optionId: string) => {
-    if (showResults) return; // Disable interaction in results view
+    if (showResults) return;
 
     if (isSingleChoice) {
-      // For single choice, deselect all others and select this one
       onOptionChange(optionId, true);
     } else {
-      // For multiple choice, toggle this option
       const isCurrentlySelected = selectedOptions.includes(optionId);
       onOptionChange(optionId, !isCurrentlySelected);
     }
@@ -62,35 +60,14 @@ export const QuizQuestion: React.FC<QuizQuestionProps> = ({
     return `${baseClasses} bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50`;
   };
 
-  const getCheckboxClassName = (optionId: string) => {
-    const isSelected = selectedOptions.includes(optionId);
-    const isCorrect = correctOptions.includes(optionId);
-    const wasSelected = showResults && isSelected;
-
-    if (showResults) {
-      if (isCorrect && wasSelected) {
-        return 'h-5 w-5 text-green-600 border-green-600 focus:ring-green-500';
-      } else if (!isCorrect && wasSelected) {
-        return 'h-5 w-5 text-red-600 border-red-600 focus:ring-red-500';
-      }
-    }
-
-    return 'h-5 w-5 text-blue-600 border-gray-300 focus:ring-blue-500';
-  };
-
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
       {/* Question Header */}
       <div className="mb-4">
-        <div className="flex items-start justify-between">
-          <h3 className="text-lg font-semibold text-gray-900">
-            <span className="text-blue-600 mr-2">Pregunta {questionNumber}</span>
-            {question.question}
-          </h3>
-          <span className="ml-4 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium flex-shrink-0">
-            {question.points} {question.points === 1 ? 'punto' : 'puntos'}
-          </span>
-        </div>
+        <h3 className="text-lg font-semibold text-gray-900">
+          <span className="text-blue-600 mr-2">Pregunta {questionNumber}</span>
+          {question.question}
+        </h3>
         {!isSingleChoice && (
           <p className="mt-2 text-sm text-gray-500">Selecciona todas las opciones correctas</p>
         )}
@@ -98,13 +75,14 @@ export const QuizQuestion: React.FC<QuizQuestionProps> = ({
 
       {/* Options */}
       <div className="space-y-3">
-        {question.options.map((option) => {
+        {(question.options || []).map((option) => {
           const isSelected = selectedOptions.includes(option.id);
 
           return (
             <label
               key={option.id}
               className={getOptionClassName(option.id)}
+              onClick={() => handleChange(option.id)}
             >
               <input
                 type={isSingleChoice ? 'radio' : 'checkbox'}
@@ -112,7 +90,7 @@ export const QuizQuestion: React.FC<QuizQuestionProps> = ({
                 checked={isSelected}
                 onChange={() => handleChange(option.id)}
                 disabled={showResults}
-                className={getCheckboxClassName(option.id)}
+                className="h-5 w-5 text-blue-600 border-gray-300 focus:ring-blue-500"
               />
               <span className={`flex-1 text-gray-900 ${isSelected ? 'font-medium' : ''}`}>
                 {option.text}
@@ -121,15 +99,6 @@ export const QuizQuestion: React.FC<QuizQuestionProps> = ({
           );
         })}
       </div>
-
-      {/* Results Feedback */}
-      {showResults && (
-        <div className="mt-4 p-4 rounded-lg bg-gray-50 border border-gray-200">
-          <p className="text-sm font-medium text-gray-700">
-            Respuesta correcta: {correctOptions.map(id => question.options.find(opt => opt.id === id)?.text).join(', ')}
-          </p>
-        </div>
-      )}
     </div>
   );
 };
