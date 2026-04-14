@@ -123,7 +123,7 @@ export const Home: React.FC = () => {
                 <div className="text-center">
                   <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-50 rounded-xl mb-4">
                     <svg
-                      className="w-8 h-8 text-[#00A6FF]-mid"
+                      className="w-8 h-8 text-[#166EB6]"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -148,7 +148,7 @@ export const Home: React.FC = () => {
       </section>
 
       {/* CTA Section */}
-      <section className="py-16 bg-[#021627]-dark text-white">
+      <section className="py-16 bg-[#0A1628] text-white">
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-3xl font-heading font-bold mb-4 text-[#F5F8FA]">
             Listo para comenzar tu aprendizaje?

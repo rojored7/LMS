@@ -131,10 +131,7 @@ export const CourseDetail: React.FC = () => {
                 {isLoadingModules ? (
                   <div className="space-y-2">
                     {[1, 2, 3].map((i) => (
-                      <div
-                        key={i}
-                        className="border border-gray-200 rounded-lg p-4 animate-pulse"
-                      >
+                      <div key={i} className="border border-gray-200 rounded-lg p-4 animate-pulse">
                         <div className="h-4 bg-gray-200 rounded w-1/3 mb-2" />
                         <div className="h-3 bg-gray-200 rounded w-2/3" />
                       </div>
@@ -143,17 +140,12 @@ export const CourseDetail: React.FC = () => {
                 ) : modules && modules.length > 0 ? (
                   <div className="space-y-2">
                     {modules.map((module, index) => (
-                      <div
-                        key={module.id}
-                        className="border border-gray-200 rounded-lg p-4"
-                      >
+                      <div key={module.id} className="border border-gray-200 rounded-lg p-4">
                         <h3 className="font-medium text-gray-900 mb-1">
                           Modulo {index + 1}: {module.title}
                         </h3>
                         {module.description && (
-                          <p className="text-sm text-gray-600">
-                            {module.description}
-                          </p>
+                          <p className="text-sm text-gray-600">{module.description}</p>
                         )}
                         {module.duration && (
                           <p className="text-sm text-gray-500 mt-2">
@@ -164,25 +156,21 @@ export const CourseDetail: React.FC = () => {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-gray-500">
-                    No hay modulos disponibles aun.
-                  </p>
+                  <p className="text-sm text-gray-500">No hay modulos disponibles aun.</p>
                 )}
               </div>
 
               {/* Tags */}
               {course.tags && course.tags.length > 0 && (
                 <div>
-                  <h3 className="text-sm font-medium text-gray-700 mb-2">
-                    Etiquetas
-                  </h3>
+                  <h3 className="text-sm font-medium text-gray-700 mb-2">Etiquetas</h3>
                   <div className="flex flex-wrap gap-2">
                     {course.tags.map((tag, index) => (
                       <Badge
                         key={index}
                         variant="default"
                         size="sm"
-                        className="bg-itac-card-blue text-itac-blue-mid"
+                        className="bg-blue-50 text-[#166EB6]"
                       >
                         {tag}
                       </Badge>
@@ -200,7 +188,7 @@ export const CourseDetail: React.FC = () => {
             <CardBody>
               {/* Price */}
               <div className="text-center mb-6">
-                <p className="text-3xl font-bold text-itac-orange">
+                <p className="text-3xl font-bold text-[#FF5100]">
                   {course.price === 0 ? 'Gratis' : formatCurrency(course.price)}
                 </p>
               </div>
@@ -249,27 +237,17 @@ export const CourseDetail: React.FC = () => {
               <div className="space-y-4 pt-4 border-t border-gray-200">
                 <div>
                   <p className="text-sm font-medium text-gray-700 mb-1">Nivel</p>
-                  <p className="text-sm text-gray-600">
-                    {COURSE_LEVEL_LABELS[course.level]}
-                  </p>
+                  <p className="text-sm text-gray-600">{COURSE_LEVEL_LABELS[course.level]}</p>
                 </div>
 
                 <div>
-                  <p className="text-sm font-medium text-gray-700 mb-1">
-                    Duración
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    {formatDuration(course.duration)}
-                  </p>
+                  <p className="text-sm font-medium text-gray-700 mb-1">Duración</p>
+                  <p className="text-sm text-gray-600">{formatDuration(course.duration)}</p>
                 </div>
 
                 <div>
-                  <p className="text-sm font-medium text-gray-700 mb-1">
-                    Última actualización
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    {formatDate(course.updatedAt)}
-                  </p>
+                  <p className="text-sm font-medium text-gray-700 mb-1">Última actualización</p>
+                  <p className="text-sm text-gray-600">{formatDate(course.updatedAt)}</p>
                 </div>
               </div>
             </CardBody>

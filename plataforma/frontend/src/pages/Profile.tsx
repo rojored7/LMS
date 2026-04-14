@@ -59,9 +59,7 @@ export const Profile: React.FC = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold font-heading text-gray-900 mb-8">
-          Mi Perfil
-        </h1>
+        <h1 className="text-3xl font-bold font-heading text-gray-900 mb-8">Mi Perfil</h1>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Sidebar */}
@@ -82,7 +80,7 @@ export const Profile: React.FC = () => {
 
                   <p className="text-sm text-gray-600 mb-3">{user.email}</p>
 
-                  <Badge variant="info" className="bg-itac-card-blue text-itac-blue">
+                  <Badge variant="info" className="bg-blue-50 text-[#00A6FF]">
                     {ROLE_LABELS[user.role]}
                   </Badge>
 
@@ -101,9 +99,7 @@ export const Profile: React.FC = () => {
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    Información Personal
-                  </h3>
+                  <h3 className="text-lg font-semibold text-gray-900">Información Personal</h3>
                   {!isEditing && (
                     <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
                       Editar
@@ -181,34 +177,26 @@ export const Profile: React.FC = () => {
                 ) : (
                   <div className="space-y-4">
                     <div>
-                      <p className="text-sm font-medium text-gray-700 mb-1">
-                        Nombre Completo
-                      </p>
+                      <p className="text-sm font-medium text-gray-700 mb-1">Nombre Completo</p>
                       <p className="text-gray-900">
                         {user.firstName} {user.lastName}
                       </p>
                     </div>
 
                     <div>
-                      <p className="text-sm font-medium text-gray-700 mb-1">
-                        Email
-                      </p>
+                      <p className="text-sm font-medium text-gray-700 mb-1">Email</p>
                       <p className="text-gray-900">{user.email}</p>
                     </div>
 
                     {user.bio && (
                       <div>
-                        <p className="text-sm font-medium text-gray-700 mb-1">
-                          Biografía
-                        </p>
+                        <p className="text-sm font-medium text-gray-700 mb-1">Biografía</p>
                         <p className="text-gray-900">{user.bio}</p>
                       </div>
                     )}
 
                     <div>
-                      <p className="text-sm font-medium text-gray-700 mb-1">
-                        Rol
-                      </p>
+                      <p className="text-sm font-medium text-gray-700 mb-1">Rol</p>
                       <p className="text-gray-900">{ROLE_LABELS[user.role]}</p>
                     </div>
                   </div>

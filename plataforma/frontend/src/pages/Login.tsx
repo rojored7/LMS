@@ -92,9 +92,7 @@ export const Login: React.FC = () => {
         <Card className="bg-white border border-gray-200 shadow-lg rounded-xl">
           <CardHeader className="border-b border-gray-200">
             <div className="text-center">
-              <h2 className="text-3xl font-bold font-heading text-gray-900">
-                Iniciar Sesion
-              </h2>
+              <h2 className="text-3xl font-bold font-heading text-gray-900">Iniciar Sesion</h2>
               <p className="mt-2 text-sm text-gray-600">
                 No tienes una cuenta?{' '}
                 <Link

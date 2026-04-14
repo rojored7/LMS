@@ -173,13 +173,11 @@ export const AdminDashboard = () => {
           <h1 className="text-3xl font-bold font-heading text-gray-900 mb-2">
             Panel de Administración
           </h1>
-          <p className="text-gray-600">
-            Gestión de usuarios, cursos y progreso del sistema
-          </p>
+          <p className="text-gray-600">Gestión de usuarios, cursos y progreso del sistema</p>
         </div>
         <button
           onClick={() => navigate('/admin/courses')}
-          className="flex items-center gap-2 px-4 py-2 bg-itac-orange text-white rounded-lg hover:bg-itac-orange-hover transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-[#FF5100] text-white rounded-lg hover:bg-[#e04800] transition-colors"
         >
           <Settings className="w-5 h-5" />
           Gestionar Cursos
@@ -191,14 +189,12 @@ export const AdminDashboard = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-itac-card-blue rounded-lg">
-                <Users className="w-6 h-6 text-itac-blue" />
+              <div className="p-3 bg-blue-50 rounded-lg">
+                <Users className="w-6 h-6 text-[#00A6FF]" />
               </div>
               <div>
                 <p className="text-sm text-gray-600">Total Usuarios</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {stats.users.total}
-                </p>
+                <p className="text-2xl font-bold text-gray-900">{stats.users.total}</p>
                 <p className="text-xs text-gray-500 mt-1">
                   {stats.users.byRole.STUDENT} estudiantes
                 </p>
@@ -208,14 +204,12 @@ export const AdminDashboard = () => {
 
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-itac-card-orange rounded-lg">
-                <BookOpen className="w-6 h-6 text-itac-orange" />
+              <div className="p-3 bg-orange-50 rounded-lg">
+                <BookOpen className="w-6 h-6 text-[#FF5100]" />
               </div>
               <div>
                 <p className="text-sm text-gray-600">Cursos</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {stats.courses.published}
-                </p>
+                <p className="text-2xl font-bold text-gray-900">{stats.courses.published}</p>
                 <p className="text-xs text-gray-500 mt-1">de {stats.courses.total} totales</p>
               </div>
             </div>
@@ -223,14 +217,12 @@ export const AdminDashboard = () => {
 
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-itac-card-blue rounded-lg">
-                <GraduationCap className="w-6 h-6 text-itac-blue" />
+              <div className="p-3 bg-blue-50 rounded-lg">
+                <GraduationCap className="w-6 h-6 text-[#00A6FF]" />
               </div>
               <div>
                 <p className="text-sm text-gray-600">Inscripciones</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {stats.enrollments.total}
-                </p>
+                <p className="text-2xl font-bold text-gray-900">{stats.enrollments.total}</p>
                 <p className="text-xs text-gray-500 mt-1">
                   {stats.enrollments.completed} completadas
                 </p>
@@ -240,8 +232,8 @@ export const AdminDashboard = () => {
 
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-itac-card-orange rounded-lg">
-                <TrendingUp className="w-6 h-6 text-itac-orange" />
+              <div className="p-3 bg-orange-50 rounded-lg">
+                <TrendingUp className="w-6 h-6 text-[#FF5100]" />
               </div>
               <div>
                 <p className="text-sm text-gray-600">Progreso Promedio</p>
@@ -260,23 +252,17 @@ export const AdminDashboard = () => {
       {/* Users Management */}
       <div className="bg-white rounded-lg shadow">
         <div className="p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">
-            Gestión de Estudiantes
-          </h2>
-          <p className="text-sm text-gray-600 mt-1">
-            {students.length} estudiantes registrados
-          </p>
+          <h2 className="text-xl font-semibold text-gray-900">Gestión de Estudiantes</h2>
+          <p className="text-sm text-gray-600 mt-1">{students.length} estudiantes registrados</p>
         </div>
 
         <div className="p-6">
           {isLoadingUsers ? (
             <div className="text-center py-12">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-itac-blue" />
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#00A6FF]" />
             </div>
           ) : students.length === 0 ? (
-            <div className="text-center py-12 text-gray-500">
-              No hay estudiantes registrados
-            </div>
+            <div className="text-center py-12 text-gray-500">No hay estudiantes registrados</div>
           ) : (
             <div className="space-y-4">
               {students.map((user) => {
@@ -285,23 +271,18 @@ export const AdminDashboard = () => {
                 const isLoading = loadingEnrollments.has(user.id);
 
                 return (
-                  <div
-                    key={user.id}
-                    className="border border-gray-200 rounded-lg"
-                  >
+                  <div key={user.id} className="border border-gray-200 rounded-lg">
                     <div className="p-4 flex items-center justify-between">
                       <div className="flex items-center gap-4 flex-1">
                         <button
                           onClick={() => handleUserExpand(user.id)}
                           className="flex items-center gap-4 flex-1 text-left hover:opacity-80 transition-opacity"
                         >
-                          <div className="w-10 h-10 rounded-full bg-itac-blue-mid flex items-center justify-center text-white font-semibold">
+                          <div className="w-10 h-10 rounded-full bg-[#166EB6] flex items-center justify-center text-white font-semibold">
                             {user.name ? user.name[0].toUpperCase() : user.email[0].toUpperCase()}
                           </div>
                           <div>
-                            <p className="font-medium text-gray-900">
-                              {user.name || user.email}
-                            </p>
+                            <p className="font-medium text-gray-900">{user.name || user.email}</p>
                             <p className="text-sm text-gray-500">{user.email}</p>
                           </div>
                         </button>
@@ -319,7 +300,7 @@ export const AdminDashboard = () => {
                               });
                             });
                           }}
-                          className="px-3 py-1.5 text-sm font-medium text-itac-blue hover:bg-itac-card-blue rounded-md transition-colors flex items-center gap-1"
+                          className="px-3 py-1.5 text-sm font-medium text-[#00A6FF] hover:bg-blue-50 rounded-md transition-colors flex items-center gap-1"
                         >
                           <Plus className="w-4 h-4" />
                           Asignar Curso
@@ -336,16 +317,11 @@ export const AdminDashboard = () => {
                     {isExpanded && userEnrollments && (
                       <div className="p-4 border-t border-gray-200 bg-gray-50">
                         {userEnrollments.enrollments.length === 0 ? (
-                          <p className="text-center py-4 text-gray-500">
-                            Sin cursos asignados
-                          </p>
+                          <p className="text-center py-4 text-gray-500">Sin cursos asignados</p>
                         ) : (
                           <div className="space-y-3">
                             {userEnrollments.enrollments.map((enrollment) => (
-                              <div
-                                key={enrollment.id}
-                                className="bg-white rounded-lg p-4"
-                              >
+                              <div key={enrollment.id} className="bg-white rounded-lg p-4">
                                 <div className="flex items-start justify-between">
                                   <div className="flex-1">
                                     <h4 className="font-medium text-gray-900">
@@ -353,16 +329,14 @@ export const AdminDashboard = () => {
                                     </h4>
                                     <div className="mt-2">
                                       <div className="flex items-center justify-between text-sm mb-1">
-                                        <span className="text-gray-600">
-                                          Progreso
-                                        </span>
+                                        <span className="text-gray-600">Progreso</span>
                                         <span className="font-semibold">
                                           {enrollment.progress}%
                                         </span>
                                       </div>
                                       <div className="w-full bg-gray-200 rounded-full h-2">
                                         <div
-                                          className="bg-itac-blue h-2 rounded-full transition-all"
+                                          className="bg-[#00A6FF] h-2 rounded-full transition-all"
                                           style={{ width: `${enrollment.progress}%` }}
                                         />
                                       </div>

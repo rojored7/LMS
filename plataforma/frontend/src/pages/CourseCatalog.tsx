@@ -49,12 +49,8 @@ export const CourseCatalog: React.FC = () => {
     <div className="container mx-auto px-4 py-8">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold font-heading text-gray-900 mb-2">
-          Catálogo de Cursos
-        </h1>
-        <p className="text-gray-600">
-          Explora nuestra colección de cursos profesionales
-        </p>
+        <h1 className="text-3xl font-bold font-heading text-gray-900 mb-2">Catálogo de Cursos</h1>
+        <p className="text-gray-600">Explora nuestra colección de cursos profesionales</p>
       </div>
 
       {/* Filters */}
@@ -105,7 +101,7 @@ export const CourseCatalog: React.FC = () => {
           {filteredCourses.map((course) => (
             <Card
               key={course.id}
-              className="hover:shadow-lg hover:border-itac-blue/30 transition-shadow cursor-pointer"
+              className="hover:shadow-lg hover:border-[#00A6FF]/30 transition-shadow cursor-pointer"
               onClick={() => navigate(`${ROUTES.COURSES}/${course.id}`)}
             >
               <CardBody>
@@ -120,12 +116,8 @@ export const CourseCatalog: React.FC = () => {
 
                 {/* Course Info */}
                 <div className="mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                    {course.title}
-                  </h3>
-                  <p className="text-sm text-gray-600 line-clamp-2 mb-3">
-                    {course.description}
-                  </p>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">{course.title}</h3>
+                  <p className="text-sm text-gray-600 line-clamp-2 mb-3">{course.description}</p>
 
                   {/* Metadata */}
                   <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
@@ -168,7 +160,7 @@ export const CourseCatalog: React.FC = () => {
                     <Badge className={COURSE_LEVEL_COLORS[course.level]} size="sm">
                       {COURSE_LEVEL_LABELS[course.level]}
                     </Badge>
-                    <span className="text-lg font-bold text-itac-orange">
+                    <span className="text-lg font-bold text-[#FF5100]">
                       {course.price === 0 ? 'Gratis' : formatCurrency(course.price)}
                     </span>
                   </div>
@@ -207,12 +199,8 @@ export const CourseCatalog: React.FC = () => {
                   d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                 />
               </svg>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                No se encontraron cursos
-              </h3>
-              <p className="text-gray-600">
-                Intenta ajustar tus filtros de búsqueda
-              </p>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No se encontraron cursos</h3>
+              <p className="text-gray-600">Intenta ajustar tus filtros de búsqueda</p>
             </div>
           </CardBody>
         </Card>

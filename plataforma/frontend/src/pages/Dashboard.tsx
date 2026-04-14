@@ -41,9 +41,9 @@ export const Dashboard: React.FC = () => {
         <Card>
           <CardBody>
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-itac-card-blue rounded-lg">
+              <div className="p-3 bg-blue-50 rounded-lg">
                 <svg
-                  className="w-8 h-8 text-itac-blue"
+                  className="w-8 h-8 text-[#00A6FF]"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -58,9 +58,7 @@ export const Dashboard: React.FC = () => {
               </div>
               <div>
                 <p className="text-sm text-gray-600">Cursos Inscritos</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {enrolledCourses?.length || 0}
-                </p>
+                <p className="text-2xl font-bold text-gray-900">{enrolledCourses?.length || 0}</p>
               </div>
             </div>
           </CardBody>
@@ -69,9 +67,9 @@ export const Dashboard: React.FC = () => {
         <Card>
           <CardBody>
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-itac-card-orange rounded-lg">
+              <div className="p-3 bg-orange-50 rounded-lg">
                 <svg
-                  className="w-8 h-8 text-itac-orange"
+                  className="w-8 h-8 text-[#FF5100]"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -97,9 +95,9 @@ export const Dashboard: React.FC = () => {
         <Card>
           <CardBody>
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-itac-card-blue rounded-lg">
+              <div className="p-3 bg-blue-50 rounded-lg">
                 <svg
-                  className="w-8 h-8 text-itac-blue-mid"
+                  className="w-8 h-8 text-[#166EB6]"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -184,7 +182,7 @@ export const Dashboard: React.FC = () => {
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2">
                         <div
-                          className="bg-itac-blue h-2 rounded-full"
+                          className="bg-[#00A6FF] h-2 rounded-full"
                           style={{ width: `${enrollment.progress}%` }}
                         />
                       </div>
@@ -222,9 +220,7 @@ export const Dashboard: React.FC = () => {
                   d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
                 />
               </svg>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                No tienes cursos inscritos
-              </h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No tienes cursos inscritos</h3>
               <p className="text-gray-600 mb-4">
                 Explora nuestro catálogo y comienza tu aprendizaje
               </p>

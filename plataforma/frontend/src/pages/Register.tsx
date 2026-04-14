@@ -55,10 +55,7 @@ export const Register: React.FC = () => {
               <h2 className="text-3xl font-bold font-heading text-gray-900">Crear Cuenta</h2>
               <p className="mt-2 text-sm text-gray-600">
                 Ya tienes una cuenta?{' '}
-                <Link
-                  to={ROUTES.LOGIN}
-                  className="font-medium text-blue-600 hover:text-blue-700"
-                >
+                <Link to={ROUTES.LOGIN} className="font-medium text-blue-600 hover:text-blue-700">
                   Inicia sesion aqui
                 </Link>
               </p>
