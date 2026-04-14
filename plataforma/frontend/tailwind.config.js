@@ -5,33 +5,25 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Tema oscuro para ciberseguridad
-        cyber: {
-          50: '#f0f9ff',
-          100: '#e0f2fe',
-          200: '#b9e6fe',
-          300: '#7cd4fd',
-          400: '#36bffa',
-          500: '#0ba5e9',
-          600: '#0284c7',
-          700: '#0369a1',
-          800: '#075985',
-          900: '#0c4a6e',
-          950: '#082f49',
+        // ITAC Brand Colors
+        itac: {
+          navy: '#021627',
+          'navy-dark': '#0A1628',
+          'navy-light': '#0f2035',
+          blue: '#00A6FF',
+          'blue-mid': '#166EB6',
+          orange: '#FF5100',
+          'orange-warm': '#EE7D20',
+          'orange-hover': '#e04800',
+          'text-light': '#F5F8FA',
+          'text-muted': 'rgba(255,255,255,0.5)',
+          'text-dark': '#1F2937',
+          'text-navy': '#21324A',
+          'surface-glass': 'rgba(255,255,255,0.04)',
+          'card-blue': 'rgba(22, 110, 182, 0.1)',
+          'card-orange': 'rgba(238, 125, 32, 0.1)',
         },
-        dark: {
-          50: '#f8fafc',
-          100: '#f1f5f9',
-          200: '#e2e8f0',
-          300: '#cbd5e1',
-          400: '#94a3b8',
-          500: '#64748b',
-          600: '#475569',
-          700: '#334155',
-          800: '#1e293b',
-          900: '#0f172a',
-          950: '#020617',
-        },
+        // Keep semantic colors
         success: {
           light: '#4ade80',
           DEFAULT: '#22c55e',
@@ -49,8 +41,12 @@ export default {
         },
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
+        sans: ['Manrope', 'system-ui', 'sans-serif'],
+        heading: ['Syne', 'system-ui', 'sans-serif'],
         mono: ['Fira Code', 'Monaco', 'Courier New', 'monospace'],
+      },
+      borderRadius: {
+        'itac': '12px',
       },
       animation: {
         'fade-in': 'fadeIn 0.3s ease-in',
@@ -85,8 +81,8 @@ export default {
         },
       },
       boxShadow: {
-        glow: '0 0 20px rgba(59, 130, 246, 0.5)',
-        'glow-lg': '0 0 30px rgba(59, 130, 246, 0.7)',
+        glow: '0 0 20px rgba(0, 166, 255, 0.3)',
+        'glow-lg': '0 0 30px rgba(0, 166, 255, 0.5)',
       },
     },
   },

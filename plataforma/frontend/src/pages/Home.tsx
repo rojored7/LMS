@@ -16,13 +16,13 @@ export const Home: React.FC = () => {
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
-      <section className="bg-gradient-to-r from-blue-600 to-blue-800 text-white py-20">
+      <section className="bg-itac-navy text-white py-24">
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center">
-            <h1 className="text-5xl font-bold mb-6">
+            <h1 className="text-5xl md:text-6xl font-heading font-bold mb-6 text-itac-text-light">
               Aprende Ciberseguridad y Desarrollo
             </h1>
-            <p className="text-xl mb-8 text-blue-100">
+            <p className="text-xl mb-8 text-white/50">
               Accede a cursos profesionales diseñados por expertos. Aprende a tu
               ritmo y obtén certificaciones reconocidas.
             </p>
@@ -68,9 +68,9 @@ export const Home: React.FC = () => {
       </section>
 
       {/* Features Section */}
-      <section className="py-16 bg-gray-50 dark:bg-gray-900">
+      <section className="py-16 bg-white dark:bg-itac-navy-dark">
         <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-bold text-center mb-12 text-gray-900 dark:text-white">
+          <h2 className="text-3xl font-heading font-bold text-center mb-12 text-gray-900 dark:text-itac-text-light">
             ¿Por qué elegirnos?
           </h2>
 
@@ -78,9 +78,9 @@ export const Home: React.FC = () => {
             <Card>
               <CardBody>
                 <div className="text-center">
-                  <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 dark:bg-blue-900 rounded-full mb-4">
+                  <div className="inline-flex items-center justify-center w-16 h-16 bg-itac-card-blue rounded-xl mb-4">
                     <svg
-                      className="w-8 h-8 text-blue-600 dark:text-blue-400"
+                      className="w-8 h-8 text-itac-blue"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -107,9 +107,9 @@ export const Home: React.FC = () => {
             <Card>
               <CardBody>
                 <div className="text-center">
-                  <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 dark:bg-green-900 rounded-full mb-4">
+                  <div className="inline-flex items-center justify-center w-16 h-16 bg-itac-card-orange rounded-xl mb-4">
                     <svg
-                      className="w-8 h-8 text-green-600 dark:text-green-400"
+                      className="w-8 h-8 text-itac-orange"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -136,9 +136,9 @@ export const Home: React.FC = () => {
             <Card>
               <CardBody>
                 <div className="text-center">
-                  <div className="inline-flex items-center justify-center w-16 h-16 bg-purple-100 dark:bg-purple-900 rounded-full mb-4">
+                  <div className="inline-flex items-center justify-center w-16 h-16 bg-itac-card-blue rounded-xl mb-4">
                     <svg
-                      className="w-8 h-8 text-purple-600 dark:text-purple-400"
+                      className="w-8 h-8 text-itac-blue-mid"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -166,12 +166,12 @@ export const Home: React.FC = () => {
       </section>
 
       {/* CTA Section */}
-      <section className="py-16 bg-blue-600 text-white">
+      <section className="py-16 bg-itac-navy-dark text-white">
         <div className="container mx-auto px-4 text-center">
-          <h2 className="text-3xl font-bold mb-4">
-            ¿Listo para comenzar tu aprendizaje?
+          <h2 className="text-3xl font-heading font-bold mb-4 text-itac-text-light">
+            Listo para comenzar tu aprendizaje?
           </h2>
-          <p className="text-xl mb-8 text-blue-100">
+          <p className="text-xl mb-8 text-white/50">
             Únete a miles de estudiantes que ya están mejorando sus habilidades.
           </p>
           {!isAuthenticated && (

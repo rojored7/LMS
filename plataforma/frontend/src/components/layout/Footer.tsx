@@ -10,15 +10,15 @@ export const Footer: React.FC = () => {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800">
+    <footer className="bg-itac-navy border-t border-white/10">
       <div className="container mx-auto px-4 py-8">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* About */}
           <div>
-            <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
+            <h3 className="text-lg font-semibold mb-4 text-itac-text-light">
               Sobre Nosotros
             </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+            <p className="text-sm text-white/50">
               Plataforma de cursos de ciberseguridad y desarrollo profesional.
               Aprende a tu ritmo con los mejores instructores.
             </p>
@@ -26,14 +26,14 @@ export const Footer: React.FC = () => {
 
           {/* Links */}
           <div>
-            <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
+            <h3 className="text-lg font-semibold mb-4 text-itac-text-light">
               Enlaces
             </h3>
             <ul className="space-y-2 text-sm">
               <li>
                 <Link
                   to={ROUTES.COURSES}
-                  className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                  className="text-white/50 hover:text-itac-blue transition-colors"
                 >
                   Cursos
                 </Link>
@@ -41,7 +41,7 @@ export const Footer: React.FC = () => {
               <li>
                 <Link
                   to={ROUTES.DASHBOARD}
-                  className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                  className="text-white/50 hover:text-itac-blue transition-colors"
                 >
                   Dashboard
                 </Link>
@@ -49,7 +49,7 @@ export const Footer: React.FC = () => {
               <li>
                 <a
                   href="#"
-                  className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                  className="text-white/50 hover:text-itac-blue transition-colors"
                 >
                   Blog
                 </a>
@@ -59,14 +59,14 @@ export const Footer: React.FC = () => {
 
           {/* Support */}
           <div>
-            <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
+            <h3 className="text-lg font-semibold mb-4 text-itac-text-light">
               Soporte
             </h3>
             <ul className="space-y-2 text-sm">
               <li>
                 <a
                   href="#"
-                  className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                  className="text-white/50 hover:text-itac-blue transition-colors"
                 >
                   Centro de Ayuda
                 </a>
@@ -74,7 +74,7 @@ export const Footer: React.FC = () => {
               <li>
                 <a
                   href="#"
-                  className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                  className="text-white/50 hover:text-itac-blue transition-colors"
                 >
                   Contacto
                 </a>
@@ -82,7 +82,7 @@ export const Footer: React.FC = () => {
               <li>
                 <a
                   href="#"
-                  className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                  className="text-white/50 hover:text-itac-blue transition-colors"
                 >
                   FAQ
                 </a>
@@ -92,14 +92,14 @@ export const Footer: React.FC = () => {
 
           {/* Legal */}
           <div>
-            <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
+            <h3 className="text-lg font-semibold mb-4 text-itac-text-light">
               Legal
             </h3>
             <ul className="space-y-2 text-sm">
               <li>
                 <a
                   href="#"
-                  className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                  className="text-white/50 hover:text-itac-blue transition-colors"
                 >
                   Términos de Uso
                 </a>
@@ -107,7 +107,7 @@ export const Footer: React.FC = () => {
               <li>
                 <a
                   href="#"
-                  className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                  className="text-white/50 hover:text-itac-blue transition-colors"
                 >
                   Política de Privacidad
                 </a>
@@ -115,7 +115,7 @@ export const Footer: React.FC = () => {
               <li>
                 <a
                   href="#"
-                  className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                  className="text-white/50 hover:text-itac-blue transition-colors"
                 >
                   Cookies
                 </a>
@@ -125,9 +125,9 @@ export const Footer: React.FC = () => {
         </div>
 
         {/* Bottom */}
-        <div className="mt-8 pt-8 border-t border-gray-200 dark:border-gray-800">
+        <div className="mt-8 pt-8 border-t border-white/10">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+            <p className="text-sm text-white/50">
               © {currentYear} Plataforma Multi-Curso. Todos los derechos reservados.
             </p>
 
@@ -135,7 +135,7 @@ export const Footer: React.FC = () => {
             <div className="flex items-center gap-4">
               <a
                 href="#"
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                className="text-white/40 hover:text-itac-blue transition-colors"
                 aria-label="Twitter"
               >
                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
@@ -144,7 +144,7 @@ export const Footer: React.FC = () => {
               </a>
               <a
                 href="#"
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                className="text-white/40 hover:text-itac-blue transition-colors"
                 aria-label="GitHub"
               >
                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
@@ -157,7 +157,7 @@ export const Footer: React.FC = () => {
               </a>
               <a
                 href="#"
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                className="text-white/40 hover:text-itac-blue transition-colors"
                 aria-label="LinkedIn"
               >
                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
