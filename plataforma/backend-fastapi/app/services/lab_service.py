@@ -48,17 +48,26 @@ class LabService:
         logger.info("lab_deleted", lab_id=lab_id)
 
     async def submit(self, lab_id: str, user_id: str, code: str, language: str = "python", passed: bool = False, stdout: str = "", stderr: str = "", exit_code: int = 0, execution_time: int = 0) -> LabSubmission:
+        from sqlalchemy import func, select as sa_select
         lab = await self.get_by_id(lab_id)
+        # Count previous attempts
+        count_result = await self.db.execute(
+            sa_select(func.count()).select_from(LabSubmission).where(
+                LabSubmission.lab_id == lab_id, LabSubmission.user_id == user_id
+            )
+        )
+        attempt_count = (count_result.scalar() or 0) + 1
         submission = LabSubmission(
             user_id=user_id,
             lab_id=lab_id,
             code=code,
             language=language,
             passed=passed,
-            stdout=stdout,
-            stderr=stderr,
+            stdout=stdout or "",
+            stderr=stderr or "",
             exit_code=exit_code,
             execution_time=execution_time,
+            attempts=attempt_count,
         )
         self.db.add(submission)
         await self.db.flush()

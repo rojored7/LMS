@@ -14,10 +14,11 @@ class ExecutorClient:
         self.secret = settings.EXECUTOR_SECRET
 
     async def execute_code(self, code: str, language: str = "python", test_code: str | None = None, timeout: int | None = None) -> dict:
+        timeout_seconds = timeout or self.timeout
         payload = {
             "code": code,
             "language": language,
-            "timeout": timeout or self.timeout,
+            "timeout": timeout_seconds * 1000,  # executor expects milliseconds
         }
         if test_code:
             payload["testCode"] = test_code

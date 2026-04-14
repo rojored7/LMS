@@ -136,11 +136,13 @@ async def submit_lab(
         language=lab.language,
     )
 
-    passed = exec_result.get("success", False)
-    stdout = exec_result.get("stdout", "")
-    stderr = exec_result.get("stderr", "")
-    exit_code = exec_result.get("exitCode", 0)
-    execution_time = exec_result.get("executionTime", 0)
+    # Executor wraps results: { success, result: { passed, stdout, stderr, exitCode, executionTime } }
+    result_data = exec_result.get("result", exec_result)
+    passed = result_data.get("passed", False)
+    stdout = result_data.get("stdout", "")
+    stderr = result_data.get("stderr", result_data.get("error", ""))
+    exit_code = result_data.get("exitCode", 0)
+    execution_time = result_data.get("executionTime", 0)
 
     submission = await lab_service.submit(
         lab_id=lab_id,
