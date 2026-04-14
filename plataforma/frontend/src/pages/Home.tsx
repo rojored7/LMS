@@ -16,10 +16,10 @@ export const Home: React.FC = () => {
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
-      <section className="bg-itac-navy text-white py-24">
+      <section className="bg-[#021627] text-white py-24">
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center">
-            <h1 className="text-5xl md:text-6xl font-heading font-bold mb-6 text-itac-text-light">
+            <h1 className="text-5xl md:text-6xl font-heading font-bold mb-6 text-[#F5F8FA]">
               Aprende Ciberseguridad y Desarrollo
             </h1>
             <p className="text-xl mb-8 text-white/80">
@@ -29,21 +29,27 @@ export const Home: React.FC = () => {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               {isAuthenticated ? (
                 <>
-                  <Button size="lg" variant="secondary" onClick={() => navigate(ROUTES.DASHBOARD)}>
+                  <Button size="lg" variant="primary" onClick={() => navigate(ROUTES.DASHBOARD)}>
                     Ir a Mi Dashboard
                   </Button>
-                  <Button size="lg" variant="outline" onClick={() => navigate(ROUTES.COURSES)}>
+                  <button
+                    onClick={() => navigate(ROUTES.COURSES)}
+                    className="px-6 py-3 text-lg font-medium rounded-xl border-2 border-white/30 text-white hover:bg-white/10 transition-colors"
+                  >
                     Explorar Cursos
-                  </Button>
+                  </button>
                 </>
               ) : (
                 <>
-                  <Button size="lg" variant="secondary" onClick={() => navigate(ROUTES.REGISTER)}>
+                  <Button size="lg" variant="primary" onClick={() => navigate(ROUTES.REGISTER)}>
                     Comenzar Gratis
                   </Button>
-                  <Button size="lg" variant="outline" onClick={() => navigate(ROUTES.COURSES)}>
+                  <button
+                    onClick={() => navigate(ROUTES.COURSES)}
+                    className="px-6 py-3 text-lg font-medium rounded-xl border-2 border-white/30 text-white hover:bg-white/10 transition-colors"
+                  >
                     Ver Cursos
-                  </Button>
+                  </button>
                 </>
               )}
             </div>
@@ -62,9 +68,9 @@ export const Home: React.FC = () => {
             <Card>
               <CardBody>
                 <div className="text-center">
-                  <div className="inline-flex items-center justify-center w-16 h-16 bg-itac-card-blue rounded-xl mb-4">
+                  <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-50 rounded-xl mb-4">
                     <svg
-                      className="w-8 h-8 text-itac-blue"
+                      className="w-8 h-8 text-[#00A6FF]"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -88,9 +94,9 @@ export const Home: React.FC = () => {
             <Card>
               <CardBody>
                 <div className="text-center">
-                  <div className="inline-flex items-center justify-center w-16 h-16 bg-itac-card-orange rounded-xl mb-4">
+                  <div className="inline-flex items-center justify-center w-16 h-16 bg-orange-50 rounded-xl mb-4">
                     <svg
-                      className="w-8 h-8 text-itac-orange"
+                      className="w-8 h-8 text-[#FF5100]"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -115,9 +121,9 @@ export const Home: React.FC = () => {
             <Card>
               <CardBody>
                 <div className="text-center">
-                  <div className="inline-flex items-center justify-center w-16 h-16 bg-itac-card-blue rounded-xl mb-4">
+                  <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-50 rounded-xl mb-4">
                     <svg
-                      className="w-8 h-8 text-itac-blue-mid"
+                      className="w-8 h-8 text-[#00A6FF]-mid"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -142,16 +148,16 @@ export const Home: React.FC = () => {
       </section>
 
       {/* CTA Section */}
-      <section className="py-16 bg-itac-navy-dark text-white">
+      <section className="py-16 bg-[#021627]-dark text-white">
         <div className="container mx-auto px-4 text-center">
-          <h2 className="text-3xl font-heading font-bold mb-4 text-itac-text-light">
+          <h2 className="text-3xl font-heading font-bold mb-4 text-[#F5F8FA]">
             Listo para comenzar tu aprendizaje?
           </h2>
           <p className="text-xl mb-8 text-white/80">
             Únete a miles de estudiantes que ya están mejorando sus habilidades.
           </p>
           {!isAuthenticated && (
-            <Button size="lg" variant="secondary" onClick={() => navigate(ROUTES.REGISTER)}>
+            <Button size="lg" variant="primary" onClick={() => navigate(ROUTES.REGISTER)}>
               Registrarse Ahora
             </Button>
           )}

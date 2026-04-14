@@ -10,12 +10,12 @@ export const Footer: React.FC = () => {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="bg-itac-navy border-t border-white/10">
+    <footer className="bg-[#021627] border-t border-white/10">
       <div className="container mx-auto px-4 py-8">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* About */}
           <div>
-            <h3 className="text-lg font-semibold mb-4 text-itac-text-light">Sobre Nosotros</h3>
+            <h3 className="text-lg font-semibold mb-4 text-[#F5F8FA]">Sobre Nosotros</h3>
             <p className="text-sm text-white/50">
               Plataforma de cursos de ciberseguridad y desarrollo profesional. Aprende a tu ritmo
               con los mejores instructores.
@@ -24,12 +24,12 @@ export const Footer: React.FC = () => {
 
           {/* Links */}
           <div>
-            <h3 className="text-lg font-semibold mb-4 text-itac-text-light">Enlaces</h3>
+            <h3 className="text-lg font-semibold mb-4 text-[#F5F8FA]">Enlaces</h3>
             <ul className="space-y-2 text-sm">
               <li>
                 <Link
                   to={ROUTES.COURSES}
-                  className="text-white/50 hover:text-itac-blue transition-colors"
+                  className="text-white/50 hover:text-[#00A6FF] transition-colors"
                 >
                   Cursos
                 </Link>
@@ -37,13 +37,13 @@ export const Footer: React.FC = () => {
               <li>
                 <Link
                   to={ROUTES.DASHBOARD}
-                  className="text-white/50 hover:text-itac-blue transition-colors"
+                  className="text-white/50 hover:text-[#00A6FF] transition-colors"
                 >
                   Dashboard
                 </Link>
               </li>
               <li>
-                <a href="#" className="text-white/50 hover:text-itac-blue transition-colors">
+                <a href="#" className="text-white/50 hover:text-[#00A6FF] transition-colors">
                   Blog
                 </a>
               </li>
@@ -52,20 +52,20 @@ export const Footer: React.FC = () => {
 
           {/* Support */}
           <div>
-            <h3 className="text-lg font-semibold mb-4 text-itac-text-light">Soporte</h3>
+            <h3 className="text-lg font-semibold mb-4 text-[#F5F8FA]">Soporte</h3>
             <ul className="space-y-2 text-sm">
               <li>
-                <a href="#" className="text-white/50 hover:text-itac-blue transition-colors">
+                <a href="#" className="text-white/50 hover:text-[#00A6FF] transition-colors">
                   Centro de Ayuda
                 </a>
               </li>
               <li>
-                <a href="#" className="text-white/50 hover:text-itac-blue transition-colors">
+                <a href="#" className="text-white/50 hover:text-[#00A6FF] transition-colors">
                   Contacto
                 </a>
               </li>
               <li>
-                <a href="#" className="text-white/50 hover:text-itac-blue transition-colors">
+                <a href="#" className="text-white/50 hover:text-[#00A6FF] transition-colors">
                   FAQ
                 </a>
               </li>
@@ -74,20 +74,20 @@ export const Footer: React.FC = () => {
 
           {/* Legal */}
           <div>
-            <h3 className="text-lg font-semibold mb-4 text-itac-text-light">Legal</h3>
+            <h3 className="text-lg font-semibold mb-4 text-[#F5F8FA]">Legal</h3>
             <ul className="space-y-2 text-sm">
               <li>
-                <a href="#" className="text-white/50 hover:text-itac-blue transition-colors">
+                <a href="#" className="text-white/50 hover:text-[#00A6FF] transition-colors">
                   Términos de Uso
                 </a>
               </li>
               <li>
-                <a href="#" className="text-white/50 hover:text-itac-blue transition-colors">
+                <a href="#" className="text-white/50 hover:text-[#00A6FF] transition-colors">
                   Política de Privacidad
                 </a>
               </li>
               <li>
-                <a href="#" className="text-white/50 hover:text-itac-blue transition-colors">
+                <a href="#" className="text-white/50 hover:text-[#00A6FF] transition-colors">
                   Cookies
                 </a>
               </li>
@@ -106,7 +106,7 @@ export const Footer: React.FC = () => {
             <div className="flex items-center gap-4">
               <a
                 href="#"
-                className="text-white/40 hover:text-itac-blue transition-colors"
+                className="text-white/40 hover:text-[#00A6FF] transition-colors"
                 aria-label="Twitter"
               >
                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
@@ -115,7 +115,7 @@ export const Footer: React.FC = () => {
               </a>
               <a
                 href="#"
-                className="text-white/40 hover:text-itac-blue transition-colors"
+                className="text-white/40 hover:text-[#00A6FF] transition-colors"
                 aria-label="GitHub"
               >
                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
@@ -128,7 +128,7 @@ export const Footer: React.FC = () => {
               </a>
               <a
                 href="#"
-                className="text-white/40 hover:text-itac-blue transition-colors"
+                className="text-white/40 hover:text-[#00A6FF] transition-colors"
                 aria-label="LinkedIn"
               >
                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
