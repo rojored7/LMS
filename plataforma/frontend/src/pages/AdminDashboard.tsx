@@ -189,7 +189,7 @@ export const AdminDashboard = () => {
       {/* Stats Cards */}
       {!isLoadingStats && stats && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+          <div className="bg-white dark:bg-itac-navy-light rounded-lg shadow p-6">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-itac-card-blue rounded-lg">
                 <Users className="w-6 h-6 text-itac-blue" />
@@ -206,7 +206,7 @@ export const AdminDashboard = () => {
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+          <div className="bg-white dark:bg-itac-navy-light rounded-lg shadow p-6">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-itac-card-orange rounded-lg">
                 <BookOpen className="w-6 h-6 text-itac-orange" />
@@ -221,7 +221,7 @@ export const AdminDashboard = () => {
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+          <div className="bg-white dark:bg-itac-navy-light rounded-lg shadow p-6">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-itac-card-blue rounded-lg">
                 <GraduationCap className="w-6 h-6 text-itac-blue" />
@@ -238,7 +238,7 @@ export const AdminDashboard = () => {
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+          <div className="bg-white dark:bg-itac-navy-light rounded-lg shadow p-6">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-itac-card-orange rounded-lg">
                 <TrendingUp className="w-6 h-6 text-itac-orange" />
@@ -258,8 +258,8 @@ export const AdminDashboard = () => {
       )}
 
       {/* Users Management */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+      <div className="bg-white dark:bg-itac-navy-light rounded-lg shadow">
+        <div className="p-6 border-b border-gray-200 dark:border-white/10">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
             Gestión de Estudiantes
           </h2>
@@ -287,7 +287,7 @@ export const AdminDashboard = () => {
                 return (
                   <div
                     key={user.id}
-                    className="border border-gray-200 dark:border-gray-700 rounded-lg"
+                    className="border border-gray-200 dark:border-white/10 rounded-lg"
                   >
                     <div className="p-4 flex items-center justify-between">
                       <div className="flex items-center gap-4 flex-1">
@@ -334,7 +334,7 @@ export const AdminDashboard = () => {
                     </div>
 
                     {isExpanded && userEnrollments && (
-                      <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
+                      <div className="p-4 border-t border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-itac-navy-dark/50">
                         {userEnrollments.enrollments.length === 0 ? (
                           <p className="text-center py-4 text-gray-500 dark:text-gray-400">
                             Sin cursos asignados
@@ -344,7 +344,7 @@ export const AdminDashboard = () => {
                             {userEnrollments.enrollments.map((enrollment) => (
                               <div
                                 key={enrollment.id}
-                                className="bg-white dark:bg-gray-800 rounded-lg p-4"
+                                className="bg-white dark:bg-itac-navy-light rounded-lg p-4"
                               >
                                 <div className="flex items-start justify-between">
                                   <div className="flex-1">
@@ -360,7 +360,7 @@ export const AdminDashboard = () => {
                                           {enrollment.progress}%
                                         </span>
                                       </div>
-                                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                                      <div className="w-full bg-gray-200 dark:bg-itac-navy-dark rounded-full h-2">
                                         <div
                                           className="bg-itac-blue h-2 rounded-full transition-all"
                                           style={{ width: `${enrollment.progress}%` }}

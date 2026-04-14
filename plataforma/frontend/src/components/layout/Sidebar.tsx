@@ -153,8 +153,8 @@ export const Sidebar: React.FC = () => {
                     className={cn(
                       'flex items-center gap-3 px-4 py-3 rounded-lg transition-colors',
                       isActive
-                        ? 'bg-itac-blue/15 text-itac-blue'
-                        : 'text-white/50 hover:bg-white/5 hover:text-itac-text-light'
+                        ? 'bg-itac-blue/20 text-itac-blue'
+                        : 'text-white/70 hover:bg-white/10 hover:text-itac-text-light'
                     )}
                   >
                     {item.icon}

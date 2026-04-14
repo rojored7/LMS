@@ -16,8 +16,10 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 const variantStyles = {
   primary: 'bg-itac-orange text-white hover:bg-itac-orange-hover focus:ring-itac-orange',
   secondary: 'bg-itac-blue-mid text-white hover:bg-[#125d9e] focus:ring-itac-blue-mid',
-  outline: 'bg-transparent border-2 border-itac-blue text-itac-blue hover:bg-itac-blue/10 focus:ring-itac-blue',
-  ghost: 'bg-transparent text-gray-700 dark:text-itac-text-light hover:bg-gray-100 dark:hover:bg-white/5 focus:ring-gray-500',
+  outline:
+    'bg-transparent border-2 border-itac-blue text-itac-blue hover:bg-itac-blue/10 focus:ring-itac-blue',
+  ghost:
+    'bg-transparent text-gray-700 dark:text-itac-text-light hover:bg-gray-100 dark:hover:bg-white/10 focus:ring-itac-blue',
   danger: 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500',
 };
 

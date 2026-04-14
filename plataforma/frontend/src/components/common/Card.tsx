@@ -18,7 +18,7 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
           'card rounded-xl',
           {
             default: 'bg-white dark:bg-itac-navy-light border border-gray-200 dark:border-white/10',
-            outlined: 'bg-transparent border-2 border-gray-300 dark:border-white/10',
+            outlined: 'bg-transparent border-2 border-gray-300 dark:border-white/20',
             elevated: 'bg-white dark:bg-itac-navy-light shadow-lg',
           }[variant],
           className

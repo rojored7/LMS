@@ -18,7 +18,11 @@ export const CourseCatalog: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedLevel, setSelectedLevel] = useState<string>('');
 
-  const { data: coursesData, isLoading, error } = useCourses({
+  const {
+    data: coursesData,
+    isLoading,
+    error,
+  } = useCourses({
     page: 1,
     limit: 12,
   });
@@ -62,12 +66,7 @@ export const CourseCatalog: React.FC = () => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             leftIcon={
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -82,7 +81,7 @@ export const CourseCatalog: React.FC = () => {
         <select
           value={selectedLevel}
           onChange={(e) => setSelectedLevel(e.target.value)}
-          className="input w-full md:w-48"
+          className="input w-full md:w-48 dark:bg-itac-navy-light dark:text-itac-text-light dark:border-white/10"
         >
           <option value="">Todos los niveles</option>
           <option value="BEGINNER">Principiante</option>
@@ -97,9 +96,7 @@ export const CourseCatalog: React.FC = () => {
         <Card>
           <CardBody>
             <div className="text-center py-8">
-              <p className="text-red-600 dark:text-red-400">
-                Error al cargar los cursos
-              </p>
+              <p className="text-red-600 dark:text-red-400">Error al cargar los cursos</p>
             </div>
           </CardBody>
         </Card>
@@ -168,16 +165,11 @@ export const CourseCatalog: React.FC = () => {
 
                   {/* Level and Price */}
                   <div className="flex items-center justify-between">
-                    <Badge
-                      className={COURSE_LEVEL_COLORS[course.level]}
-                      size="sm"
-                    >
+                    <Badge className={COURSE_LEVEL_COLORS[course.level]} size="sm">
                       {COURSE_LEVEL_LABELS[course.level]}
                     </Badge>
                     <span className="text-lg font-bold text-itac-orange">
-                      {course.price === 0
-                        ? 'Gratis'
-                        : formatCurrency(course.price)}
+                      {course.price === 0 ? 'Gratis' : formatCurrency(course.price)}
                     </span>
                   </div>
                 </div>
