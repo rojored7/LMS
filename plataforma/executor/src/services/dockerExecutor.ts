@@ -1,5 +1,6 @@
 import Docker from 'dockerode';
-import { Readable } from 'stream';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const tar = require('tar-stream');
 import { config, LANGUAGE_CONFIGS } from '../config';
 import { ExecuteRequest, ExecutionResult, Language } from '../types';
 import { logger } from '../utils/logger';
@@ -39,13 +40,13 @@ export class DockerExecutor {
       container = await this.createContainer(params.language);
       logger.debug('Container created', { id: container.id });
 
-      // 2. Copy code to container
-      await this.copyCodeToContainer(container, params.code, params.language);
-      logger.debug('Code copied to container');
-
-      // 3. Start container
+      // 2. Start container (must start before copy so tmpfs is mounted)
       await container.start();
       logger.debug('Container started');
+
+      // 3. Copy code to container (after start, so tmpfs /sandbox is available)
+      await this.copyCodeToContainer(container, params.code, params.language);
+      logger.debug('Code copied to container');
 
       // 4. Execute with timeout
       const output = await this.runWithTimeout(container, params.language, timeout);
@@ -63,10 +64,10 @@ export class DockerExecutor {
 
       if (params.tests && params.tests.length > 0) {
         testsResults = validator.validate(output.stdout, params.tests);
-        passed = passed && testsResults.every(r => r.passed);
+        passed = passed && testsResults.every((r) => r.passed);
         logger.debug('Tests validation completed', {
           totalTests: testsResults.length,
-          passedTests: testsResults.filter(r => r.passed).length,
+          passedTests: testsResults.filter((r) => r.passed).length,
         });
       }
 
@@ -86,7 +87,6 @@ export class DockerExecutor {
       });
 
       return result;
-
     } catch (error) {
       const executionTime = Date.now() - startTime;
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -105,7 +105,6 @@ export class DockerExecutor {
         passed: false,
         error: errorMessage,
       };
-
     } finally {
       // 6. Cleanup - ALWAYS executed
       if (container) {
@@ -119,10 +118,9 @@ export class DockerExecutor {
    * Creates a Docker container with security restrictions
    */
   private async createContainer(language: Language): Promise<Docker.Container> {
-    const langConfig = LANGUAGE_CONFIGS[language];
-
     const containerConfig: Docker.ContainerCreateOptions = {
       Image: config.SANDBOX_IMAGE,
+      Cmd: ['sleep', '300'],
       AttachStdin: false,
       AttachStdout: true,
       AttachStderr: true,
@@ -140,11 +138,12 @@ export class DockerExecutor {
         MemorySwap: this.parseMemoryLimit(config.SANDBOX_MEMORY_LIMIT), // Same as memory to disable swap
         NanoCpus: parseInt(config.SANDBOX_CPU_LIMIT) * 1e9,
 
-        // Security
+        // Security - tmpfs for sandbox, capabilities dropped, no privileges
         Privileged: false,
-        ReadonlyRootfs: false, // Need to write code file
-        CapDrop: ['ALL'],
+        ReadonlyRootfs: false,
+        CapDrop: ['NET_RAW', 'SYS_ADMIN', 'SYS_PTRACE', 'SYS_MODULE', 'MKNOD', 'AUDIT_WRITE', 'NET_BIND_SERVICE'],
         SecurityOpt: ['no-new-privileges'],
+        Tmpfs: { '/tmp': 'size=10m,mode=1777' },
 
         // No volume mounts
         Binds: [],
@@ -166,7 +165,9 @@ export class DockerExecutor {
         error: error instanceof Error ? error.message : 'Unknown error',
         language,
       });
-      throw new Error(`Failed to create container: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to create container: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -183,11 +184,10 @@ export class DockerExecutor {
 
     try {
       // Create a tar archive with the code file
-      const tar = require('tar-stream');
       const pack = tar.pack();
 
       // Add the code file to the archive
-      pack.entry({ name: fileName }, code, (err) => {
+      pack.entry({ name: fileName }, code, (err: Error | null) => {
         if (err) {
           logger.error('Failed to create tar entry', { error: err.message });
         }
@@ -217,20 +217,18 @@ export class DockerExecutor {
     const langConfig = LANGUAGE_CONFIGS[language];
     const command = [...langConfig.command, langConfig.fileName];
 
-    return new Promise(async (resolve, reject) => {
-      const timeoutId = setTimeout(async () => {
+    return new Promise((resolve, reject) => {
+      const timeoutId = setTimeout(() => {
         logger.warn('Execution timeout reached', { timeout });
-        try {
-          await container.kill();
-        } catch (err) {
+        container.kill().catch((err) => {
           logger.error('Failed to kill timed out container', {
             error: err instanceof Error ? err.message : 'Unknown error',
           });
-        }
+        });
         reject(new Error(`Execution timeout after ${timeout}ms`));
       }, timeout);
 
-      try {
+      const runExec = async () => {
         // Create exec instance
         const exec = await container.exec({
           Cmd: command,
@@ -249,10 +247,14 @@ export class DockerExecutor {
         container.modem.demuxStream(
           stream,
           {
-            write: (chunk: Buffer) => { stdout += chunk.toString(); },
+            write: (chunk: Buffer) => {
+              stdout += chunk.toString();
+            },
           } as NodeJS.WritableStream,
           {
-            write: (chunk: Buffer) => { stderr += chunk.toString(); },
+            write: (chunk: Buffer) => {
+              stderr += chunk.toString();
+            },
           } as NodeJS.WritableStream
         );
 
@@ -279,14 +281,15 @@ export class DockerExecutor {
           logger.error('Stream error', { error: err.message });
           reject(err);
         });
+      };
 
-      } catch (error) {
+      runExec().catch((error) => {
         clearTimeout(timeoutId);
         logger.error('Execution failed', {
           error: error instanceof Error ? error.message : 'Unknown error',
         });
         reject(error);
-      }
+      });
     });
   }
 
