@@ -30,12 +30,10 @@ export const Dashboard: React.FC = () => {
     <div className="container mx-auto px-4 py-8">
       {/* Welcome Section */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+        <h1 className="text-3xl font-bold font-heading text-gray-900 dark:text-white mb-2">
           Bienvenido, {user?.firstName}
         </h1>
-        <p className="text-gray-600 dark:text-gray-400">
-          Continúa tu aprendizaje donde lo dejaste
-        </p>
+        <p className="text-gray-600 dark:text-gray-400">Continúa tu aprendizaje donde lo dejaste</p>
       </div>
 
       {/* Stats Cards */}
@@ -43,9 +41,9 @@ export const Dashboard: React.FC = () => {
         <Card>
           <CardBody>
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-blue-100 dark:bg-blue-900 rounded-lg">
+              <div className="p-3 bg-itac-card-blue rounded-lg">
                 <svg
-                  className="w-8 h-8 text-blue-600 dark:text-blue-400"
+                  className="w-8 h-8 text-itac-blue"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -59,9 +57,7 @@ export const Dashboard: React.FC = () => {
                 </svg>
               </div>
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Cursos Inscritos
-                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Cursos Inscritos</p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">
                   {enrolledCourses?.length || 0}
                 </p>
@@ -73,9 +69,9 @@ export const Dashboard: React.FC = () => {
         <Card>
           <CardBody>
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-green-100 dark:bg-green-900 rounded-lg">
+              <div className="p-3 bg-itac-card-orange rounded-lg">
                 <svg
-                  className="w-8 h-8 text-green-600 dark:text-green-400"
+                  className="w-8 h-8 text-itac-orange"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -89,11 +85,9 @@ export const Dashboard: React.FC = () => {
                 </svg>
               </div>
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Cursos Completados
-                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Cursos Completados</p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {enrolledCourses?.filter(e => e.progress === 100).length || 0}
+                  {enrolledCourses?.filter((e) => e.progress === 100).length || 0}
                 </p>
               </div>
             </div>
@@ -103,9 +97,9 @@ export const Dashboard: React.FC = () => {
         <Card>
           <CardBody>
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-purple-100 dark:bg-purple-900 rounded-lg">
+              <div className="p-3 bg-itac-card-blue rounded-lg">
                 <svg
-                  className="w-8 h-8 text-purple-600 dark:text-purple-400"
+                  className="w-8 h-8 text-itac-blue-mid"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -119,9 +113,7 @@ export const Dashboard: React.FC = () => {
                 </svg>
               </div>
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Horas de Estudio
-                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Horas de Estudio</p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">0</p>
               </div>
             </div>
@@ -133,14 +125,8 @@ export const Dashboard: React.FC = () => {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-              Mis Cursos
-            </h2>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate(ROUTES.COURSES)}
-            >
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Mis Cursos</h2>
+            <Button variant="outline" size="sm" onClick={() => navigate(ROUTES.COURSES)}>
               Explorar Más Cursos
             </Button>
           </div>
@@ -149,9 +135,7 @@ export const Dashboard: React.FC = () => {
         <CardBody>
           {error ? (
             <div className="text-center py-8">
-              <p className="text-red-600 dark:text-red-400">
-                Error al cargar los cursos
-              </p>
+              <p className="text-red-600 dark:text-red-400">Error al cargar los cursos</p>
               <Button variant="outline" size="sm" onClick={() => refetch()}>
                 Reintentar
               </Button>
@@ -181,28 +165,26 @@ export const Dashboard: React.FC = () => {
 
                       {/* Level Badge */}
                       {enrollment.course?.level && (
-                      <Badge
-                        className={COURSE_LEVEL_COLORS[enrollment.course.level] || ''}
-                        size="sm"
-                      >
-                        {COURSE_LEVEL_LABELS[enrollment.course.level] || enrollment.course.level}
-                      </Badge>
+                        <Badge
+                          className={COURSE_LEVEL_COLORS[enrollment.course.level] || ''}
+                          size="sm"
+                        >
+                          {COURSE_LEVEL_LABELS[enrollment.course.level] || enrollment.course.level}
+                        </Badge>
                       )}
                     </div>
 
                     {/* Progress Bar */}
                     <div className="mb-4">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm text-gray-600 dark:text-gray-400">
-                          Progreso
-                        </span>
+                        <span className="text-sm text-gray-600 dark:text-gray-400">Progreso</span>
                         <span className="text-sm font-medium text-gray-900 dark:text-white">
                           {enrollment.progress}%
                         </span>
                       </div>
                       <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                         <div
-                          className="bg-blue-600 h-2 rounded-full"
+                          className="bg-itac-blue h-2 rounded-full"
                           style={{ width: `${enrollment.progress}%` }}
                         />
                       </div>
@@ -214,7 +196,8 @@ export const Dashboard: React.FC = () => {
                       size="sm"
                       className="w-full"
                       onClick={() => {
-                        const targetId = enrollment.course?.slug || enrollment.course?.id || enrollment.courseId;
+                        const targetId =
+                          enrollment.course?.slug || enrollment.course?.id || enrollment.courseId;
                         navigate(`${ROUTES.COURSES}/${targetId}`);
                       }}
                     >
@@ -245,10 +228,7 @@ export const Dashboard: React.FC = () => {
               <p className="text-gray-600 dark:text-gray-400 mb-4">
                 Explora nuestro catálogo y comienza tu aprendizaje
               </p>
-              <Button
-                variant="primary"
-                onClick={() => navigate(ROUTES.COURSES)}
-              >
+              <Button variant="primary" onClick={() => navigate(ROUTES.COURSES)}>
                 Explorar Cursos
               </Button>
             </div>

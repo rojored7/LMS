@@ -45,7 +45,7 @@ export const CourseCatalog: React.FC = () => {
     <div className="container mx-auto px-4 py-8">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+        <h1 className="text-3xl font-bold font-heading text-gray-900 dark:text-white mb-2">
           Catálogo de Cursos
         </h1>
         <p className="text-gray-600 dark:text-gray-400">
@@ -108,7 +108,7 @@ export const CourseCatalog: React.FC = () => {
           {filteredCourses.map((course) => (
             <Card
               key={course.id}
-              className="hover:shadow-lg transition-shadow cursor-pointer"
+              className="hover:shadow-lg hover:border-itac-blue/30 transition-shadow cursor-pointer"
               onClick={() => navigate(`${ROUTES.COURSES}/${course.id}`)}
             >
               <CardBody>
@@ -174,7 +174,7 @@ export const CourseCatalog: React.FC = () => {
                     >
                       {COURSE_LEVEL_LABELS[course.level]}
                     </Badge>
-                    <span className="text-lg font-bold text-blue-600">
+                    <span className="text-lg font-bold text-itac-orange">
                       {course.price === 0
                         ? 'Gratis'
                         : formatCurrency(course.price)}

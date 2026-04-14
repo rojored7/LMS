@@ -136,7 +136,7 @@ export const Sidebar: React.FC = () => {
       {/* Sidebar */}
       <aside
         className={cn(
-          'fixed top-16 left-0 z-40 h-[calc(100vh-4rem)] w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-transform duration-300',
+          'fixed top-16 left-0 z-40 h-[calc(100vh-4rem)] w-64 bg-itac-navy-dark border-r border-white/10 transition-transform duration-300',
           isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         )}
       >
@@ -153,8 +153,8 @@ export const Sidebar: React.FC = () => {
                     className={cn(
                       'flex items-center gap-3 px-4 py-3 rounded-lg transition-colors',
                       isActive
-                        ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
-                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                        ? 'bg-itac-blue/15 text-itac-blue'
+                        : 'text-white/50 hover:bg-white/5 hover:text-itac-text-light'
                     )}
                   >
                     {item.icon}

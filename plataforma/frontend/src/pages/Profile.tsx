@@ -59,7 +59,7 @@ export const Profile: React.FC = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-8">Mi Perfil</h1>
+        <h1 className="text-3xl font-bold font-heading text-gray-900 dark:text-white mb-8">Mi Perfil</h1>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Sidebar */}
@@ -80,7 +80,7 @@ export const Profile: React.FC = () => {
 
                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">{user.email}</p>
 
-                  <Badge variant="info">{ROLE_LABELS[user.role]}</Badge>
+                  <Badge variant="info" className="bg-itac-card-blue text-itac-blue">{ROLE_LABELS[user.role]}</Badge>
 
                   <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
                     <p className="text-xs text-gray-500 dark:text-gray-500">

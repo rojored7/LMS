@@ -170,7 +170,7 @@ export const AdminDashboard = () => {
       {/* Header */}
       <div className="mb-8 flex items-start justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+          <h1 className="text-3xl font-bold font-heading text-gray-900 dark:text-white mb-2">
             Panel de Administración
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
@@ -179,7 +179,7 @@ export const AdminDashboard = () => {
         </div>
         <button
           onClick={() => navigate('/admin/courses')}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-itac-orange text-white rounded-lg hover:bg-itac-orange-hover transition-colors"
         >
           <Settings className="w-5 h-5" />
           Gestionar Cursos
@@ -191,8 +191,8 @@ export const AdminDashboard = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-blue-100 dark:bg-blue-900 rounded-lg">
-                <Users className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <div className="p-3 bg-itac-card-blue rounded-lg">
+                <Users className="w-6 h-6 text-itac-blue" />
               </div>
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">Total Usuarios</p>
@@ -208,8 +208,8 @@ export const AdminDashboard = () => {
 
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-purple-100 dark:bg-purple-900 rounded-lg">
-                <BookOpen className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              <div className="p-3 bg-itac-card-orange rounded-lg">
+                <BookOpen className="w-6 h-6 text-itac-orange" />
               </div>
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">Cursos</p>
@@ -223,8 +223,8 @@ export const AdminDashboard = () => {
 
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-green-100 dark:bg-green-900 rounded-lg">
-                <GraduationCap className="w-6 h-6 text-green-600 dark:text-green-400" />
+              <div className="p-3 bg-itac-card-blue rounded-lg">
+                <GraduationCap className="w-6 h-6 text-itac-blue" />
               </div>
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">Inscripciones</p>
@@ -240,8 +240,8 @@ export const AdminDashboard = () => {
 
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-yellow-100 dark:bg-yellow-900 rounded-lg">
-                <TrendingUp className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
+              <div className="p-3 bg-itac-card-orange rounded-lg">
+                <TrendingUp className="w-6 h-6 text-itac-orange" />
               </div>
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">Progreso Promedio</p>
@@ -271,7 +271,7 @@ export const AdminDashboard = () => {
         <div className="p-6">
           {isLoadingUsers ? (
             <div className="text-center py-12">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-itac-blue" />
             </div>
           ) : students.length === 0 ? (
             <div className="text-center py-12 text-gray-500 dark:text-gray-400">
@@ -295,7 +295,7 @@ export const AdminDashboard = () => {
                           onClick={() => handleUserExpand(user.id)}
                           className="flex items-center gap-4 flex-1 text-left hover:opacity-80 transition-opacity"
                         >
-                          <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold">
+                          <div className="w-10 h-10 rounded-full bg-itac-blue-mid flex items-center justify-center text-white font-semibold">
                             {user.name ? user.name[0].toUpperCase() : user.email[0].toUpperCase()}
                           </div>
                           <div>
@@ -319,7 +319,7 @@ export const AdminDashboard = () => {
                               });
                             });
                           }}
-                          className="px-3 py-1.5 text-sm font-medium text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition-colors flex items-center gap-1"
+                          className="px-3 py-1.5 text-sm font-medium text-itac-blue hover:bg-itac-card-blue rounded-md transition-colors flex items-center gap-1"
                         >
                           <Plus className="w-4 h-4" />
                           Asignar Curso
@@ -362,7 +362,7 @@ export const AdminDashboard = () => {
                                       </div>
                                       <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                                         <div
-                                          className="bg-blue-600 h-2 rounded-full transition-all"
+                                          className="bg-itac-blue h-2 rounded-full transition-all"
                                           style={{ width: `${enrollment.progress}%` }}
                                         />
                                       </div>

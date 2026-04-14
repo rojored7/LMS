@@ -80,7 +80,7 @@ export const CourseDetail: React.FC = () => {
                   {course.isEnrolled && <Badge variant="success">Inscrito</Badge>}
                 </div>
 
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                <h1 className="text-3xl font-bold font-heading text-gray-900 dark:text-white mb-2">
                   {course.title}
                 </h1>
 
@@ -178,7 +178,7 @@ export const CourseDetail: React.FC = () => {
                   </h3>
                   <div className="flex flex-wrap gap-2">
                     {course.tags.map((tag, index) => (
-                      <Badge key={index} variant="default" size="sm">
+                      <Badge key={index} variant="default" size="sm" className="bg-itac-card-blue text-itac-blue-mid">
                         {tag}
                       </Badge>
                     ))}
@@ -195,7 +195,7 @@ export const CourseDetail: React.FC = () => {
             <CardBody>
               {/* Price */}
               <div className="text-center mb-6">
-                <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">
+                <p className="text-3xl font-bold text-itac-orange dark:text-itac-orange">
                   {course.price === 0 ? 'Gratis' : formatCurrency(course.price)}
                 </p>
               </div>

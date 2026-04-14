@@ -87,21 +87,21 @@ export const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-itac-navy-dark py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full">
-        <Card>
-          <CardHeader>
+        <Card className="bg-itac-navy-light border border-white/10 rounded-xl">
+          <CardHeader className="border-b border-white/10">
             <div className="text-center">
-              <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
-                Iniciar Sesión
+              <h2 className="text-3xl font-bold font-heading text-itac-text-light">
+                Iniciar Sesion
               </h2>
-              <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                ¿No tienes una cuenta?{' '}
+              <p className="mt-2 text-sm text-white/60">
+                No tienes una cuenta?{' '}
                 <Link
                   to={ROUTES.REGISTER}
-                  className="font-medium text-blue-600 hover:text-blue-500"
+                  className="font-medium text-itac-blue hover:text-itac-blue/80"
                 >
-                  Regístrate aquí
+                  Registrate aqui
                 </Link>
               </p>
             </div>
@@ -111,10 +111,8 @@ export const Login: React.FC = () => {
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* General error */}
               {errors.general && (
-                <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
-                  <p className="text-sm text-red-600 dark:text-red-400">
-                    {errors.general}
-                  </p>
+                <div className="p-3 bg-red-900/20 border border-red-800 rounded-xl">
+                  <p className="text-sm text-red-400">{errors.general}</p>
                 </div>
               )}
 
@@ -130,12 +128,7 @@ export const Login: React.FC = () => {
                 required
                 autoComplete="email"
                 leftIcon={
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -158,12 +151,7 @@ export const Login: React.FC = () => {
                 required
                 autoComplete="current-password"
                 leftIcon={
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -181,12 +169,9 @@ export const Login: React.FC = () => {
                     id="remember-me"
                     name="remember-me"
                     type="checkbox"
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    className="h-4 w-4 text-itac-orange focus:ring-itac-orange border-white/10 rounded bg-itac-navy"
                   />
-                  <label
-                    htmlFor="remember-me"
-                    className="ml-2 block text-sm text-gray-700 dark:text-gray-300"
-                  >
+                  <label htmlFor="remember-me" className="ml-2 block text-sm text-itac-text-light">
                     Recordarme
                   </label>
                 </div>
@@ -194,9 +179,9 @@ export const Login: React.FC = () => {
                 <div className="text-sm">
                   <Link
                     to={ROUTES.FORGOT_PASSWORD}
-                    className="font-medium text-blue-600 hover:text-blue-500"
+                    className="font-medium text-itac-blue hover:text-itac-blue/80"
                   >
-                    ¿Olvidaste tu contraseña?
+                    Olvidaste tu contrasena?
                   </Link>
                 </div>
               </div>
