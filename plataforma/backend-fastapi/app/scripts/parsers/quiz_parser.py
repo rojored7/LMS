@@ -109,20 +109,46 @@ def _parse_md_quiz(qf: Path) -> ParsedQuiz | None:
             attempts=3,
         )
 
-        # Parse questions: look for ### N. pattern
-        question_blocks = re.split(r"(?=^### \d+\.)", content, flags=re.MULTILINE)
+        # Parse questions: look for ### N. or ### Pregunta N or **Pregunta N:** patterns
+        question_blocks = re.split(r"(?=^(?:### (?:\d+\.|Pregunta \d+)|\*\*Pregunta \d+))", content, flags=re.MULTILINE)
 
         for block in question_blocks:
             block = block.strip()
-            if not block.startswith("### "):
+            if not (block.startswith("### ") or block.startswith("**Pregunta")):
                 continue
 
             q_lines = block.splitlines()
-            # Extract question text
+            question_text = ""
+
+            # Format A: ### 1. Question text here?
             q_match = re.match(r"### \d+\.\s*(.*)", q_lines[0])
-            if not q_match:
+            if q_match and q_match.group(1).strip():
+                question_text = q_match.group(1).strip()
+
+            # Format B: ### Pregunta N (question text on next non-empty line)
+            if not question_text:
+                q_match = re.match(r"### (?:Pregunta\s+)?\d+", q_lines[0])
+                if q_match:
+                    for line in q_lines[1:]:
+                        line = line.strip()
+                        if line and not line.startswith("a)") and not line.startswith("**") and line != "---":
+                            question_text = line
+                            break
+
+            # Format C: **Pregunta N:** Question text here?
+            if not question_text:
+                q_match = re.match(r"\*\*Pregunta\s+\d+:\*\*\s*(.*)", q_lines[0])
+                if q_match and q_match.group(1).strip():
+                    question_text = q_match.group(1).strip()
+                elif q_match:
+                    for line in q_lines[1:]:
+                        line = line.strip()
+                        if line and not line.startswith("a)") and not line.startswith("**") and line != "---":
+                            question_text = line
+                            break
+
+            if not question_text:
                 continue
-            question_text = q_match.group(1).strip()
 
             options = []
             correct_answer = None
@@ -161,6 +187,30 @@ def _parse_md_quiz(qf: Path) -> ParsedQuiz | None:
                         explanation=explanation,
                     )
                 )
+
+        # Parse answers section at the end (### Respuesta N: letra) text)
+        answer_section = re.search(r"## Respuestas", content, re.IGNORECASE)
+        if answer_section:
+            answer_text = content[answer_section.start():]
+            answer_matches = re.findall(r"### Respuesta\s+(\d+):\s*([a-zA-Z])\)", answer_text)
+            for q_num_str, letter in answer_matches:
+                q_num = int(q_num_str)
+                idx = ord(letter.lower()) - ord("a")
+                if 0 < q_num <= len(quiz.questions):
+                    quiz.questions[q_num - 1].correct_answer = idx
+
+            # Also extract explanations from answer section
+            explanation_blocks = re.split(r"(?=### Respuesta\s+\d+)", answer_text)
+            for eblock in explanation_blocks:
+                enum_match = re.match(r"### Respuesta\s+(\d+)", eblock)
+                if not enum_match:
+                    continue
+                q_num = int(enum_match.group(1))
+                # Everything after the first line is explanation
+                elines = eblock.splitlines()[1:]
+                explanation_text = " ".join(l.strip() for l in elines if l.strip() and not l.startswith("###")).strip()
+                if explanation_text and 0 < q_num <= len(quiz.questions):
+                    quiz.questions[q_num - 1].explanation = explanation_text
 
         return quiz
     except Exception:
