@@ -141,15 +141,23 @@ export class DockerExecutor {
         // Security - tmpfs for sandbox, capabilities dropped, no privileges
         Privileged: false,
         ReadonlyRootfs: false,
-        CapDrop: ['NET_RAW', 'SYS_ADMIN', 'SYS_PTRACE', 'SYS_MODULE', 'MKNOD', 'AUDIT_WRITE', 'NET_BIND_SERVICE'],
+        CapDrop: [
+          'NET_RAW',
+          'SYS_ADMIN',
+          'SYS_PTRACE',
+          'SYS_MODULE',
+          'MKNOD',
+          'AUDIT_WRITE',
+          'NET_BIND_SERVICE',
+        ],
         SecurityOpt: ['no-new-privileges'],
         Tmpfs: { '/tmp': 'size=10m,mode=1777' },
 
         // No volume mounts
         Binds: [],
 
-        // Prevent network access
-        NetworkMode: config.SANDBOX_NETWORK_DISABLED ? 'none' : 'bridge',
+        // Network access: 'none' for isolated, default bridge for internet
+        NetworkMode: config.SANDBOX_NETWORK_DISABLED ? 'none' : '',
       },
     };
 

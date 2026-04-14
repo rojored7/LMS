@@ -14,7 +14,10 @@ const configSchema = z.object({
   SANDBOX_TIMEOUT: z.string().transform(Number).default('30000'),
   SANDBOX_MEMORY_LIMIT: z.string().default('256m'),
   SANDBOX_CPU_LIMIT: z.string().default('1'),
-  SANDBOX_NETWORK_DISABLED: z.string().transform(val => val === 'true').default('true'),
+  SANDBOX_NETWORK_DISABLED: z
+    .string()
+    .transform((val) => val === 'true')
+    .default('false'),
   SANDBOX_IMAGE: z.string().default('ciber-sandbox:latest'),
 
   // Redis Configuration
@@ -26,6 +29,13 @@ const configSchema = z.object({
 
   // Docker Configuration
   DOCKER_SOCKET_PATH: z.string().default('/var/run/docker.sock'),
+
+  // Authentication - shared secret with backend
+  EXECUTOR_SECRET: z.string().min(16, 'EXECUTOR_SECRET debe tener al menos 16 caracteres'),
+  ALLOWED_ORIGINS: z
+    .string()
+    .default('http://localhost:4000')
+    .transform((v) => v.split(',')),
 });
 
 export type Config = z.infer<typeof configSchema>;
@@ -67,4 +77,6 @@ export const LANGUAGE_CONFIGS = {
   },
 } as const;
 
-export const SUPPORTED_LANGUAGES = Object.keys(LANGUAGE_CONFIGS) as Array<keyof typeof LANGUAGE_CONFIGS>;
+export const SUPPORTED_LANGUAGES = Object.keys(LANGUAGE_CONFIGS) as Array<
+  keyof typeof LANGUAGE_CONFIGS
+>;
