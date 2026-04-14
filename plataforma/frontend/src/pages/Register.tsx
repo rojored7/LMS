@@ -47,17 +47,17 @@ export const Register: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-itac-navy-dark py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full">
-        <Card className="bg-itac-navy-light border border-white/10 rounded-xl">
-          <CardHeader className="border-b border-white/10">
+        <Card className="bg-white border border-gray-200 shadow-lg rounded-xl">
+          <CardHeader className="border-b border-gray-200">
             <div className="text-center">
-              <h2 className="text-3xl font-bold font-heading text-itac-text-light">Crear Cuenta</h2>
-              <p className="mt-2 text-sm text-white/60">
+              <h2 className="text-3xl font-bold font-heading text-gray-900">Crear Cuenta</h2>
+              <p className="mt-2 text-sm text-gray-600">
                 Ya tienes una cuenta?{' '}
                 <Link
                   to={ROUTES.LOGIN}
-                  className="font-medium text-itac-blue hover:text-itac-blue/80"
+                  className="font-medium text-blue-600 hover:text-blue-700"
                 >
                   Inicia sesion aqui
                 </Link>
@@ -150,15 +150,15 @@ export const Register: React.FC = () => {
                   type="checkbox"
                   required
                   disabled={isSubmitting}
-                  className="h-4 w-4 text-itac-orange focus:ring-itac-orange border-white/10 rounded mt-1 bg-itac-navy"
+                  className="h-4 w-4 text-orange-500 focus:ring-orange-500 border-gray-300 rounded mt-1 bg-white"
                 />
-                <label htmlFor="accept-terms" className="ml-2 block text-sm text-itac-text-light">
+                <label htmlFor="accept-terms" className="ml-2 block text-sm text-gray-700">
                   Acepto los{' '}
-                  <a href="#" className="text-itac-blue hover:text-itac-blue/80">
+                  <a href="#" className="text-blue-600 hover:text-blue-700">
                     terminos y condiciones
                   </a>{' '}
                   y la{' '}
-                  <a href="#" className="text-itac-blue hover:text-itac-blue/80">
+                  <a href="#" className="text-blue-600 hover:text-blue-700">
                     politica de privacidad
                   </a>
                 </label>

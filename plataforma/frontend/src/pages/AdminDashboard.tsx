@@ -170,10 +170,10 @@ export const AdminDashboard = () => {
       {/* Header */}
       <div className="mb-8 flex items-start justify-between">
         <div>
-          <h1 className="text-3xl font-bold font-heading text-gray-900 dark:text-white mb-2">
+          <h1 className="text-3xl font-bold font-heading text-gray-900 mb-2">
             Panel de Administración
           </h1>
-          <p className="text-gray-600 dark:text-gray-400">
+          <p className="text-gray-600">
             Gestión de usuarios, cursos y progreso del sistema
           </p>
         </div>
@@ -189,14 +189,14 @@ export const AdminDashboard = () => {
       {/* Stats Cards */}
       {!isLoadingStats && stats && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white dark:bg-itac-navy-light rounded-lg shadow p-6">
+          <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-itac-card-blue rounded-lg">
                 <Users className="w-6 h-6 text-itac-blue" />
               </div>
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Total Usuarios</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                <p className="text-sm text-gray-600">Total Usuarios</p>
+                <p className="text-2xl font-bold text-gray-900">
                   {stats.users.total}
                 </p>
                 <p className="text-xs text-gray-500 mt-1">
@@ -206,14 +206,14 @@ export const AdminDashboard = () => {
             </div>
           </div>
 
-          <div className="bg-white dark:bg-itac-navy-light rounded-lg shadow p-6">
+          <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-itac-card-orange rounded-lg">
                 <BookOpen className="w-6 h-6 text-itac-orange" />
               </div>
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Cursos</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                <p className="text-sm text-gray-600">Cursos</p>
+                <p className="text-2xl font-bold text-gray-900">
                   {stats.courses.published}
                 </p>
                 <p className="text-xs text-gray-500 mt-1">de {stats.courses.total} totales</p>
@@ -221,14 +221,14 @@ export const AdminDashboard = () => {
             </div>
           </div>
 
-          <div className="bg-white dark:bg-itac-navy-light rounded-lg shadow p-6">
+          <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-itac-card-blue rounded-lg">
                 <GraduationCap className="w-6 h-6 text-itac-blue" />
               </div>
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Inscripciones</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                <p className="text-sm text-gray-600">Inscripciones</p>
+                <p className="text-2xl font-bold text-gray-900">
                   {stats.enrollments.total}
                 </p>
                 <p className="text-xs text-gray-500 mt-1">
@@ -238,14 +238,14 @@ export const AdminDashboard = () => {
             </div>
           </div>
 
-          <div className="bg-white dark:bg-itac-navy-light rounded-lg shadow p-6">
+          <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-itac-card-orange rounded-lg">
                 <TrendingUp className="w-6 h-6 text-itac-orange" />
               </div>
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Progreso Promedio</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                <p className="text-sm text-gray-600">Progreso Promedio</p>
+                <p className="text-2xl font-bold text-gray-900">
                   {stats.systemHealth.averageProgress}%
                 </p>
                 <p className="text-xs text-gray-500 mt-1">
@@ -258,12 +258,12 @@ export const AdminDashboard = () => {
       )}
 
       {/* Users Management */}
-      <div className="bg-white dark:bg-itac-navy-light rounded-lg shadow">
-        <div className="p-6 border-b border-gray-200 dark:border-white/10">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+      <div className="bg-white rounded-lg shadow">
+        <div className="p-6 border-b border-gray-200">
+          <h2 className="text-xl font-semibold text-gray-900">
             Gestión de Estudiantes
           </h2>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+          <p className="text-sm text-gray-600 mt-1">
             {students.length} estudiantes registrados
           </p>
         </div>
@@ -274,7 +274,7 @@ export const AdminDashboard = () => {
               <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-itac-blue" />
             </div>
           ) : students.length === 0 ? (
-            <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+            <div className="text-center py-12 text-gray-500">
               No hay estudiantes registrados
             </div>
           ) : (
@@ -287,7 +287,7 @@ export const AdminDashboard = () => {
                 return (
                   <div
                     key={user.id}
-                    className="border border-gray-200 dark:border-white/10 rounded-lg"
+                    className="border border-gray-200 rounded-lg"
                   >
                     <div className="p-4 flex items-center justify-between">
                       <div className="flex items-center gap-4 flex-1">
@@ -299,10 +299,10 @@ export const AdminDashboard = () => {
                             {user.name ? user.name[0].toUpperCase() : user.email[0].toUpperCase()}
                           </div>
                           <div>
-                            <p className="font-medium text-gray-900 dark:text-white">
+                            <p className="font-medium text-gray-900">
                               {user.name || user.email}
                             </p>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">{user.email}</p>
+                            <p className="text-sm text-gray-500">{user.email}</p>
                           </div>
                         </button>
                       </div>
@@ -326,7 +326,7 @@ export const AdminDashboard = () => {
                         </button>
                         <button
                           onClick={() => handleDeleteUser(user.id)}
-                          className="px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors"
+                          className="px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 rounded-md transition-colors"
                         >
                           Eliminar
                         </button>
@@ -334,9 +334,9 @@ export const AdminDashboard = () => {
                     </div>
 
                     {isExpanded && userEnrollments && (
-                      <div className="p-4 border-t border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-itac-navy-dark/50">
+                      <div className="p-4 border-t border-gray-200 bg-gray-50">
                         {userEnrollments.enrollments.length === 0 ? (
-                          <p className="text-center py-4 text-gray-500 dark:text-gray-400">
+                          <p className="text-center py-4 text-gray-500">
                             Sin cursos asignados
                           </p>
                         ) : (
@@ -344,23 +344,23 @@ export const AdminDashboard = () => {
                             {userEnrollments.enrollments.map((enrollment) => (
                               <div
                                 key={enrollment.id}
-                                className="bg-white dark:bg-itac-navy-light rounded-lg p-4"
+                                className="bg-white rounded-lg p-4"
                               >
                                 <div className="flex items-start justify-between">
                                   <div className="flex-1">
-                                    <h4 className="font-medium text-gray-900 dark:text-white">
+                                    <h4 className="font-medium text-gray-900">
                                       {enrollment.course.title}
                                     </h4>
                                     <div className="mt-2">
                                       <div className="flex items-center justify-between text-sm mb-1">
-                                        <span className="text-gray-600 dark:text-gray-400">
+                                        <span className="text-gray-600">
                                           Progreso
                                         </span>
                                         <span className="font-semibold">
                                           {enrollment.progress}%
                                         </span>
                                       </div>
-                                      <div className="w-full bg-gray-200 dark:bg-itac-navy-dark rounded-full h-2">
+                                      <div className="w-full bg-gray-200 rounded-full h-2">
                                         <div
                                           className="bg-itac-blue h-2 rounded-full transition-all"
                                           style={{ width: `${enrollment.progress}%` }}
@@ -370,7 +370,7 @@ export const AdminDashboard = () => {
                                   </div>
                                   <button
                                     onClick={() => handleRemoveEnrollment(enrollment.id)}
-                                    className="ml-4 text-sm text-red-600 hover:text-red-700 dark:text-red-400"
+                                    className="ml-4 text-sm text-red-600 hover:text-red-700"
                                   >
                                     Retirar
                                   </button>

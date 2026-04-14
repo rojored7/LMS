@@ -163,7 +163,7 @@ export const Header: React.FC = () => {
               </div>
             ) : (
               <div className="flex items-center gap-2">
-                <Button variant="ghost" size="sm" onClick={() => navigate(ROUTES.LOGIN)}>
+                <Button variant="ghost" size="sm" onClick={() => navigate(ROUTES.LOGIN)} className="text-white hover:bg-white/10 hover:text-white">
                   Iniciar Sesión
                 </Button>
                 <Button variant="primary" size="sm" onClick={() => navigate(ROUTES.REGISTER)}>

@@ -103,9 +103,7 @@ export const LabExecutor: React.FC<LabExecutorProps> = ({ lab }) => {
           {showResults && results && (
             <div
               className={`rounded-lg border p-4 ${
-                results.passed
-                  ? 'bg-green-50 border-green-200'
-                  : 'bg-red-50 border-red-200'
+                results.passed ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
               }`}
             >
               <h3
@@ -131,9 +129,7 @@ export const LabExecutor: React.FC<LabExecutorProps> = ({ lab }) => {
                   </pre>
                 </div>
               )}
-              {results.error && (
-                <p className="text-sm text-red-700">{results.error}</p>
-              )}
+              {results.error && <p className="text-sm text-red-700">{results.error}</p>}
             </div>
           )}
         </div>

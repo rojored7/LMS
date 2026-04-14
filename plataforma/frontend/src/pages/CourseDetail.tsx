@@ -44,7 +44,7 @@ export const CourseDetail: React.FC = () => {
         <Card>
           <CardBody>
             <div className="text-center py-12">
-              <p className="text-red-600 dark:text-red-400 mb-4">Error al cargar el curso</p>
+              <p className="text-red-600 mb-4">Error al cargar el curso</p>
               <Button variant="outline" onClick={() => navigate(ROUTES.COURSES)}>
                 Volver al Catálogo
               </Button>
@@ -80,15 +80,15 @@ export const CourseDetail: React.FC = () => {
                   {course.isEnrolled && <Badge variant="success">Inscrito</Badge>}
                 </div>
 
-                <h1 className="text-3xl font-bold font-heading text-gray-900 dark:text-white mb-2">
+                <h1 className="text-3xl font-bold font-heading text-gray-900 mb-2">
                   {course.title}
                 </h1>
 
-                <p className="text-gray-600 dark:text-gray-400">{course.description}</p>
+                <p className="text-gray-600">{course.description}</p>
               </div>
 
               {/* Metadata */}
-              <div className="flex flex-wrap gap-6 mb-6 text-sm text-gray-600 dark:text-gray-400">
+              <div className="flex flex-wrap gap-6 mb-6 text-sm text-gray-600">
                 <span className="flex items-center gap-2">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
@@ -123,7 +123,7 @@ export const CourseDetail: React.FC = () => {
 
               {/* Course Modules */}
               <div className="mb-6">
-                <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
+                <h2 className="text-xl font-semibold mb-4 text-gray-900">
                   Contenido del Curso
                   {modules && modules.length > 0 ? ` (${modules.length} modulos)` : ''}
                 </h2>
@@ -133,10 +133,10 @@ export const CourseDetail: React.FC = () => {
                     {[1, 2, 3].map((i) => (
                       <div
                         key={i}
-                        className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 animate-pulse"
+                        className="border border-gray-200 rounded-lg p-4 animate-pulse"
                       >
-                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mb-2" />
-                        <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-2/3" />
+                        <div className="h-4 bg-gray-200 rounded w-1/3 mb-2" />
+                        <div className="h-3 bg-gray-200 rounded w-2/3" />
                       </div>
                     ))}
                   </div>
@@ -145,18 +145,18 @@ export const CourseDetail: React.FC = () => {
                     {modules.map((module, index) => (
                       <div
                         key={module.id}
-                        className="border border-gray-200 dark:border-gray-700 rounded-lg p-4"
+                        className="border border-gray-200 rounded-lg p-4"
                       >
-                        <h3 className="font-medium text-gray-900 dark:text-white mb-1">
+                        <h3 className="font-medium text-gray-900 mb-1">
                           Modulo {index + 1}: {module.title}
                         </h3>
                         {module.description && (
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                          <p className="text-sm text-gray-600">
                             {module.description}
                           </p>
                         )}
                         {module.duration && (
-                          <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">
+                          <p className="text-sm text-gray-500 mt-2">
                             {formatDuration(module.duration)}
                           </p>
                         )}
@@ -164,7 +164,7 @@ export const CourseDetail: React.FC = () => {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                  <p className="text-sm text-gray-500">
                     No hay modulos disponibles aun.
                   </p>
                 )}
@@ -173,12 +173,17 @@ export const CourseDetail: React.FC = () => {
               {/* Tags */}
               {course.tags && course.tags.length > 0 && (
                 <div>
-                  <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <h3 className="text-sm font-medium text-gray-700 mb-2">
                     Etiquetas
                   </h3>
                   <div className="flex flex-wrap gap-2">
                     {course.tags.map((tag, index) => (
-                      <Badge key={index} variant="default" size="sm" className="bg-itac-card-blue text-itac-blue-mid">
+                      <Badge
+                        key={index}
+                        variant="default"
+                        size="sm"
+                        className="bg-itac-card-blue text-itac-blue-mid"
+                      >
                         {tag}
                       </Badge>
                     ))}
@@ -195,7 +200,7 @@ export const CourseDetail: React.FC = () => {
             <CardBody>
               {/* Price */}
               <div className="text-center mb-6">
-                <p className="text-3xl font-bold text-itac-orange dark:text-itac-orange">
+                <p className="text-3xl font-bold text-itac-orange">
                   {course.price === 0 ? 'Gratis' : formatCurrency(course.price)}
                 </p>
               </div>
@@ -241,28 +246,28 @@ export const CourseDetail: React.FC = () => {
               )}
 
               {/* Course Info */}
-              <div className="space-y-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <div className="space-y-4 pt-4 border-t border-gray-200">
                 <div>
-                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nivel</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                  <p className="text-sm font-medium text-gray-700 mb-1">Nivel</p>
+                  <p className="text-sm text-gray-600">
                     {COURSE_LEVEL_LABELS[course.level]}
                   </p>
                 </div>
 
                 <div>
-                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <p className="text-sm font-medium text-gray-700 mb-1">
                     Duración
                   </p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                  <p className="text-sm text-gray-600">
                     {formatDuration(course.duration)}
                   </p>
                 </div>
 
                 <div>
-                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <p className="text-sm font-medium text-gray-700 mb-1">
                     Última actualización
                   </p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                  <p className="text-sm text-gray-600">
                     {formatDate(course.updatedAt)}
                   </p>
                 </div>

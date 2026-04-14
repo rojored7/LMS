@@ -30,10 +30,10 @@ export const Dashboard: React.FC = () => {
     <div className="container mx-auto px-4 py-8">
       {/* Welcome Section */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold font-heading text-gray-900 dark:text-white mb-2">
+        <h1 className="text-3xl font-bold font-heading text-gray-900 mb-2">
           Bienvenido, {user?.firstName}
         </h1>
-        <p className="text-gray-600 dark:text-gray-400">Continúa tu aprendizaje donde lo dejaste</p>
+        <p className="text-gray-600">Continúa tu aprendizaje donde lo dejaste</p>
       </div>
 
       {/* Stats Cards */}
@@ -57,8 +57,8 @@ export const Dashboard: React.FC = () => {
                 </svg>
               </div>
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Cursos Inscritos</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                <p className="text-sm text-gray-600">Cursos Inscritos</p>
+                <p className="text-2xl font-bold text-gray-900">
                   {enrolledCourses?.length || 0}
                 </p>
               </div>
@@ -85,8 +85,8 @@ export const Dashboard: React.FC = () => {
                 </svg>
               </div>
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Cursos Completados</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                <p className="text-sm text-gray-600">Cursos Completados</p>
+                <p className="text-2xl font-bold text-gray-900">
                   {enrolledCourses?.filter((e) => e.progress === 100).length || 0}
                 </p>
               </div>
@@ -113,8 +113,8 @@ export const Dashboard: React.FC = () => {
                 </svg>
               </div>
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Horas de Estudio</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">0</p>
+                <p className="text-sm text-gray-600">Horas de Estudio</p>
+                <p className="text-2xl font-bold text-gray-900">0</p>
               </div>
             </div>
           </CardBody>
@@ -125,7 +125,7 @@ export const Dashboard: React.FC = () => {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Mis Cursos</h2>
+            <h2 className="text-xl font-semibold text-gray-900">Mis Cursos</h2>
             <Button variant="outline" size="sm" onClick={() => navigate(ROUTES.COURSES)}>
               Explorar Más Cursos
             </Button>
@@ -135,7 +135,7 @@ export const Dashboard: React.FC = () => {
         <CardBody>
           {error ? (
             <div className="text-center py-8">
-              <p className="text-red-600 dark:text-red-400">Error al cargar los cursos</p>
+              <p className="text-red-600">Error al cargar los cursos</p>
               <Button variant="outline" size="sm" onClick={() => refetch()}>
                 Reintentar
               </Button>
@@ -156,10 +156,10 @@ export const Dashboard: React.FC = () => {
 
                     {/* Course Info */}
                     <div className="mb-4">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">
                         {enrollment.course?.title || 'Curso'}
                       </h3>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mb-3">
+                      <p className="text-sm text-gray-600 line-clamp-2 mb-3">
                         {enrollment.course?.description || ''}
                       </p>
 
@@ -177,12 +177,12 @@ export const Dashboard: React.FC = () => {
                     {/* Progress Bar */}
                     <div className="mb-4">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm text-gray-600 dark:text-gray-400">Progreso</span>
-                        <span className="text-sm font-medium text-gray-900 dark:text-white">
+                        <span className="text-sm text-gray-600">Progreso</span>
+                        <span className="text-sm font-medium text-gray-900">
                           {enrollment.progress}%
                         </span>
                       </div>
-                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                      <div className="w-full bg-gray-200 rounded-full h-2">
                         <div
                           className="bg-itac-blue h-2 rounded-full"
                           style={{ width: `${enrollment.progress}%` }}
@@ -222,10 +222,10 @@ export const Dashboard: React.FC = () => {
                   d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
                 />
               </svg>
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
                 No tienes cursos inscritos
               </h3>
-              <p className="text-gray-600 dark:text-gray-400 mb-4">
+              <p className="text-gray-600 mb-4">
                 Explora nuestro catálogo y comienza tu aprendizaje
               </p>
               <Button variant="primary" onClick={() => navigate(ROUTES.COURSES)}>

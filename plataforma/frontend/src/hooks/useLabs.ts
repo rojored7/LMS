@@ -37,8 +37,7 @@ export const useSubmitLab = () => {
   const { showToast } = useToast();
 
   return useMutation({
-    mutationFn: ({ labId, code }: { labId: string; code: string }) =>
-      submitLab(labId, code),
+    mutationFn: ({ labId, code }: { labId: string; code: string }) => submitLab(labId, code),
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['lab', variables.labId] });
       queryClient.invalidateQueries({ queryKey: ['labSubmissions', variables.labId] });

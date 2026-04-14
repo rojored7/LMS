@@ -87,19 +87,19 @@ export const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-itac-navy-dark py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full">
-        <Card className="bg-itac-navy-light border border-white/10 rounded-xl">
-          <CardHeader className="border-b border-white/10">
+        <Card className="bg-white border border-gray-200 shadow-lg rounded-xl">
+          <CardHeader className="border-b border-gray-200">
             <div className="text-center">
-              <h2 className="text-3xl font-bold font-heading text-itac-text-light">
+              <h2 className="text-3xl font-bold font-heading text-gray-900">
                 Iniciar Sesion
               </h2>
-              <p className="mt-2 text-sm text-white/60">
+              <p className="mt-2 text-sm text-gray-600">
                 No tienes una cuenta?{' '}
                 <Link
                   to={ROUTES.REGISTER}
-                  className="font-medium text-itac-blue hover:text-itac-blue/80"
+                  className="font-medium text-blue-600 hover:text-blue-700"
                 >
                   Registrate aqui
                 </Link>
@@ -169,9 +169,9 @@ export const Login: React.FC = () => {
                     id="remember-me"
                     name="remember-me"
                     type="checkbox"
-                    className="h-4 w-4 text-itac-orange focus:ring-itac-orange border-white/10 rounded bg-itac-navy"
+                    className="h-4 w-4 text-orange-500 focus:ring-orange-500 border-gray-300 rounded bg-white"
                   />
-                  <label htmlFor="remember-me" className="ml-2 block text-sm text-itac-text-light">
+                  <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">
                     Recordarme
                   </label>
                 </div>
@@ -179,7 +179,7 @@ export const Login: React.FC = () => {
                 <div className="text-sm">
                   <Link
                     to={ROUTES.FORGOT_PASSWORD}
-                    className="font-medium text-itac-blue hover:text-itac-blue/80"
+                    className="font-medium text-blue-600 hover:text-blue-700"
                   >
                     Olvidaste tu contrasena?
                   </Link>

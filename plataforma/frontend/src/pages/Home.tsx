@@ -22,42 +22,26 @@ export const Home: React.FC = () => {
             <h1 className="text-5xl md:text-6xl font-heading font-bold mb-6 text-itac-text-light">
               Aprende Ciberseguridad y Desarrollo
             </h1>
-            <p className="text-xl mb-8 text-white/50">
-              Accede a cursos profesionales diseñados por expertos. Aprende a tu
-              ritmo y obtén certificaciones reconocidas.
+            <p className="text-xl mb-8 text-white/80">
+              Accede a cursos profesionales diseñados por expertos. Aprende a tu ritmo y obtén
+              certificaciones reconocidas.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               {isAuthenticated ? (
                 <>
-                  <Button
-                    size="lg"
-                    variant="secondary"
-                    onClick={() => navigate(ROUTES.DASHBOARD)}
-                  >
+                  <Button size="lg" variant="secondary" onClick={() => navigate(ROUTES.DASHBOARD)}>
                     Ir a Mi Dashboard
                   </Button>
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    onClick={() => navigate(ROUTES.COURSES)}
-                  >
+                  <Button size="lg" variant="outline" onClick={() => navigate(ROUTES.COURSES)}>
                     Explorar Cursos
                   </Button>
                 </>
               ) : (
                 <>
-                  <Button
-                    size="lg"
-                    variant="secondary"
-                    onClick={() => navigate(ROUTES.REGISTER)}
-                  >
+                  <Button size="lg" variant="secondary" onClick={() => navigate(ROUTES.REGISTER)}>
                     Comenzar Gratis
                   </Button>
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    onClick={() => navigate(ROUTES.COURSES)}
-                  >
+                  <Button size="lg" variant="outline" onClick={() => navigate(ROUTES.COURSES)}>
                     Ver Cursos
                   </Button>
                 </>
@@ -68,9 +52,9 @@ export const Home: React.FC = () => {
       </section>
 
       {/* Features Section */}
-      <section className="py-16 bg-white dark:bg-itac-navy-dark">
+      <section className="py-16 bg-white">
         <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-heading font-bold text-center mb-12 text-gray-900 dark:text-itac-text-light">
+          <h2 className="text-3xl font-heading font-bold text-center mb-12 text-gray-900">
             ¿Por qué elegirnos?
           </h2>
 
@@ -93,12 +77,9 @@ export const Home: React.FC = () => {
                       />
                     </svg>
                   </div>
-                  <h3 className="text-xl font-semibold mb-2">
-                    Contenido de Calidad
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-400">
-                    Cursos desarrollados por profesionales con años de experiencia
-                    en la industria.
+                  <h3 className="text-xl font-semibold mb-2">Contenido de Calidad</h3>
+                  <p className="text-gray-600">
+                    Cursos desarrollados por profesionales con años de experiencia en la industria.
                   </p>
                 </div>
               </CardBody>
@@ -122,12 +103,10 @@ export const Home: React.FC = () => {
                       />
                     </svg>
                   </div>
-                  <h3 className="text-xl font-semibold mb-2">
-                    Certificaciones
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-400">
-                    Obtén certificados reconocidos al completar tus cursos y destaca
-                    en el mercado laboral.
+                  <h3 className="text-xl font-semibold mb-2">Certificaciones</h3>
+                  <p className="text-gray-600">
+                    Obtén certificados reconocidos al completar tus cursos y destaca en el mercado
+                    laboral.
                   </p>
                 </div>
               </CardBody>
@@ -151,12 +130,9 @@ export const Home: React.FC = () => {
                       />
                     </svg>
                   </div>
-                  <h3 className="text-xl font-semibold mb-2">
-                    Aprende a tu Ritmo
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-400">
-                    Acceso 24/7 al contenido. Estudia cuando y donde quieras, sin
-                    presiones.
+                  <h3 className="text-xl font-semibold mb-2">Aprende a tu Ritmo</h3>
+                  <p className="text-gray-600">
+                    Acceso 24/7 al contenido. Estudia cuando y donde quieras, sin presiones.
                   </p>
                 </div>
               </CardBody>
@@ -171,15 +147,11 @@ export const Home: React.FC = () => {
           <h2 className="text-3xl font-heading font-bold mb-4 text-itac-text-light">
             Listo para comenzar tu aprendizaje?
           </h2>
-          <p className="text-xl mb-8 text-white/50">
+          <p className="text-xl mb-8 text-white/80">
             Únete a miles de estudiantes que ya están mejorando sus habilidades.
           </p>
           {!isAuthenticated && (
-            <Button
-              size="lg"
-              variant="secondary"
-              onClick={() => navigate(ROUTES.REGISTER)}
-            >
+            <Button size="lg" variant="secondary" onClick={() => navigate(ROUTES.REGISTER)}>
               Registrarse Ahora
             </Button>
           )}

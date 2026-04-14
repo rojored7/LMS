@@ -49,10 +49,7 @@ export const getLab = async (labId: string): Promise<Lab> => {
 /**
  * Submit a lab solution
  */
-export const submitLab = async (
-  labId: string,
-  code: string,
-): Promise<LabSubmissionResult> => {
+export const submitLab = async (labId: string, code: string): Promise<LabSubmissionResult> => {
   const response = await api.post(`/labs/${labId}/submit`, { code });
   return (response as any).data || response;
 };

@@ -15,20 +15,16 @@ export const Footer: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* About */}
           <div>
-            <h3 className="text-lg font-semibold mb-4 text-itac-text-light">
-              Sobre Nosotros
-            </h3>
+            <h3 className="text-lg font-semibold mb-4 text-itac-text-light">Sobre Nosotros</h3>
             <p className="text-sm text-white/50">
-              Plataforma de cursos de ciberseguridad y desarrollo profesional.
-              Aprende a tu ritmo con los mejores instructores.
+              Plataforma de cursos de ciberseguridad y desarrollo profesional. Aprende a tu ritmo
+              con los mejores instructores.
             </p>
           </div>
 
           {/* Links */}
           <div>
-            <h3 className="text-lg font-semibold mb-4 text-itac-text-light">
-              Enlaces
-            </h3>
+            <h3 className="text-lg font-semibold mb-4 text-itac-text-light">Enlaces</h3>
             <ul className="space-y-2 text-sm">
               <li>
                 <Link
@@ -47,10 +43,7 @@ export const Footer: React.FC = () => {
                 </Link>
               </li>
               <li>
-                <a
-                  href="#"
-                  className="text-white/50 hover:text-itac-blue transition-colors"
-                >
+                <a href="#" className="text-white/50 hover:text-itac-blue transition-colors">
                   Blog
                 </a>
               </li>
@@ -59,31 +52,20 @@ export const Footer: React.FC = () => {
 
           {/* Support */}
           <div>
-            <h3 className="text-lg font-semibold mb-4 text-itac-text-light">
-              Soporte
-            </h3>
+            <h3 className="text-lg font-semibold mb-4 text-itac-text-light">Soporte</h3>
             <ul className="space-y-2 text-sm">
               <li>
-                <a
-                  href="#"
-                  className="text-white/50 hover:text-itac-blue transition-colors"
-                >
+                <a href="#" className="text-white/50 hover:text-itac-blue transition-colors">
                   Centro de Ayuda
                 </a>
               </li>
               <li>
-                <a
-                  href="#"
-                  className="text-white/50 hover:text-itac-blue transition-colors"
-                >
+                <a href="#" className="text-white/50 hover:text-itac-blue transition-colors">
                   Contacto
                 </a>
               </li>
               <li>
-                <a
-                  href="#"
-                  className="text-white/50 hover:text-itac-blue transition-colors"
-                >
+                <a href="#" className="text-white/50 hover:text-itac-blue transition-colors">
                   FAQ
                 </a>
               </li>
@@ -92,31 +74,20 @@ export const Footer: React.FC = () => {
 
           {/* Legal */}
           <div>
-            <h3 className="text-lg font-semibold mb-4 text-itac-text-light">
-              Legal
-            </h3>
+            <h3 className="text-lg font-semibold mb-4 text-itac-text-light">Legal</h3>
             <ul className="space-y-2 text-sm">
               <li>
-                <a
-                  href="#"
-                  className="text-white/50 hover:text-itac-blue transition-colors"
-                >
+                <a href="#" className="text-white/50 hover:text-itac-blue transition-colors">
                   Términos de Uso
                 </a>
               </li>
               <li>
-                <a
-                  href="#"
-                  className="text-white/50 hover:text-itac-blue transition-colors"
-                >
+                <a href="#" className="text-white/50 hover:text-itac-blue transition-colors">
                   Política de Privacidad
                 </a>
               </li>
               <li>
-                <a
-                  href="#"
-                  className="text-white/50 hover:text-itac-blue transition-colors"
-                >
+                <a href="#" className="text-white/50 hover:text-itac-blue transition-colors">
                   Cookies
                 </a>
               </li>
