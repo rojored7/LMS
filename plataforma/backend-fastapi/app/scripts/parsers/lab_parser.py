@@ -110,7 +110,7 @@ def parse_labs(module_dir: Path) -> list[ParsedLab]:
                     hints=hints,
                 )
             )
-        except (json.JSONDecodeError, KeyError):
+        except Exception:
             continue
 
     # Also parse lab subdirectories (lab_01_name/README.md format)

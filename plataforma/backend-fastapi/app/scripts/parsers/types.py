@@ -7,7 +7,7 @@ class ParsedQuestion:
     type: str = "MULTIPLE_CHOICE"
     question: str = ""
     options: list[str] | None = None
-    correct_answer: str = ""
+    correct_answer: str | int = ""
     explanation: str | None = None
 
 

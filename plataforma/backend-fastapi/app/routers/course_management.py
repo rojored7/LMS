@@ -132,6 +132,7 @@ async def import_course_zip(
         return {"success": True, "data": {"courseId": course_id, "title": parsed.title, "message": f"Curso '{parsed.title}' importado exitosamente"}}
     except Exception as e:
         logger.error("course_import_failed", error=str(e))
+        await db.rollback()
         return {"success": False, "error": {"code": "IMPORT_ERROR", "message": str(e)}}
     finally:
         if tmp_dir and tmp_dir.exists():

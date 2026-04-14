@@ -8,7 +8,7 @@ def parse_course(course_dir: Path) -> ParsedCourse:
     # Try config.json first
     config_path = course_dir / "config.json"
     if config_path.exists():
-        with open(config_path) as f:
+        with open(config_path, encoding="utf-8") as f:
             config = json.load(f)
         return _build_from_config(config, course_dir)
 
@@ -18,7 +18,7 @@ def parse_course(course_dir: Path) -> ParsedCourse:
         if yaml_path.exists():
             try:
                 import yaml
-                with open(yaml_path) as f:
+                with open(yaml_path, encoding="utf-8") as f:
                     config = yaml.safe_load(f)
                 if config and isinstance(config, dict):
                     return _build_from_config(config, course_dir)
@@ -76,8 +76,13 @@ def find_module_dirs(course_dir: Path) -> list[Path]:
         return sorted([d for d in modules_dir.iterdir() if d.is_dir()])
 
     # Fallback: numbered directories at root level (01_*, 02_*, etc.)
+    excluded = {
+        "assets", "projects", ".git", "__pycache__", "recursos", "scripts",
+        "docs", "images", "config", "tests", "solutions", ".github",
+        "node_modules", "venv", ".venv", "dist", "build",
+    }
     dirs = sorted([
         d for d in course_dir.iterdir()
-        if d.is_dir() and d.name not in ("assets", "projects", ".git", "__pycache__", "recursos", "scripts")
+        if d.is_dir() and d.name not in excluded and not d.name.startswith(".")
     ])
     return dirs

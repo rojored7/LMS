@@ -54,6 +54,7 @@ class CourseImportService {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
+        timeout: 120000,
         onUploadProgress: (progressEvent) => {
           if (progressEvent.total && onProgress) {
             const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
@@ -63,10 +64,14 @@ class CourseImportService {
       });
 
       const envelope = response as any;
+      const courseData = envelope.data || envelope;
       return {
         success: true,
-        course: envelope.data,
-        message: envelope.message || 'Curso importado exitosamente',
+        course: {
+          id: courseData.courseId || courseData.id,
+          title: courseData.title,
+        },
+        message: courseData.message || envelope.message || 'Curso importado exitosamente',
       };
     } catch (error: any) {
       return {
@@ -89,6 +94,7 @@ class CourseImportService {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
+        timeout: 120000,
       });
 
       return (response as any).data || response;
