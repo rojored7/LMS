@@ -61,9 +61,9 @@ const queryClient = new QueryClient({
  */
 const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
-    <div className="flex min-h-screen bg-gray-50 overflow-x-hidden">
+    <div className="flex min-h-screen bg-gray-50" style={{ overflowX: 'hidden' }}>
       <Sidebar />
-      <div className="flex-1 lg:ml-64 overflow-x-hidden">
+      <div className="flex-1 lg:ml-64" style={{ overflowX: 'hidden', maxWidth: '100%' }}>
         <main className="min-h-[calc(100vh-4rem)]">{children}</main>
       </div>
     </div>
@@ -136,290 +136,289 @@ function App() {
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
-          <div className="min-h-screen bg-gray-50 overflow-x-hidden">
+          <div className="min-h-screen bg-gray-50" style={{ overflowX: 'hidden' }}>
             <Header />
             <div className="pt-16">
+              <Routes>
+                {/* Public Routes */}
+                <Route
+                  path={ROUTES.HOME}
+                  element={
+                    <PublicLayout>
+                      <Home />
+                    </PublicLayout>
+                  }
+                />
 
-            <Routes>
-              {/* Public Routes */}
-              <Route
-                path={ROUTES.HOME}
-                element={
-                  <PublicLayout>
-                    <Home />
-                  </PublicLayout>
-                }
-              />
+                <Route path={ROUTES.LOGIN} element={<Login />} />
 
-              <Route path={ROUTES.LOGIN} element={<Login />} />
+                <Route path={ROUTES.REGISTER} element={<Register />} />
 
-              <Route path={ROUTES.REGISTER} element={<Register />} />
+                {/* HU-005: Password Reset Routes */}
+                <Route path={ROUTES.FORGOT_PASSWORD} element={<ForgotPassword />} />
+                <Route path={ROUTES.RESET_PASSWORD} element={<ResetPassword />} />
 
-              {/* HU-005: Password Reset Routes */}
-              <Route path={ROUTES.FORGOT_PASSWORD} element={<ForgotPassword />} />
-              <Route path={ROUTES.RESET_PASSWORD} element={<ResetPassword />} />
+                <Route
+                  path={ROUTES.COURSES}
+                  element={
+                    <PublicLayout>
+                      <CourseCatalog />
+                    </PublicLayout>
+                  }
+                />
 
-              <Route
-                path={ROUTES.COURSES}
-                element={
-                  <PublicLayout>
-                    <CourseCatalog />
-                  </PublicLayout>
-                }
-              />
+                <Route
+                  path="/courses/:id"
+                  element={
+                    <PublicLayout>
+                      <CourseDetail />
+                    </PublicLayout>
+                  }
+                />
 
-              <Route
-                path="/courses/:id"
-                element={
-                  <PublicLayout>
-                    <CourseDetail />
-                  </PublicLayout>
-                }
-              />
+                {/* Protected Routes - Require Authentication */}
+                <Route
+                  path={ROUTES.DASHBOARD}
+                  element={
+                    <ProtectedRoute>
+                      <DashboardLayout>
+                        <DashboardRedirect />
+                      </DashboardLayout>
+                    </ProtectedRoute>
+                  }
+                />
 
-              {/* Protected Routes - Require Authentication */}
-              <Route
-                path={ROUTES.DASHBOARD}
-                element={
-                  <ProtectedRoute>
-                    <DashboardLayout>
-                      <DashboardRedirect />
-                    </DashboardLayout>
-                  </ProtectedRoute>
-                }
-              />
+                <Route
+                  path={ROUTES.PROFILE}
+                  element={
+                    <ProtectedRoute>
+                      <DashboardLayout>
+                        <Profile />
+                      </DashboardLayout>
+                    </ProtectedRoute>
+                  }
+                />
 
-              <Route
-                path={ROUTES.PROFILE}
-                element={
-                  <ProtectedRoute>
-                    <DashboardLayout>
-                      <Profile />
-                    </DashboardLayout>
-                  </ProtectedRoute>
-                }
-              />
+                {/* Course Learning Interface - Full screen layout */}
+                <Route
+                  path="/courses/:courseId/learn"
+                  element={
+                    <ProtectedRoute>
+                      <CourseLearning />
+                    </ProtectedRoute>
+                  }
+                />
 
-              {/* Course Learning Interface - Full screen layout */}
-              <Route
-                path="/courses/:courseId/learn"
-                element={
-                  <ProtectedRoute>
-                    <CourseLearning />
-                  </ProtectedRoute>
-                }
-              />
+                {/* Instructor Routes */}
+                <Route
+                  path={ROUTES.INSTRUCTOR}
+                  element={
+                    <ProtectedRoute requiredRoles={[UserRole.INSTRUCTOR]}>
+                      <DashboardLayout>
+                        <InstructorDashboard />
+                      </DashboardLayout>
+                    </ProtectedRoute>
+                  }
+                />
 
-              {/* Instructor Routes */}
-              <Route
-                path={ROUTES.INSTRUCTOR}
-                element={
-                  <ProtectedRoute requiredRoles={[UserRole.INSTRUCTOR]}>
-                    <DashboardLayout>
-                      <InstructorDashboard />
-                    </DashboardLayout>
-                  </ProtectedRoute>
-                }
-              />
+                <Route
+                  path="/instructor/courses/:courseId/students"
+                  element={
+                    <ProtectedRoute requiredRoles={[UserRole.INSTRUCTOR]}>
+                      <DashboardLayout>
+                        <InstructorStudents />
+                      </DashboardLayout>
+                    </ProtectedRoute>
+                  }
+                />
 
-              <Route
-                path="/instructor/courses/:courseId/students"
-                element={
-                  <ProtectedRoute requiredRoles={[UserRole.INSTRUCTOR]}>
-                    <DashboardLayout>
-                      <InstructorStudents />
-                    </DashboardLayout>
-                  </ProtectedRoute>
-                }
-              />
+                <Route
+                  path="/instructor/courses/:courseId/gradebook"
+                  element={
+                    <ProtectedRoute requiredRoles={[UserRole.INSTRUCTOR]}>
+                      <DashboardLayout>
+                        <InstructorGradebook />
+                      </DashboardLayout>
+                    </ProtectedRoute>
+                  }
+                />
 
-              <Route
-                path="/instructor/courses/:courseId/gradebook"
-                element={
-                  <ProtectedRoute requiredRoles={[UserRole.INSTRUCTOR]}>
-                    <DashboardLayout>
-                      <InstructorGradebook />
-                    </DashboardLayout>
-                  </ProtectedRoute>
-                }
-              />
+                <Route
+                  path="/instructor/analytics"
+                  element={
+                    <ProtectedRoute requiredRoles={[UserRole.INSTRUCTOR]}>
+                      <DashboardLayout>
+                        <InstructorAnalytics />
+                      </DashboardLayout>
+                    </ProtectedRoute>
+                  }
+                />
 
-              <Route
-                path="/instructor/analytics"
-                element={
-                  <ProtectedRoute requiredRoles={[UserRole.INSTRUCTOR]}>
-                    <DashboardLayout>
-                      <InstructorAnalytics />
-                    </DashboardLayout>
-                  </ProtectedRoute>
-                }
-              />
+                {/* Admin Routes - Require Admin Role */}
+                <Route
+                  path={ROUTES.ADMIN}
+                  element={
+                    <ProtectedRoute requiredRoles={[UserRole.ADMIN]}>
+                      <DashboardLayout>
+                        <AdminDashboard />
+                      </DashboardLayout>
+                    </ProtectedRoute>
+                  }
+                />
 
-              {/* Admin Routes - Require Admin Role */}
-              <Route
-                path={ROUTES.ADMIN}
-                element={
-                  <ProtectedRoute requiredRoles={[UserRole.ADMIN]}>
-                    <DashboardLayout>
-                      <AdminDashboard />
-                    </DashboardLayout>
-                  </ProtectedRoute>
-                }
-              />
+                <Route
+                  path="/admin/users"
+                  element={
+                    <ProtectedRoute requiredRoles={[UserRole.ADMIN]}>
+                      <DashboardLayout>
+                        <UsersList />
+                      </DashboardLayout>
+                    </ProtectedRoute>
+                  }
+                />
 
-              <Route
-                path="/admin/users"
-                element={
-                  <ProtectedRoute requiredRoles={[UserRole.ADMIN]}>
-                    <DashboardLayout>
-                      <UsersList />
-                    </DashboardLayout>
-                  </ProtectedRoute>
-                }
-              />
+                <Route
+                  path="/admin/users/:userId/progress"
+                  element={
+                    <ProtectedRoute requiredRoles={[UserRole.ADMIN]}>
+                      <DashboardLayout>
+                        <UserProgressDetail />
+                      </DashboardLayout>
+                    </ProtectedRoute>
+                  }
+                />
 
-              <Route
-                path="/admin/users/:userId/progress"
-                element={
-                  <ProtectedRoute requiredRoles={[UserRole.ADMIN]}>
-                    <DashboardLayout>
-                      <UserProgressDetail />
-                    </DashboardLayout>
-                  </ProtectedRoute>
-                }
-              />
+                <Route
+                  path="/admin/training-profiles"
+                  element={
+                    <ProtectedRoute requiredRoles={[UserRole.ADMIN]}>
+                      <DashboardLayout>
+                        <TrainingProfiles />
+                      </DashboardLayout>
+                    </ProtectedRoute>
+                  }
+                />
 
-              <Route
-                path="/admin/training-profiles"
-                element={
-                  <ProtectedRoute requiredRoles={[UserRole.ADMIN]}>
-                    <DashboardLayout>
-                      <TrainingProfiles />
-                    </DashboardLayout>
-                  </ProtectedRoute>
-                }
-              />
+                {/* Course Management Routes */}
+                <Route
+                  path="/admin/courses"
+                  element={
+                    <ProtectedRoute requiredRoles={[UserRole.ADMIN, UserRole.INSTRUCTOR]}>
+                      <DashboardLayout>
+                        <CourseListPage />
+                      </DashboardLayout>
+                    </ProtectedRoute>
+                  }
+                />
 
-              {/* Course Management Routes */}
-              <Route
-                path="/admin/courses"
-                element={
-                  <ProtectedRoute requiredRoles={[UserRole.ADMIN, UserRole.INSTRUCTOR]}>
-                    <DashboardLayout>
-                      <CourseListPage />
-                    </DashboardLayout>
-                  </ProtectedRoute>
-                }
-              />
+                <Route
+                  path="/admin/courses/import"
+                  element={
+                    <ProtectedRoute requiredRoles={[UserRole.ADMIN, UserRole.INSTRUCTOR]}>
+                      <DashboardLayout>
+                        <CourseImportPage />
+                      </DashboardLayout>
+                    </ProtectedRoute>
+                  }
+                />
 
-              <Route
-                path="/admin/courses/import"
-                element={
-                  <ProtectedRoute requiredRoles={[UserRole.ADMIN, UserRole.INSTRUCTOR]}>
-                    <DashboardLayout>
-                      <CourseImportPage />
-                    </DashboardLayout>
-                  </ProtectedRoute>
-                }
-              />
+                <Route
+                  path="/admin/courses/create"
+                  element={
+                    <ProtectedRoute requiredRoles={[UserRole.ADMIN, UserRole.INSTRUCTOR]}>
+                      <DashboardLayout>
+                        <CourseWizardPage />
+                      </DashboardLayout>
+                    </ProtectedRoute>
+                  }
+                />
 
-              <Route
-                path="/admin/courses/create"
-                element={
-                  <ProtectedRoute requiredRoles={[UserRole.ADMIN, UserRole.INSTRUCTOR]}>
-                    <DashboardLayout>
-                      <CourseWizardPage />
-                    </DashboardLayout>
-                  </ProtectedRoute>
-                }
-              />
+                <Route
+                  path="/admin/courses/:id/edit"
+                  element={
+                    <ProtectedRoute requiredRoles={[UserRole.ADMIN, UserRole.INSTRUCTOR]}>
+                      <DashboardLayout>
+                        <CourseEditorPage />
+                      </DashboardLayout>
+                    </ProtectedRoute>
+                  }
+                />
 
-              <Route
-                path="/admin/courses/:id/edit"
-                element={
-                  <ProtectedRoute requiredRoles={[UserRole.ADMIN, UserRole.INSTRUCTOR]}>
-                    <DashboardLayout>
-                      <CourseEditorPage />
-                    </DashboardLayout>
-                  </ProtectedRoute>
-                }
-              />
+                {/* Quiz Routes */}
+                <Route
+                  path="/courses/:courseId/quizzes/create"
+                  element={
+                    <ProtectedRoute requiredRoles={[UserRole.INSTRUCTOR, UserRole.ADMIN]}>
+                      <DashboardLayout>
+                        <QuizBuilder />
+                      </DashboardLayout>
+                    </ProtectedRoute>
+                  }
+                />
 
-              {/* Quiz Routes */}
-              <Route
-                path="/courses/:courseId/quizzes/create"
-                element={
-                  <ProtectedRoute requiredRoles={[UserRole.INSTRUCTOR, UserRole.ADMIN]}>
-                    <DashboardLayout>
-                      <QuizBuilder />
-                    </DashboardLayout>
-                  </ProtectedRoute>
-                }
-              />
+                <Route
+                  path="/courses/:courseId/quizzes/:quizId/edit"
+                  element={
+                    <ProtectedRoute requiredRoles={[UserRole.INSTRUCTOR, UserRole.ADMIN]}>
+                      <DashboardLayout>
+                        <QuizBuilder />
+                      </DashboardLayout>
+                    </ProtectedRoute>
+                  }
+                />
 
-              <Route
-                path="/courses/:courseId/quizzes/:quizId/edit"
-                element={
-                  <ProtectedRoute requiredRoles={[UserRole.INSTRUCTOR, UserRole.ADMIN]}>
-                    <DashboardLayout>
-                      <QuizBuilder />
-                    </DashboardLayout>
-                  </ProtectedRoute>
-                }
-              />
+                {/* Project Routes */}
+                <Route
+                  path="/courses/:courseId/projects/:projectId/submit"
+                  element={
+                    <ProtectedRoute>
+                      <DashboardLayout>
+                        <ProjectSubmission />
+                      </DashboardLayout>
+                    </ProtectedRoute>
+                  }
+                />
 
-              {/* Project Routes */}
-              <Route
-                path="/courses/:courseId/projects/:projectId/submit"
-                element={
-                  <ProtectedRoute>
-                    <DashboardLayout>
-                      <ProjectSubmission />
-                    </DashboardLayout>
-                  </ProtectedRoute>
-                }
-              />
+                <Route
+                  path="/courses/:courseId/projects/:projectId/submissions"
+                  element={
+                    <ProtectedRoute requiredRoles={[UserRole.INSTRUCTOR, UserRole.ADMIN]}>
+                      <DashboardLayout>
+                        <SubmissionsReview />
+                      </DashboardLayout>
+                    </ProtectedRoute>
+                  }
+                />
 
-              <Route
-                path="/courses/:courseId/projects/:projectId/submissions"
-                element={
-                  <ProtectedRoute requiredRoles={[UserRole.INSTRUCTOR, UserRole.ADMIN]}>
-                    <DashboardLayout>
-                      <SubmissionsReview />
-                    </DashboardLayout>
-                  </ProtectedRoute>
-                }
-              />
+                {/* Public Profile */}
+                <Route
+                  path="/profile/:userId"
+                  element={
+                    <PublicLayout>
+                      <PublicProfile />
+                    </PublicLayout>
+                  }
+                />
 
-              {/* Public Profile */}
-              <Route
-                path="/profile/:userId"
-                element={
-                  <PublicLayout>
-                    <PublicProfile />
-                  </PublicLayout>
-                }
-              />
+                {/* Notifications */}
+                <Route
+                  path="/notifications"
+                  element={
+                    <ProtectedRoute>
+                      <DashboardLayout>
+                        <NotificationsPage />
+                      </DashboardLayout>
+                    </ProtectedRoute>
+                  }
+                />
 
-              {/* Notifications */}
-              <Route
-                path="/notifications"
-                element={
-                  <ProtectedRoute>
-                    <DashboardLayout>
-                      <NotificationsPage />
-                    </DashboardLayout>
-                  </ProtectedRoute>
-                }
-              />
+                {/* 403 Forbidden - HU-003: Sistema de Roles (RBAC) */}
+                <Route path={ROUTES.FORBIDDEN} element={<Forbidden />} />
 
-              {/* 403 Forbidden - HU-003: Sistema de Roles (RBAC) */}
-              <Route path={ROUTES.FORBIDDEN} element={<Forbidden />} />
-
-              {/* 404 Not Found */}
-              <Route path={ROUTES.NOT_FOUND} element={<NotFound />} />
-              <Route path="*" element={<Navigate to={ROUTES.NOT_FOUND} replace />} />
-            </Routes>
+                {/* 404 Not Found */}
+                <Route path={ROUTES.NOT_FOUND} element={<NotFound />} />
+                <Route path="*" element={<Navigate to={ROUTES.NOT_FOUND} replace />} />
+              </Routes>
             </div>
 
             {/* Toast Notifications */}

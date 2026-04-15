@@ -134,7 +134,7 @@ function DataTable<T>({
   }
 
   return (
-    <div className={`data-table-container ${className}`}>
+    <div className={`data-table-container ${className} max-w-full`}>
       <div className="overflow-x-auto">
         <table className={`
           min-w-full divide-y divide-gray-200

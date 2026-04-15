@@ -108,26 +108,25 @@ const CourseListPage: React.FC = () => {
             )}
           </div>
         ),
-        width: '80px',
+        width: '60px',
       },
       {
         key: 'title',
         header: 'Titulo',
         accessor: (course) => (
-          <div className="max-w-md">
+          <div className="max-w-[280px]">
             <Link
               to={`/admin/courses/${course.id}/edit`}
               className="font-medium text-gray-900 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 block truncate"
             >
               {course.title}
             </Link>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 line-clamp-2 break-words">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 line-clamp-1 break-words">
               {course.description}
             </p>
           </div>
         ),
         sortable: true,
-        width: '400px',
       },
       {
         key: 'level',
@@ -140,41 +139,41 @@ const CourseListPage: React.FC = () => {
           </span>
         ),
         sortable: true,
-        width: '120px',
+        width: '90px',
       },
       {
         key: 'duration',
         header: 'Duracion',
         accessor: (course) => (
-          <span className="text-gray-900 dark:text-gray-100">{Math.round(course.duration / 60)} horas</span>
+          <span className="text-gray-900 dark:text-gray-100">{Math.round(course.duration / 60)}h</span>
         ),
         sortable: true,
-        width: '100px',
+        width: '70px',
       },
       {
         key: 'modules',
-        header: 'Modulos',
+        header: 'Mod.',
         accessor: (course) => (
           <span className="text-gray-900 dark:text-gray-100">{course.moduleCount || 0}</span>
         ),
         sortable: true,
-        width: '90px',
+        width: '60px',
       },
       {
         key: 'enrollments',
-        header: 'Estudiantes',
+        header: 'Est.',
         accessor: (course) => (
           <span className="text-gray-900 dark:text-gray-100">{course.enrollmentCount || 0}</span>
         ),
         sortable: true,
-        width: '100px',
+        width: '60px',
       },
       {
         key: 'status',
         header: 'Estado',
         accessor: (course) => <StatusBadge isPublished={course.isPublished} />,
         sortable: true,
-        width: '100px',
+        width: '90px',
       },
       {
         key: 'actions',
@@ -324,7 +323,7 @@ const CourseListPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+      <div className="w-full max-w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
         {/* Filters and Search */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm mb-4 sm:mb-6 p-4">
           <div className="flex flex-col sm:flex-row sm:items-center gap-4">
