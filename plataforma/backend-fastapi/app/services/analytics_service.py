@@ -120,3 +120,76 @@ class AnalyticsService:
             "newEnrollments": new_enrollments,
             "activeUsers": active_users,
         }
+
+    async def get_user_distribution(self) -> list[dict]:
+        result = await self.db.execute(
+            select(User.role, func.count().label("count")).group_by(User.role)
+        )
+        return [{"role": str(r.role.value) if hasattr(r.role, 'value') else str(r.role), "count": r.count} for r in result.all()]
+
+    async def get_recent_activity(self, limit: int = 10) -> list[dict]:
+        result = await self.db.execute(
+            select(Enrollment, User, Course)
+            .join(User, Enrollment.user_id == User.id)
+            .join(Course, Enrollment.course_id == Course.id)
+            .order_by(Enrollment.enrolled_at.desc())
+            .limit(limit)
+        )
+        rows = result.all()
+        data = []
+        for enrollment, user, course in rows:
+            activity_type = "completion" if enrollment.completed_at else "enrollment"
+            timestamp = enrollment.completed_at if enrollment.completed_at else enrollment.enrolled_at
+            data.append({
+                "type": activity_type,
+                "userName": user.name or user.email,
+                "userEmail": user.email,
+                "courseTitle": course.title,
+                "timestamp": timestamp.isoformat() if timestamp else None,
+            })
+        return data
+
+    async def get_comparative_stats(self) -> dict:
+        now = datetime.now(timezone.utc)
+        current_start = now - timedelta(days=30)
+        previous_start = now - timedelta(days=60)
+
+        def _pct(current: int, previous: int) -> float:
+            if previous == 0:
+                return 100.0 if current > 0 else 0.0
+            return round((current - previous) / previous * 100, 1)
+
+        cur_users = (await self.db.execute(
+            select(func.count()).select_from(User).where(User.created_at >= current_start)
+        )).scalar() or 0
+        prev_users = (await self.db.execute(
+            select(func.count()).select_from(User).where(User.created_at >= previous_start, User.created_at < current_start)
+        )).scalar() or 0
+
+        cur_enrollments = (await self.db.execute(
+            select(func.count()).select_from(Enrollment).where(Enrollment.enrolled_at >= current_start)
+        )).scalar() or 0
+        prev_enrollments = (await self.db.execute(
+            select(func.count()).select_from(Enrollment).where(Enrollment.enrolled_at >= previous_start, Enrollment.enrolled_at < current_start)
+        )).scalar() or 0
+
+        cur_completions = (await self.db.execute(
+            select(func.count()).select_from(Enrollment).where(Enrollment.completed_at >= current_start)
+        )).scalar() or 0
+        prev_completions = (await self.db.execute(
+            select(func.count()).select_from(Enrollment).where(Enrollment.completed_at >= previous_start, Enrollment.completed_at < current_start)
+        )).scalar() or 0
+
+        cur_active = (await self.db.execute(
+            select(func.count()).select_from(User).where(User.last_login_at >= current_start)
+        )).scalar() or 0
+        prev_active = (await self.db.execute(
+            select(func.count()).select_from(User).where(User.last_login_at >= previous_start, User.last_login_at < current_start)
+        )).scalar() or 0
+
+        return {
+            "users": {"current": cur_users, "previous": prev_users, "changePercent": _pct(cur_users, prev_users)},
+            "enrollments": {"current": cur_enrollments, "previous": prev_enrollments, "changePercent": _pct(cur_enrollments, prev_enrollments)},
+            "completions": {"current": cur_completions, "previous": prev_completions, "changePercent": _pct(cur_completions, prev_completions)},
+            "activeStudents": {"current": cur_active, "previous": prev_active, "changePercent": _pct(cur_active, prev_active)},
+        }

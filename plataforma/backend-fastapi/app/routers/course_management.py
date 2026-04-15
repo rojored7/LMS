@@ -14,6 +14,7 @@ from app.database import get_db
 from app.middleware.auth import require_instructor
 from app.middleware.error_handler import AuthorizationError, NotFoundError
 from app.models.course import Course, Module, Lesson, LessonType
+from app.models.progress import Enrollment
 from app.models.user import User, UserRole
 from app.schemas.common import PaginationMeta
 from app.schemas.course import CourseResponse
@@ -153,9 +154,17 @@ async def list_all_courses(
     offset = (page - 1) * limit
     result = await db.execute(select(Course).where(base_filter).offset(offset).limit(limit).order_by(Course.created_at.desc()))
     courses = result.scalars().all()
+    data = []
+    for c in courses:
+        mod_count = (await db.execute(select(func.count()).select_from(Module).where(Module.course_id == c.id))).scalar() or 0
+        enroll_count = (await db.execute(select(func.count()).select_from(Enrollment).where(Enrollment.course_id == c.id))).scalar() or 0
+        d = CourseResponse.model_validate(c).model_dump()
+        d["moduleCount"] = mod_count
+        d["enrollmentCount"] = enroll_count
+        data.append(d)
     return {
         "success": True,
-        "data": [CourseResponse.model_validate(c).model_dump() for c in courses],
+        "data": data,
         "meta": PaginationMeta(total=total, page=page, limit=limit, pages=math.ceil(total / limit) if limit else 0),
     }
 
@@ -170,7 +179,12 @@ async def get_course_admin(
     course = result.scalar_one_or_none()
     if course is None:
         raise NotFoundError("Curso no encontrado")
-    return {"success": True, "data": CourseResponse.model_validate(course).model_dump()}
+    mod_count = (await db.execute(select(func.count()).select_from(Module).where(Module.course_id == course.id))).scalar() or 0
+    enroll_count = (await db.execute(select(func.count()).select_from(Enrollment).where(Enrollment.course_id == course.id))).scalar() or 0
+    d = CourseResponse.model_validate(course).model_dump()
+    d["moduleCount"] = mod_count
+    d["enrollmentCount"] = enroll_count
+    return {"success": True, "data": d}
 
 
 @router.post("/{course_id}/publish")

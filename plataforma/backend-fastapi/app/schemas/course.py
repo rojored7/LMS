@@ -49,6 +49,8 @@ class CourseResponse(CamelModel):
     price: float
     created_at: datetime
     updated_at: datetime
+    module_count: int = 0
+    enrollment_count: int = 0
 
 
 class CourseDetailResponse(CourseResponse):

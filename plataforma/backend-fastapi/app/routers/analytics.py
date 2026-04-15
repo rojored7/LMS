@@ -50,3 +50,34 @@ async def get_user_activity(
     service = AnalyticsService(db)
     activity = await service.get_user_activity(days=days)
     return ApiResponse(success=True, data=activity).model_dump()
+
+
+@router.get("/user-distribution")
+async def get_user_distribution(
+    user: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    service = AnalyticsService(db)
+    data = await service.get_user_distribution()
+    return ApiResponse(success=True, data=data).model_dump()
+
+
+@router.get("/recent-activity")
+async def get_recent_activity(
+    limit: int = Query(10, ge=1, le=50),
+    user: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    service = AnalyticsService(db)
+    data = await service.get_recent_activity(limit=limit)
+    return ApiResponse(success=True, data=data).model_dump()
+
+
+@router.get("/comparative-stats")
+async def get_comparative_stats(
+    user: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    service = AnalyticsService(db)
+    data = await service.get_comparative_stats()
+    return ApiResponse(success=True, data=data).model_dump()

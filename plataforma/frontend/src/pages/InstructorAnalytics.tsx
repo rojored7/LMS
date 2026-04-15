@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useUiStore } from '../store/uiStore';
-import instructorService, { InstructorAnalytics as AnalyticsData } from '../services/api/instructor.service';
+import instructorService, {
+  InstructorAnalytics as AnalyticsData,
+} from '../services/api/instructor.service';
 
 const InstructorAnalytics: React.FC = () => {
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);

@@ -146,7 +146,7 @@ const CourseListPage: React.FC = () => {
         key: 'duration',
         header: 'Duracion',
         accessor: (course) => (
-          <span className="text-gray-900 dark:text-gray-100">{course.duration} horas</span>
+          <span className="text-gray-900 dark:text-gray-100">{Math.round(course.duration / 60)} horas</span>
         ),
         sortable: true,
         width: '100px',
