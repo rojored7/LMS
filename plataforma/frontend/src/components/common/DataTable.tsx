@@ -57,7 +57,7 @@ function DataTable<T>({
   const sortedData = useMemo(() => {
     if (!sortColumn) return data;
 
-    const column = columns.find(col => col.key === sortColumn);
+    const column = columns.find((col) => col.key === sortColumn);
     if (!column || !column.sortable) return data;
 
     return [...data].sort((a, b) => {
@@ -136,13 +136,15 @@ function DataTable<T>({
   return (
     <div className={`data-table-container ${className} max-w-full`}>
       <div className="overflow-x-auto">
-        <table className={`
+        <table
+          className={`
           min-w-full divide-y divide-gray-200
           ${compact ? 'text-sm' : 'text-base'}
-        `}>
+        `}
+        >
           <thead className="bg-gray-50">
             <tr>
-              {columns.map(column => (
+              {columns.map((column) => (
                 <th
                   key={column.key}
                   className={`
@@ -165,10 +167,7 @@ function DataTable<T>({
           <tbody className={`bg-white divide-y divide-gray-200 ${striped ? 'striped' : ''}`}>
             {paginatedData.length === 0 ? (
               <tr>
-                <td
-                  colSpan={columns.length}
-                  className="px-6 py-12 text-center text-gray-500"
-                >
+                <td colSpan={columns.length} className="px-6 py-12 text-center text-gray-500">
                   {emptyMessage}
                 </td>
               </tr>
@@ -183,7 +182,7 @@ function DataTable<T>({
                   `}
                   onClick={() => onRowClick && onRowClick(item)}
                 >
-                  {columns.map(column => (
+                  {columns.map((column) => (
                     <td
                       key={column.key}
                       className={`
@@ -213,7 +212,7 @@ function DataTable<T>({
                   onChange={(e) => handlePageSizeChange(Number(e.target.value))}
                   className="px-3 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  {pageSizeOptions.map(size => (
+                  {pageSizeOptions.map((size) => (
                     <option key={size} value={size}>
                       {size}
                     </option>
@@ -226,9 +225,9 @@ function DataTable<T>({
 
           <div className="flex items-center space-x-2">
             <span className="text-sm text-gray-700">
-              Mostrando {((currentPage - 1) * currentPageSize) + 1} a{' '}
-              {Math.min(currentPage * currentPageSize, sortedData.length)} de{' '}
-              {sortedData.length} registros
+              Mostrando {(currentPage - 1) * currentPageSize + 1} a{' '}
+              {Math.min(currentPage * currentPageSize, sortedData.length)} de {sortedData.length}{' '}
+              registros
             </span>
           </div>
 
@@ -238,9 +237,11 @@ function DataTable<T>({
               disabled={currentPage === 1}
               className={`
                 px-3 py-1 text-sm border border-gray-300 rounded-l-md
-                ${currentPage === 1
-                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                  : 'bg-white text-gray-700 hover:bg-gray-50'}
+                ${
+                  currentPage === 1
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-white text-gray-700 hover:bg-gray-50'
+                }
               `}
             >
               <ChevronLeftIcon className="w-4 h-4" />
@@ -265,9 +266,11 @@ function DataTable<T>({
                   onClick={() => goToPage(pageNum)}
                   className={`
                     px-3 py-1 text-sm border-t border-b border-gray-300
-                    ${pageNum === currentPage
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-white text-gray-700 hover:bg-gray-50'}
+                    ${
+                      pageNum === currentPage
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-white text-gray-700 hover:bg-gray-50'
+                    }
                   `}
                 >
                   {pageNum}
@@ -280,9 +283,11 @@ function DataTable<T>({
               disabled={currentPage === totalPages}
               className={`
                 px-3 py-1 text-sm border border-gray-300 rounded-r-md
-                ${currentPage === totalPages
-                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                  : 'bg-white text-gray-700 hover:bg-gray-50'}
+                ${
+                  currentPage === totalPages
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-white text-gray-700 hover:bg-gray-50'
+                }
               `}
             >
               <ChevronRightIcon className="w-4 h-4" />
