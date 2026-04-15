@@ -108,6 +108,7 @@ from app.routers import (
     certificates,
     course_management,
     courses,
+    instructor,
     labs,
     lessons,
     modules,
@@ -135,6 +136,7 @@ app.include_router(admin.router)
 app.include_router(training_profiles.router)
 app.include_router(analytics.router)
 app.include_router(course_management.router)
+app.include_router(instructor.router)
 
 
 @app.get("/health")

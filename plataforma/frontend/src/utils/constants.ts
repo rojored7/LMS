@@ -49,6 +49,7 @@ export const ROUTES = {
   COURSES: '/courses',
   COURSE_DETAIL: '/courses/:id',
   ADMIN: '/admin',
+  INSTRUCTOR: '/instructor',
   FORBIDDEN: '/403', // HU-003: Página de acceso denegado
   NOT_FOUND: '/404',
 } as const;
@@ -87,11 +88,17 @@ export const TOAST_DURATION = {
 // File Upload
 export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 export const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'];
-export const ACCEPTED_DOCUMENT_TYPES = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+export const ACCEPTED_DOCUMENT_TYPES = [
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+];
 
 // Validation
 export const PASSWORD_MIN_LENGTH = 8;
 export const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/;
 
 // JWT Refresh
-export const JWT_REFRESH_THRESHOLD = parseInt(import.meta.env.VITE_JWT_REFRESH_THRESHOLD || '300000'); // 5 minutes before expiry
+export const JWT_REFRESH_THRESHOLD = parseInt(
+  import.meta.env.VITE_JWT_REFRESH_THRESHOLD || '300000'
+); // 5 minutes before expiry

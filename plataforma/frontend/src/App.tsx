@@ -37,6 +37,10 @@ import CourseImportPage from './pages/CourseImportPage';
 import CourseListPage from './pages/CourseListPage';
 import CourseEditorPage from './pages/CourseEditorPage';
 import CourseWizardPage from './pages/CourseWizardPage';
+import InstructorDashboard from './pages/InstructorDashboard';
+import InstructorStudents from './pages/InstructorStudents';
+import InstructorGradebook from './pages/InstructorGradebook';
+import InstructorAnalytics from './pages/InstructorAnalytics';
 import { ROUTES } from './utils/constants';
 import { UserRole } from './types';
 import { useAuth } from './hooks/useAuth';
@@ -84,6 +88,9 @@ const PublicLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 const DashboardRedirect: React.FC = () => {
   const { user } = useAuth();
 
+  if (user?.role === UserRole.INSTRUCTOR) {
+    return <Navigate to={ROUTES.INSTRUCTOR} replace />;
+  }
   if (user?.role === UserRole.ADMIN) {
     return <Navigate to={ROUTES.ADMIN} replace />;
   }
@@ -198,6 +205,51 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <CourseLearning />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Instructor Routes */}
+              <Route
+                path={ROUTES.INSTRUCTOR}
+                element={
+                  <ProtectedRoute requiredRoles={[UserRole.INSTRUCTOR]}>
+                    <DashboardLayout>
+                      <InstructorDashboard />
+                    </DashboardLayout>
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/instructor/courses/:courseId/students"
+                element={
+                  <ProtectedRoute requiredRoles={[UserRole.INSTRUCTOR]}>
+                    <DashboardLayout>
+                      <InstructorStudents />
+                    </DashboardLayout>
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/instructor/courses/:courseId/gradebook"
+                element={
+                  <ProtectedRoute requiredRoles={[UserRole.INSTRUCTOR]}>
+                    <DashboardLayout>
+                      <InstructorGradebook />
+                    </DashboardLayout>
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/instructor/analytics"
+                element={
+                  <ProtectedRoute requiredRoles={[UserRole.INSTRUCTOR]}>
+                    <DashboardLayout>
+                      <InstructorAnalytics />
+                    </DashboardLayout>
                   </ProtectedRoute>
                 }
               />

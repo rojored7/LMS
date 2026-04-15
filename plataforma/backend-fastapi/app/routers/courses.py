@@ -5,7 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.middleware.auth import get_current_user, get_optional_user, require_admin, require_instructor
-from app.models.user import User
+from app.middleware.error_handler import AuthorizationError
+from app.models.user import User, UserRole
 from app.schemas.common import PaginationMeta
 from app.schemas.course import CourseCreate, CourseListResponse, CourseResponse, CourseUpdate, EnrollmentResponse, ModuleResponse, LessonResponse
 from app.services.course_service import CourseService
@@ -49,13 +50,17 @@ async def get_course(id_or_slug: str, user: User | None = Depends(get_optional_u
 @router.post("")
 async def create_course(data: CourseCreate, user: User = Depends(require_instructor), db: AsyncSession = Depends(get_db)) -> dict:
     service = CourseService(db)
-    course = await service.create_course(slug=data.slug, title=data.title, description=data.description, duration=data.duration, level=data.level, author=data.author, tags=data.tags, thumbnail=data.thumbnail, price=data.price)
+    course = await service.create_course(slug=data.slug, title=data.title, description=data.description, duration=data.duration, level=data.level, author=data.author, tags=data.tags, thumbnail=data.thumbnail, price=data.price, author_id=user.id)
     return {"success": True, "data": CourseResponse.model_validate(course).model_dump()}
 
 
 @router.put("/{course_id}")
 async def update_course(course_id: str, data: CourseUpdate, user: User = Depends(require_instructor), db: AsyncSession = Depends(get_db)) -> dict:
     service = CourseService(db)
+    if user.role == UserRole.INSTRUCTOR:
+        existing = await service.get_course_by_id_or_slug(course_id)
+        if existing.author_id != user.id:
+            raise AuthorizationError("No tiene permisos para editar este curso")
     course = await service.update_course(course_id, **data.model_dump(exclude_unset=True, by_alias=False))
     return {"success": True, "data": CourseResponse.model_validate(course).model_dump()}
 

@@ -12,9 +12,9 @@ import structlog
 
 from app.database import get_db
 from app.middleware.auth import require_instructor
-from app.middleware.error_handler import NotFoundError
+from app.middleware.error_handler import AuthorizationError, NotFoundError
 from app.models.course import Course, Module, Lesson, LessonType
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.schemas.common import PaginationMeta
 from app.schemas.course import CourseResponse
 
@@ -148,9 +148,10 @@ async def list_all_courses(
     _user: User = Depends(require_instructor),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    total = (await db.execute(select(func.count()).select_from(Course))).scalar() or 0
+    base_filter = Course.author_id == _user.id if _user.role == UserRole.INSTRUCTOR else True
+    total = (await db.execute(select(func.count()).select_from(Course).where(base_filter))).scalar() or 0
     offset = (page - 1) * limit
-    result = await db.execute(select(Course).offset(offset).limit(limit).order_by(Course.created_at.desc()))
+    result = await db.execute(select(Course).where(base_filter).offset(offset).limit(limit).order_by(Course.created_at.desc()))
     courses = result.scalars().all()
     return {
         "success": True,
@@ -182,6 +183,8 @@ async def publish_course(
     course = result.scalar_one_or_none()
     if course is None:
         raise NotFoundError("Curso no encontrado")
+    if _user.role == UserRole.INSTRUCTOR and course.author_id != _user.id:
+        raise AuthorizationError("No tiene permisos sobre este curso")
     course.is_published = True
     await db.flush()
     return {"success": True, "data": CourseResponse.model_validate(course).model_dump()}
@@ -197,6 +200,8 @@ async def unpublish_course(
     course = result.scalar_one_or_none()
     if course is None:
         raise NotFoundError("Curso no encontrado")
+    if _user.role == UserRole.INSTRUCTOR and course.author_id != _user.id:
+        raise AuthorizationError("No tiene permisos sobre este curso")
     course.is_published = False
     await db.flush()
     return {"success": True, "data": CourseResponse.model_validate(course).model_dump()}

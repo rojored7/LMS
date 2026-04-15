@@ -1,11 +1,12 @@
 from fastapi import APIRouter, Depends
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.middleware.auth import get_current_user
 from app.middleware.error_handler import NotFoundError
 from app.models.course import Course
+from app.models.progress import UserProgress
 from app.models.user import User
 from app.schemas.common import ApiResponse
 from app.services.progress_service import ProgressService
@@ -55,3 +56,17 @@ async def get_module_progress(
     service = ProgressService(db)
     data = await service.get_module_progress(user.id, module_id)
     return ApiResponse(success=True, data=data).model_dump()
+
+
+@router.get("/study-hours")
+async def get_study_hours(
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    total_seconds = (await db.execute(
+        select(func.coalesce(func.sum(UserProgress.time_spent), 0)).where(
+            UserProgress.user_id == user.id
+        )
+    )).scalar() or 0
+    hours = round(total_seconds / 3600, 1)
+    return ApiResponse(success=True, data={"totalSeconds": total_seconds, "hours": hours}).model_dump()

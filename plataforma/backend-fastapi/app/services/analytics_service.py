@@ -59,7 +59,7 @@ class AnalyticsService:
 
     async def get_course_stats(self) -> list[dict]:
         result = await self.db.execute(
-            select(Course).where(Course.published.is_(True))
+            select(Course).where(Course.is_published.is_(True))
         )
         courses = list(result.scalars().all())
 

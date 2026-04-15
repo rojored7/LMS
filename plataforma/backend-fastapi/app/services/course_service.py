@@ -38,11 +38,11 @@ class CourseService:
             raise NotFoundError("Curso no encontrado")
         return course
 
-    async def create_course(self, slug: str, title: str, description: str, duration: int, level: str, author: str, tags: list[str] | None = None, thumbnail: str | None = None, price: float = 0.0) -> Course:
+    async def create_course(self, slug: str, title: str, description: str, duration: int, level: str, author: str, tags: list[str] | None = None, thumbnail: str | None = None, price: float = 0.0, author_id: str | None = None) -> Course:
         existing = await self.db.execute(select(Course).where(Course.slug == slug))
         if existing.scalar_one_or_none():
             raise ConflictError(f"Ya existe un curso con slug '{slug}'")
-        course = Course(slug=slug, title=title, description=description, duration=duration, level=CourseLevel(level), author=author, tags=tags, thumbnail=thumbnail, price=price)
+        course = Course(slug=slug, title=title, description=description, duration=duration, level=CourseLevel(level), author=author, tags=tags, thumbnail=thumbnail, price=price, author_id=author_id)
         self.db.add(course)
         await self.db.flush()
         await self.db.refresh(course)
