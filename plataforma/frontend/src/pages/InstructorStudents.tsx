@@ -11,17 +11,19 @@ const InstructorStudents: React.FC = () => {
 
   useEffect(() => {
     if (!courseId) return;
+    let cancelled = false;
     const load = async () => {
       try {
         const data = await instructorService.getCourseStudents(courseId);
-        setStudents(data);
+        if (!cancelled) setStudents(data);
       } catch {
-        addToast({ type: 'error', message: 'Error al cargar estudiantes' });
+        if (!cancelled) addToast({ type: 'error', message: 'Error al cargar estudiantes' });
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
     load();
+    return () => { cancelled = true; };
   }, [courseId, addToast]);
 
   if (loading) {

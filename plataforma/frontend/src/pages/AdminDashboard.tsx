@@ -5,6 +5,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Users, BookOpen, Upload, Settings } from 'lucide-react';
+import { useUiStore } from '../store/uiStore';
 import KpiCardsRow from '../components/admin/KpiCardsRow';
 import EnrollmentTrendsChart from '../components/admin/EnrollmentTrendsChart';
 import UserDistributionChart from '../components/admin/UserDistributionChart';
@@ -21,6 +22,7 @@ import dashboardAnalytics, {
 } from '../services/api/dashboard-analytics.service';
 
 export const AdminDashboard = () => {
+  const { addToast } = useUiStore();
   const [stats, setStats] = useState<PlatformStats | null>(null);
   const [trends, setTrends] = useState<EnrollmentTrend[]>([]);
   const [courseStats, setCourseStats] = useState<CourseStat[]>([]);
@@ -38,32 +40,32 @@ export const AdminDashboard = () => {
   useEffect(() => {
     dashboardAnalytics.getPlatformStats()
       .then(setStats)
-      .catch(() => {})
+      .catch(() => addToast({ type: 'error', message: 'Error al cargar datos del dashboard' }))
       .finally(() => setLoadingStats(false));
 
     dashboardAnalytics.getEnrollmentTrends(30)
       .then(setTrends)
-      .catch(() => {})
+      .catch(() => addToast({ type: 'error', message: 'Error al cargar datos del dashboard' }))
       .finally(() => setLoadingTrends(false));
 
     dashboardAnalytics.getCourseStats()
       .then(setCourseStats)
-      .catch(() => {})
+      .catch(() => addToast({ type: 'error', message: 'Error al cargar datos del dashboard' }))
       .finally(() => setLoadingCourses(false));
 
     dashboardAnalytics.getUserDistribution()
       .then(setUserDist)
-      .catch(() => {})
+      .catch(() => addToast({ type: 'error', message: 'Error al cargar datos del dashboard' }))
       .finally(() => setLoadingDist(false));
 
     dashboardAnalytics.getComparativeStats()
       .then(setComparative)
-      .catch(() => {})
+      .catch(() => addToast({ type: 'error', message: 'Error al cargar datos del dashboard' }))
       .finally(() => setLoadingComparative(false));
 
     dashboardAnalytics.getRecentActivity(10)
       .then(setActivity)
-      .catch(() => {})
+      .catch(() => addToast({ type: 'error', message: 'Error al cargar datos del dashboard' }))
       .finally(() => setLoadingActivity(false));
   }, []);
 

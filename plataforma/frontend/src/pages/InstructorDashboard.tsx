@@ -13,21 +13,25 @@ const InstructorDashboard: React.FC = () => {
   const { addToast } = useUiStore();
 
   useEffect(() => {
+    let cancelled = false;
     const loadData = async () => {
       try {
         const [dashStats, dashCourses] = await Promise.all([
           instructorService.getInstructorDashboard(),
           instructorService.getInstructorCourses(),
         ]);
-        setStats(dashStats);
-        setCourses(dashCourses);
+        if (!cancelled) {
+          setStats(dashStats);
+          setCourses(dashCourses);
+        }
       } catch {
-        addToast({ type: 'error', message: 'Error al cargar datos del instructor' });
+        if (!cancelled) addToast({ type: 'error', message: 'Error al cargar datos del instructor' });
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
     loadData();
+    return () => { cancelled = true; };
   }, [addToast]);
 
   if (loading) {

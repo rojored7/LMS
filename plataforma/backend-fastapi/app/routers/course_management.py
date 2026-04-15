@@ -6,7 +6,7 @@ import zipfile
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
-from sqlalchemy import func, select
+from sqlalchemy import func, select, true as sa_true
 from sqlalchemy.ext.asyncio import AsyncSession
 import structlog
 
@@ -149,18 +149,20 @@ async def list_all_courses(
     _user: User = Depends(require_instructor),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    base_filter = Course.author_id == _user.id if _user.role == UserRole.INSTRUCTOR else True
+    base_filter = Course.author_id == _user.id if _user.role == UserRole.INSTRUCTOR else sa_true()
     total = (await db.execute(select(func.count()).select_from(Course).where(base_filter))).scalar() or 0
     offset = (page - 1) * limit
-    result = await db.execute(select(Course).where(base_filter).offset(offset).limit(limit).order_by(Course.created_at.desc()))
-    courses = result.scalars().all()
+    mod_count_q = select(func.count(Module.id)).where(Module.course_id == Course.id).correlate(Course).scalar_subquery()
+    enroll_count_q = select(func.count(Enrollment.id)).where(Enrollment.course_id == Course.id).correlate(Course).scalar_subquery()
+    result = await db.execute(
+        select(Course, mod_count_q.label("mod_count"), enroll_count_q.label("enroll_count"))
+        .where(base_filter).offset(offset).limit(limit).order_by(Course.created_at.desc())
+    )
     data = []
-    for c in courses:
-        mod_count = (await db.execute(select(func.count()).select_from(Module).where(Module.course_id == c.id))).scalar() or 0
-        enroll_count = (await db.execute(select(func.count()).select_from(Enrollment).where(Enrollment.course_id == c.id))).scalar() or 0
+    for c, mod_count, enroll_count in result.all():
         d = CourseResponse.model_validate(c).model_dump()
-        d["moduleCount"] = mod_count
-        d["enrollmentCount"] = enroll_count
+        d["moduleCount"] = mod_count or 0
+        d["enrollmentCount"] = enroll_count or 0
         data.append(d)
     return {
         "success": True,
@@ -175,15 +177,21 @@ async def get_course_admin(
     _user: User = Depends(require_instructor),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    result = await db.execute(select(Course).where(Course.id == course_id))
-    course = result.scalar_one_or_none()
-    if course is None:
+    mod_count_q = select(func.count(Module.id)).where(Module.course_id == Course.id).correlate(Course).scalar_subquery()
+    enroll_count_q = select(func.count(Enrollment.id)).where(Enrollment.course_id == Course.id).correlate(Course).scalar_subquery()
+    result = await db.execute(
+        select(Course, mod_count_q.label("mod_count"), enroll_count_q.label("enroll_count"))
+        .where(Course.id == course_id)
+    )
+    row = result.one_or_none()
+    if row is None:
         raise NotFoundError("Curso no encontrado")
-    mod_count = (await db.execute(select(func.count()).select_from(Module).where(Module.course_id == course.id))).scalar() or 0
-    enroll_count = (await db.execute(select(func.count()).select_from(Enrollment).where(Enrollment.course_id == course.id))).scalar() or 0
+    course, mod_count, enroll_count = row
+    if _user.role == UserRole.INSTRUCTOR and course.author_id != _user.id:
+        raise AuthorizationError("No tiene permisos sobre este curso")
     d = CourseResponse.model_validate(course).model_dump()
-    d["moduleCount"] = mod_count
-    d["enrollmentCount"] = enroll_count
+    d["moduleCount"] = mod_count or 0
+    d["enrollmentCount"] = enroll_count or 0
     return {"success": True, "data": d}
 
 

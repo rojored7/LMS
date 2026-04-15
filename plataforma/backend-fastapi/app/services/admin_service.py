@@ -69,13 +69,11 @@ class AdminService:
         ]
 
     async def bulk_update_role(self, user_ids: list[str], role: str) -> int:
-        count = 0
-        for uid in user_ids:
-            result = await self.db.execute(select(User).where(User.id == uid))
-            user = result.scalar_one_or_none()
-            if user:
-                user.role = UserRole(role)
-                count += 1
+        result = await self.db.execute(select(User).where(User.id.in_(user_ids)))
+        users = list(result.scalars().all())
+        new_role = UserRole(role)
+        for user in users:
+            user.role = new_role
         await self.db.flush()
-        logger.info("bulk_role_update", count=count, role=role)
-        return count
+        logger.info("bulk_role_update", count=len(users), role=role)
+        return len(users)

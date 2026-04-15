@@ -1,4 +1,5 @@
 import api from '../api';
+import { unwrapResponse } from './unwrap';
 
 export interface InstructorDashboardStats {
   totalCourses: number;
@@ -28,17 +29,17 @@ export interface CourseStudent {
 
 async function getInstructorDashboard(): Promise<InstructorDashboardStats> {
   const response = await api.get('/instructor/dashboard');
-  return (response as any).data || response;
+  return unwrapResponse(response);
 }
 
 async function getInstructorCourses(): Promise<InstructorCourse[]> {
   const response = await api.get('/instructor/courses');
-  return (response as any).data || response;
+  return unwrapResponse(response);
 }
 
 async function getCourseStudents(courseId: string): Promise<CourseStudent[]> {
   const response = await api.get(`/instructor/courses/${courseId}/students`);
-  return (response as any).data || response;
+  return unwrapResponse(response);
 }
 
 export interface GradebookEntry {
@@ -65,12 +66,12 @@ export interface InstructorAnalytics {
 
 async function getGradebook(courseId: string): Promise<GradebookEntry[]> {
   const response = await api.get(`/instructor/courses/${courseId}/gradebook`);
-  return (response as any).data || response;
+  return unwrapResponse(response);
 }
 
 async function getInstructorAnalytics(): Promise<InstructorAnalytics> {
   const response = await api.get('/instructor/analytics');
-  return (response as any).data || response;
+  return unwrapResponse(response);
 }
 
 export default {

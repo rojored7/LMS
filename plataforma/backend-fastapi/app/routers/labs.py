@@ -3,8 +3,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.middleware.auth import get_current_user, require_instructor
+from app.middleware.auth import get_current_user, require_instructor, verify_module_ownership
 from app.middleware.rate_limit import limiter
+from app.models.assessment import Lab
 from app.models.course import Module
 from app.models.user import User, UserRole
 from app.schemas.common import ApiResponse
@@ -60,6 +61,7 @@ async def create_lab(
     user: User = Depends(require_instructor),
     db: AsyncSession = Depends(get_db),
 ):
+    await verify_module_ownership(module_id, user, db)
     service = LabService(db)
     lab = await service.create(module_id, body.model_dump())
     return ApiResponse(success=True, data=LabResponse.model_validate(lab).model_dump()).model_dump()
@@ -72,6 +74,9 @@ async def update_lab(
     user: User = Depends(require_instructor),
     db: AsyncSession = Depends(get_db),
 ):
+    lab_row = (await db.execute(select(Lab).where(Lab.id == lab_id))).scalar_one_or_none()
+    if lab_row:
+        await verify_module_ownership(lab_row.module_id, user, db)
     service = LabService(db)
     lab = await service.update(lab_id, body.model_dump(exclude_unset=True))
     return ApiResponse(success=True, data=LabResponse.model_validate(lab).model_dump()).model_dump()
@@ -83,6 +88,9 @@ async def delete_lab(
     user: User = Depends(require_instructor),
     db: AsyncSession = Depends(get_db),
 ):
+    lab_row = (await db.execute(select(Lab).where(Lab.id == lab_id))).scalar_one_or_none()
+    if lab_row:
+        await verify_module_ownership(lab_row.module_id, user, db)
     service = LabService(db)
     await service.delete(lab_id)
     return ApiResponse(success=True, data={"message": "Laboratorio eliminado"}).model_dump()
@@ -97,6 +105,9 @@ async def submit_lab(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    if len(body.code) > 50_000:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=400, detail="Codigo excede el limite de 50KB")
     lab_service = LabService(db)
     lab = await lab_service.get_by_id(lab_id)
     mod = (await db.execute(select(Module).where(Module.id == lab.module_id))).scalar_one_or_none()

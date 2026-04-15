@@ -1,4 +1,5 @@
 import api from '../api';
+import { unwrapResponse } from './unwrap';
 
 export interface PlatformStats {
   totalUsers: number;
@@ -53,32 +54,32 @@ export interface RecentActivity {
 
 async function getPlatformStats(): Promise<PlatformStats> {
   const response = await api.get('/analytics/stats');
-  return (response as any).data || response;
+  return unwrapResponse(response);
 }
 
 async function getEnrollmentTrends(days: number = 30): Promise<EnrollmentTrend[]> {
   const response = await api.get(`/analytics/enrollment-trends?days=${days}`);
-  return (response as any).data || response;
+  return unwrapResponse(response);
 }
 
 async function getCourseStats(): Promise<CourseStat[]> {
   const response = await api.get('/analytics/courses');
-  return (response as any).data || response;
+  return unwrapResponse(response);
 }
 
 async function getUserDistribution(): Promise<UserDistribution[]> {
   const response = await api.get('/analytics/user-distribution');
-  return (response as any).data || response;
+  return unwrapResponse(response);
 }
 
 async function getRecentActivity(limit: number = 10): Promise<RecentActivity[]> {
   const response = await api.get(`/analytics/recent-activity?limit=${limit}`);
-  return (response as any).data || response;
+  return unwrapResponse(response);
 }
 
 async function getComparativeStats(): Promise<ComparativeStats> {
   const response = await api.get('/analytics/comparative-stats');
-  return (response as any).data || response;
+  return unwrapResponse(response);
 }
 
 export default {

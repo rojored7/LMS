@@ -45,7 +45,7 @@ export default function RecentActivityFeed({ data, isLoading }: RecentActivityFe
               : '';
 
             return (
-              <div key={i} className="flex gap-3">
+              <div key={`${item.timestamp}-${item.userEmail}-${item.courseTitle}`} className="flex gap-3">
                 <div className="flex flex-col items-center">
                   <div className={`w-2.5 h-2.5 rounded-full mt-1.5 ${dotColor}`} />
                   {i < data.length - 1 && <div className="w-px flex-1 bg-white/10 mt-1" />}

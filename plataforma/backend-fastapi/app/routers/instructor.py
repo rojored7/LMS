@@ -18,10 +18,7 @@ async def get_instructor_dashboard(
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     service = InstructorService(db)
-    author_id = None if user.role == UserRole.ADMIN else user.id
-    if author_id is None:
-        author_id = user.id
-    stats = await service.get_dashboard_stats(author_id)
+    stats = await service.get_dashboard_stats(user.id)
     logger.info("instructor_dashboard_viewed", user_id=user.id)
     return {"success": True, "data": stats}
 

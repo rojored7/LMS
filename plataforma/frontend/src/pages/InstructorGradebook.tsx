@@ -11,17 +11,19 @@ const InstructorGradebook: React.FC = () => {
 
   useEffect(() => {
     if (!courseId) return;
+    let cancelled = false;
     const load = async () => {
       try {
         const data = await instructorService.getGradebook(courseId);
-        setEntries(data);
+        if (!cancelled) setEntries(data);
       } catch {
-        addToast({ type: 'error', message: 'Error al cargar calificaciones' });
+        if (!cancelled) addToast({ type: 'error', message: 'Error al cargar calificaciones' });
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
     load();
+    return () => { cancelled = true; };
   }, [courseId, addToast]);
 
   if (loading) {

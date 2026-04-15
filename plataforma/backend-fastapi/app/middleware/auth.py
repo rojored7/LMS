@@ -76,3 +76,18 @@ def require_role(allowed_roles: list[UserRole]):
 
 require_admin = require_role([UserRole.ADMIN])
 require_instructor = require_role([UserRole.ADMIN, UserRole.INSTRUCTOR])
+
+
+async def verify_module_ownership(module_id: str, user: User, db: AsyncSession) -> None:
+    """Verifica que el instructor es dueno del curso al que pertenece el modulo."""
+    if user.role == UserRole.ADMIN:
+        return
+    from app.models.course import Course, Module
+    result = await db.execute(
+        select(Course.author_id)
+        .join(Module, Module.course_id == Course.id)
+        .where(Module.id == module_id)
+    )
+    author_id = result.scalar_one_or_none()
+    if author_id != user.id:
+        raise AuthorizationError("No tiene permisos sobre este curso")

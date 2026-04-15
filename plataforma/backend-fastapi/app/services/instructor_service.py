@@ -1,9 +1,10 @@
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 import structlog
 
 from app.middleware.error_handler import AuthorizationError, NotFoundError
-from app.models.assessment import Project, ProjectSubmission, QuizAttempt
+from app.models.assessment import Project, ProjectSubmission, Quiz, QuizAttempt
 from app.models.course import Course, Module
 from app.models.progress import Enrollment, UserProgress
 from app.models.user import User
@@ -46,28 +47,36 @@ class InstructorService:
         }
 
     async def get_instructor_courses(self, author_id: str) -> list[dict]:
-        result = await self.db.execute(
-            select(Course).where(Course.author_id == author_id).order_by(Course.created_at.desc())
+        enroll_count_q = (
+            select(func.count(Enrollment.id))
+            .where(Enrollment.course_id == Course.id)
+            .correlate(Course)
+            .scalar_subquery()
         )
-        courses = result.scalars().all()
-        data = []
-        for course in courses:
-            enrollment_count = (await self.db.execute(
-                select(func.count()).select_from(Enrollment).where(Enrollment.course_id == course.id)
-            )).scalar() or 0
-            avg_progress = (await self.db.execute(
-                select(func.avg(Enrollment.progress)).where(Enrollment.course_id == course.id)
-            )).scalar() or 0.0
-            data.append({
+        avg_progress_q = (
+            select(func.coalesce(func.avg(Enrollment.progress), 0))
+            .where(Enrollment.course_id == Course.id)
+            .correlate(Course)
+            .scalar_subquery()
+        )
+        result = await self.db.execute(
+            select(Course, enroll_count_q.label("enroll_count"), avg_progress_q.label("avg_prog"))
+            .where(Course.author_id == author_id)
+            .order_by(Course.created_at.desc())
+        )
+        rows = result.all()
+        return [
+            {
                 "id": course.id,
                 "title": course.title,
                 "slug": course.slug,
                 "isPublished": course.is_published,
-                "enrollmentCount": enrollment_count,
-                "avgProgress": round(float(avg_progress), 1),
+                "enrollmentCount": enroll_count or 0,
+                "avgProgress": round(float(avg_prog or 0), 1),
                 "createdAt": course.created_at.isoformat() if course.created_at else None,
-            })
-        return data
+            }
+            for course, enroll_count, avg_prog in rows
+        ]
 
     async def get_course_students(self, course_id: str, author_id: str) -> list[dict]:
         result = await self.db.execute(select(Course).where(Course.id == course_id))
@@ -82,18 +91,17 @@ class InstructorService:
                 Enrollment.course_id == course_id
             ).order_by(Enrollment.enrolled_at.desc())
         )
-        rows = enrollments_result.all()
-        data = []
-        for enrollment, user in rows:
-            data.append({
+        return [
+            {
                 "userId": user.id,
                 "name": user.name,
                 "email": user.email,
                 "enrolledAt": enrollment.enrolled_at.isoformat() if enrollment.enrolled_at else None,
                 "progress": float(enrollment.progress) if enrollment.progress else 0.0,
                 "lastLoginAt": user.last_login_at.isoformat() if user.last_login_at else None,
-            })
-        return data
+            }
+            for enrollment, user in enrollments_result.all()
+        ]
 
     async def get_gradebook(self, course_id: str, author_id: str) -> list[dict]:
         result = await self.db.execute(select(Course).where(Course.id == course_id))
@@ -103,37 +111,43 @@ class InstructorService:
         if course.author_id != author_id:
             raise AuthorizationError("No tiene permisos sobre este curso")
 
-        enrollments_result = await self.db.execute(
-            select(Enrollment, User).join(User, Enrollment.user_id == User.id).where(
-                Enrollment.course_id == course_id
-            ).order_by(User.name)
+        quiz_avg_q = (
+            select(func.avg(QuizAttempt.score))
+            .join(Quiz, QuizAttempt.quiz_id == Quiz.id)
+            .join(Module, Quiz.module_id == Module.id)
+            .where(QuizAttempt.user_id == Enrollment.user_id, Module.course_id == course_id)
+            .correlate(Enrollment)
+            .scalar_subquery()
         )
-        rows = enrollments_result.all()
-
-        data = []
-        for enrollment, user in rows:
-            quiz_avg = (await self.db.execute(
-                select(func.avg(QuizAttempt.score)).where(QuizAttempt.user_id == user.id)
-            )).scalar()
-
-            modules_completed = (await self.db.execute(
-                select(func.count()).select_from(UserProgress).where(
-                    UserProgress.user_id == user.id,
-                    UserProgress.completed == True,  # noqa: E712
-                    UserProgress.enrollment_id == enrollment.id,
-                )
-            )).scalar() or 0
-
-            data.append({
+        modules_done_q = (
+            select(func.count())
+            .select_from(UserProgress)
+            .where(
+                UserProgress.user_id == Enrollment.user_id,
+                UserProgress.enrollment_id == Enrollment.id,
+                UserProgress.completed == True,  # noqa: E712
+            )
+            .correlate(Enrollment)
+            .scalar_subquery()
+        )
+        enrollments_result = await self.db.execute(
+            select(Enrollment, User, quiz_avg_q.label("quiz_avg"), modules_done_q.label("modules_done"))
+            .join(User, Enrollment.user_id == User.id)
+            .where(Enrollment.course_id == course_id)
+            .order_by(User.name)
+        )
+        return [
+            {
                 "userId": user.id,
                 "name": user.name,
                 "email": user.email,
                 "progress": float(enrollment.progress) if enrollment.progress else 0.0,
                 "quizAvgScore": round(float(quiz_avg), 1) if quiz_avg else None,
-                "modulesCompleted": modules_completed,
+                "modulesCompleted": modules_done or 0,
                 "completedAt": enrollment.completed_at.isoformat() if enrollment.completed_at else None,
-            })
-        return data
+            }
+            for enrollment, user, quiz_avg, modules_done in enrollments_result.all()
+        ]
 
     async def get_instructor_analytics(self, author_id: str) -> dict:
         course_ids_q = select(Course.id).where(Course.author_id == author_id)
@@ -151,25 +165,32 @@ class InstructorService:
 
         completion_rate = round((completed_enrollments / total_enrollments * 100), 1) if total_enrollments > 0 else 0.0
 
-        courses_result = await self.db.execute(
-            select(Course).where(Course.author_id == author_id).order_by(Course.created_at.desc())
+        enroll_count_q = (
+            select(func.count(Enrollment.id))
+            .where(Enrollment.course_id == Course.id)
+            .correlate(Course)
+            .scalar_subquery()
         )
-        courses = courses_result.scalars().all()
-
-        per_course = []
-        for course in courses:
-            enroll_count = (await self.db.execute(
-                select(func.count()).select_from(Enrollment).where(Enrollment.course_id == course.id)
-            )).scalar() or 0
-            avg_prog = (await self.db.execute(
-                select(func.avg(Enrollment.progress)).where(Enrollment.course_id == course.id)
-            )).scalar() or 0.0
-            per_course.append({
-                "courseId": course.id,
-                "title": course.title,
-                "enrollments": enroll_count,
-                "avgProgress": round(float(avg_prog), 1),
-            })
+        avg_prog_q = (
+            select(func.coalesce(func.avg(Enrollment.progress), 0))
+            .where(Enrollment.course_id == Course.id)
+            .correlate(Course)
+            .scalar_subquery()
+        )
+        courses_result = await self.db.execute(
+            select(Course.id, Course.title, enroll_count_q.label("enroll_count"), avg_prog_q.label("avg_prog"))
+            .where(Course.author_id == author_id)
+            .order_by(Course.created_at.desc())
+        )
+        per_course = [
+            {
+                "courseId": cid,
+                "title": title,
+                "enrollments": enroll_count or 0,
+                "avgProgress": round(float(avg_prog or 0), 1),
+            }
+            for cid, title, enroll_count, avg_prog in courses_result.all()
+        ]
 
         return {
             "totalEnrollments": total_enrollments,

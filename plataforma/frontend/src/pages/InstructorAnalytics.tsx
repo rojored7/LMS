@@ -11,17 +11,19 @@ const InstructorAnalytics: React.FC = () => {
   const { addToast } = useUiStore();
 
   useEffect(() => {
+    let cancelled = false;
     const load = async () => {
       try {
         const data = await instructorService.getInstructorAnalytics();
-        setAnalytics(data);
+        if (!cancelled) setAnalytics(data);
       } catch {
-        addToast({ type: 'error', message: 'Error al cargar analytics' });
+        if (!cancelled) addToast({ type: 'error', message: 'Error al cargar analytics' });
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
     load();
+    return () => { cancelled = true; };
   }, [addToast]);
 
   if (loading) {

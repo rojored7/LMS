@@ -107,10 +107,29 @@ class ErrorBoundary extends React.Component<
     return { error };
   }
   componentDidCatch(error: Error, info: React.ErrorInfo) {
-    console.error('React ErrorBoundary:', error, info);
+    if (!import.meta.env.PROD) {
+      console.error('React ErrorBoundary:', error, info);
+    }
   }
   render() {
     if (this.state.error) {
+      if (import.meta.env.PROD) {
+        return (
+          <div style={{ padding: 40, fontFamily: 'sans-serif', textAlign: 'center' }}>
+            <h1>Error en la aplicacion</h1>
+            <p>Ha ocurrido un error inesperado. Recarga la pagina o intenta mas tarde.</p>
+            <button
+              onClick={() => {
+                localStorage.clear();
+                window.location.href = '/login';
+              }}
+              style={{ marginTop: 16, padding: '8px 16px', cursor: 'pointer' }}
+            >
+              Reiniciar
+            </button>
+          </div>
+        );
+      }
       return (
         <div style={{ padding: 40, color: 'red', fontFamily: 'monospace' }}>
           <h1>Error en la aplicacion</h1>
@@ -213,7 +232,7 @@ function App() {
                 <Route
                   path={ROUTES.INSTRUCTOR}
                   element={
-                    <ProtectedRoute requiredRoles={[UserRole.INSTRUCTOR]}>
+                    <ProtectedRoute requiredRoles={[UserRole.INSTRUCTOR, UserRole.ADMIN]}>
                       <DashboardLayout>
                         <InstructorDashboard />
                       </DashboardLayout>
@@ -224,7 +243,7 @@ function App() {
                 <Route
                   path="/instructor/courses/:courseId/students"
                   element={
-                    <ProtectedRoute requiredRoles={[UserRole.INSTRUCTOR]}>
+                    <ProtectedRoute requiredRoles={[UserRole.INSTRUCTOR, UserRole.ADMIN]}>
                       <DashboardLayout>
                         <InstructorStudents />
                       </DashboardLayout>
@@ -235,7 +254,7 @@ function App() {
                 <Route
                   path="/instructor/courses/:courseId/gradebook"
                   element={
-                    <ProtectedRoute requiredRoles={[UserRole.INSTRUCTOR]}>
+                    <ProtectedRoute requiredRoles={[UserRole.INSTRUCTOR, UserRole.ADMIN]}>
                       <DashboardLayout>
                         <InstructorGradebook />
                       </DashboardLayout>
@@ -246,7 +265,7 @@ function App() {
                 <Route
                   path="/instructor/analytics"
                   element={
-                    <ProtectedRoute requiredRoles={[UserRole.INSTRUCTOR]}>
+                    <ProtectedRoute requiredRoles={[UserRole.INSTRUCTOR, UserRole.ADMIN]}>
                       <DashboardLayout>
                         <InstructorAnalytics />
                       </DashboardLayout>

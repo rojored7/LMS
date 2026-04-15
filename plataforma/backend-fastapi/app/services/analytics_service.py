@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 
 import structlog
-from sqlalchemy import func, select
+from sqlalchemy import Date, cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.course import Course
@@ -47,53 +47,55 @@ class AnalyticsService:
         cutoff = datetime.now(timezone.utc) - timedelta(days=days)
         result = await self.db.execute(
             select(
-                func.date(Enrollment.created_at).label("date"),
+                cast(Enrollment.enrolled_at, Date).label("date"),
                 func.count().label("count"),
             )
-            .where(Enrollment.created_at >= cutoff)
-            .group_by(func.date(Enrollment.created_at))
-            .order_by(func.date(Enrollment.created_at))
+            .where(Enrollment.enrolled_at >= cutoff)
+            .group_by(cast(Enrollment.enrolled_at, Date))
+            .order_by(cast(Enrollment.enrolled_at, Date))
         )
         rows = result.all()
         return [{"date": str(r.date), "count": r.count} for r in rows]
 
     async def get_course_stats(self) -> list[dict]:
-        result = await self.db.execute(
-            select(Course).where(Course.is_published.is_(True))
+        enroll_count_q = (
+            select(func.count(Enrollment.id))
+            .where(Enrollment.course_id == Course.id)
+            .correlate(Course)
+            .scalar_subquery()
         )
-        courses = list(result.scalars().all())
-
+        avg_progress_q = (
+            select(func.coalesce(func.avg(Enrollment.progress), 0))
+            .where(Enrollment.course_id == Course.id)
+            .correlate(Course)
+            .scalar_subquery()
+        )
+        completed_q = (
+            select(func.count(Enrollment.id))
+            .where(Enrollment.course_id == Course.id, Enrollment.completed_at.isnot(None))
+            .correlate(Course)
+            .scalar_subquery()
+        )
+        result = await self.db.execute(
+            select(
+                Course.id, Course.title,
+                enroll_count_q.label("enroll_count"),
+                avg_progress_q.label("avg_progress"),
+                completed_q.label("completed"),
+            )
+            .where(Course.is_published.is_(True))
+        )
         stats = []
-        for course in courses:
-            enroll_count = (
-                await self.db.execute(
-                    select(func.count()).select_from(Enrollment).where(Enrollment.course_id == course.id)
-                )
-            ).scalar() or 0
-
-            avg_progress = (
-                await self.db.execute(
-                    select(func.avg(Enrollment.progress)).where(Enrollment.course_id == course.id)
-                )
-            ).scalar() or 0.0
-
-            completed = (
-                await self.db.execute(
-                    select(func.count()).select_from(Enrollment).where(
-                        Enrollment.course_id == course.id, Enrollment.completed_at.isnot(None)
-                    )
-                )
-            ).scalar() or 0
-
+        for cid, title, enroll_count, avg_progress, completed in result.all():
+            ec = enroll_count or 0
             stats.append({
-                "courseId": course.id,
-                "courseTitle": course.title,
-                "enrollmentCount": enroll_count,
-                "averageProgress": round(avg_progress, 2),
-                "completedCount": completed,
-                "completionRate": round((completed / enroll_count) * 100, 2) if enroll_count > 0 else 0.0,
+                "courseId": cid,
+                "courseTitle": title,
+                "enrollmentCount": ec,
+                "averageProgress": round(float(avg_progress or 0), 2),
+                "completedCount": completed or 0,
+                "completionRate": round(((completed or 0) / ec) * 100, 2) if ec > 0 else 0.0,
             })
-
         return stats
 
     async def get_user_activity(self, days: int = 7) -> dict:
