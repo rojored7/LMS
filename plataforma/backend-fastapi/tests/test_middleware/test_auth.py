@@ -60,7 +60,7 @@ async def test_validate_token_mass_invalidated_raises() -> None:
     token_service.is_blacklisted = AsyncMock(return_value=False)
     token_service.are_user_tokens_invalidated = AsyncMock(return_value=True)
 
-    valid_token = token_service.generate_access_token("user1", "e@e.com", "STUDENT")
+    valid_token = token_service.create_access_token("user1", "e@e.com", "STUDENT")
 
     db = AsyncMock(spec=AsyncSession)
 
@@ -73,7 +73,7 @@ async def test_validate_token_user_not_found_raises() -> None:
     token_service.is_blacklisted = AsyncMock(return_value=False)
     token_service.are_user_tokens_invalidated = AsyncMock(return_value=False)
 
-    valid_token = token_service.generate_access_token("user1", "e@e.com", "STUDENT")
+    valid_token = token_service.create_access_token("user1", "e@e.com", "STUDENT")
 
     mock_result = MagicMock()
     mock_result.scalar_one_or_none.return_value = None
@@ -89,7 +89,7 @@ async def test_validate_token_success() -> None:
     token_service.is_blacklisted = AsyncMock(return_value=False)
     token_service.are_user_tokens_invalidated = AsyncMock(return_value=False)
 
-    valid_token = token_service.generate_access_token("user1", "e@e.com", "STUDENT")
+    valid_token = token_service.create_access_token("user1", "e@e.com", "STUDENT")
 
     mock_user = User(id="user1", email="e@e.com", password_hash="h", name="Test", role=UserRole.STUDENT)
     mock_result = MagicMock()
@@ -119,7 +119,7 @@ async def test_optional_auth_rejects_blacklisted_token() -> None:
     """CORRECCION: A diferencia de optionalAuth.ts en Express, este SI verifica blacklist."""
     token_service = TokenService(redis=AsyncMock())
     token_service.is_blacklisted = AsyncMock(return_value=True)
-    valid_token = token_service.generate_access_token("user1", "e@e.com", "STUDENT")
+    valid_token = token_service.create_access_token("user1", "e@e.com", "STUDENT")
 
     request = MagicMock()
     request.headers.get.return_value = f"Bearer {valid_token}"

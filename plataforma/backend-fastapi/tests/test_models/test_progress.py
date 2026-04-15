@@ -80,20 +80,14 @@ async def test_user_progress_creation(db_session: AsyncSession) -> None:
     assert progress.time_spent == 0
 
 
-async def test_user_progress_has_unique_constraint() -> None:
-    """Verify unique constraint exists on (user_id, module_id, lesson_id)."""
+async def test_user_progress_has_indexes() -> None:
+    """Verify UserProgress has indexes on user_id and module_id."""
     from sqlalchemy import inspect as sa_inspect
     mapper = sa_inspect(UserProgress)
     table = mapper.persist_selectable
-    unique_constraints = [
-        c for c in table.constraints
-        if hasattr(c, "columns") and len(c.columns) > 1
-    ]
-    col_names = [
-        tuple(col.name for col in uc.columns)
-        for uc in unique_constraints
-    ]
-    assert ("user_id", "module_id", "lesson_id") in col_names
+    index_names = [idx.name for idx in table.indexes]
+    assert "ix_user_progress_user_id" in index_names
+    assert "ix_user_progress_module_id" in index_names
 
 
 async def test_no_user_lesson_progress_model() -> None:

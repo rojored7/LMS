@@ -91,7 +91,19 @@
       "Bash(docker rm:*)",
       "Bash(docker run:*)",
       "Bash(cp -r /c/Users/Itac/Proyectos/Curso_ciber/plataforma/backend-fastapi/app_restore/* /c/Users/Itac/Proyectos/Curso_ciber/plataforma/backend-fastapi/app/)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(grep -E \"\\\\.py$\")",
+      "Bash(grep def parse_module\\\\b\\\\|def parse_lessons\\\\b\\\\|def parse_quizzes\\\\b\\\\|def parse_labs\\\\b\\\\|def parse_projects\\\\b:*)",
+      "Bash(grep:*)",
+      "Bash(find:*)",
+      "Bash(PYTHONPATH=/c/Users/Itac/Proyectos/Curso_ciber/plataforma python3)",
+      "WebFetch(domain:itac.co)",
+      "Bash(docker build:*)",
+      "Bash(git -C \"C:/Users/Itac/Proyectos/Curso_ciber/plataforma\" log --all --oneline -- \"*.env\" \".env\")",
+      "Bash(npx vitest:*)",
+      "Bash(pip uninstall:*)"
     ],
     "deny": [],
     "ask": []

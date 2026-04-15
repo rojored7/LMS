@@ -1,8 +1,8 @@
 # Arquitectura Técnica - Plataforma Multi-Curso de Ciberseguridad
 
-**Versión:** 1.0
-**Fecha:** Febrero 2026
-**Estado:** Documento Base de Referencia
+**Version:** 2.0
+**Fecha:** Abril 2026
+**Estado:** Actualizado tras migracion de Express/Prisma a FastAPI/SQLAlchemy
 
 ---
 
@@ -109,7 +109,7 @@ graph TB
     end
 
     subgraph Backend Container
-        API[API REST<br>Node.js + Express + TypeScript]
+        API[API REST<br>Python 3.12 + FastAPI]
     end
 
     subgraph Executor Container
@@ -159,22 +159,23 @@ graph TB
 - React Query para data fetching
 - Monaco Editor para edición de código
 
-#### 2.3.2 Backend API (Node.js + Express)
+#### 2.3.2 Backend API (Python + FastAPI)
 
 **Responsabilidades:**
-- Lógica de negocio principal
-- Autenticación y autorización (JWT)
-- Validación de datos (Zod)
-- Comunicación con base de datos (Prisma ORM)
-- Gestión de caché (Redis)
-- Coordinación de ejecución de código
+- Logica de negocio principal
+- Autenticacion y autorizacion (JWT)
+- Validacion de datos (Pydantic v2)
+- Comunicacion con base de datos (SQLAlchemy 2.0 async con asyncpg)
+- Gestion de cache (Redis)
+- Coordinacion de ejecucion de codigo
 
-**Tecnologías:**
-- Node.js 20+ LTS
-- Express.js con TypeScript
-- Prisma ORM
-- JWT para autenticación
-- Zod para validación de schemas
+**Tecnologias:**
+- Python 3.12 con uvicorn
+- FastAPI
+- SQLAlchemy 2.0 async con asyncpg
+- python-jose para JWT
+- Pydantic v2 para validacion de schemas
+- Alembic para migraciones de base de datos
 
 #### 2.3.3 Code Executor Service
 
@@ -201,7 +202,7 @@ graph TB
 
 **Características:**
 - PostgreSQL 15+
-- Esquema gestionado por Prisma Migrations
+- Esquema gestionado por Alembic Migrations
 - Índices optimizados para queries frecuentes
 - Backups automáticos
 
@@ -461,145 +462,149 @@ export function LoginForm() {
 
 #### 3.2.1 Core Framework
 
-**Node.js 20 LTS + Express + TypeScript**
+**Python 3.12 + FastAPI + uvicorn**
 
-```typescript
-// server.ts
-import express, { Express } from 'express'
-import helmet from 'helmet'
-import cors from 'cors'
+```python
+# app/main.py
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
-const app: Express = express()
+from app.config import settings
+from app.routers import auth, courses, labs, admin, progress, certificates
 
-// Middleware
-app.use(helmet()) // Security headers
-app.use(cors({ origin: process.env.FRONTEND_URL }))
-app.use(express.json())
-app.use(express.urlencoded({ extended: true }))
+app = FastAPI(title="Plataforma Ciberseguridad API")
 
-// Routes
-app.use('/api/auth', authRoutes)
-app.use('/api/courses', courseRoutes)
-app.use('/api/labs', labRoutes)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.CORS_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-export default app
+app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
+app.include_router(courses.router, prefix="/api/courses", tags=["courses"])
+app.include_router(labs.router, prefix="/api/labs", tags=["labs"])
+app.include_router(admin.router, prefix="/api/admin", tags=["admin"])
 ```
 
-#### 3.2.2 ORM - Prisma
+#### 3.2.2 ORM - SQLAlchemy 2.0 async
 
-**Prisma 5+**
-- Type-safe database client
-- Auto-generated TypeScript types
-- Database migrations
-- Introspection
-- Query builder
+**SQLAlchemy 2.0 con asyncpg**
+- Modelos declarativos con Mapped types
+- Sesiones async con AsyncSession
+- Migraciones con Alembic
+- Connection pooling nativo
+- Soporte para relaciones y eager/lazy loading
 
-```prisma
-// prisma/schema.prisma
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
+```python
+# app/models/user.py
+from sqlalchemy import String, Enum as SAEnum
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from app.database import Base
+import enum
 
-generator client {
-  provider = "prisma-client-js"
-}
+class UserRole(str, enum.Enum):
+    ADMIN = "ADMIN"
+    INSTRUCTOR = "INSTRUCTOR"
+    STUDENT = "STUDENT"
 
-model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String
-  role      Role     @default(STUDENT)
-  profile   TrainingProfile?
-  enrollments Enrollment[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
+class User(Base):
+    __tablename__ = "users"
 
-enum Role {
-  ADMIN
-  INSTRUCTOR
-  STUDENT
-}
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=uuid4)
+    email: Mapped[str] = mapped_column(String, unique=True, index=True)
+    password: Mapped[str] = mapped_column(String)
+    role: Mapped[UserRole] = mapped_column(SAEnum(UserRole), default=UserRole.STUDENT)
+    enrollments: Mapped[list["Enrollment"]] = relationship(back_populates="user")
 ```
 
 #### 3.2.3 Authentication - JWT
 
-**jsonwebtoken + bcrypt**
+**python-jose + passlib[bcrypt]**
 
-```typescript
-// services/auth.service.ts
-import jwt from 'jsonwebtoken'
-import bcrypt from 'bcrypt'
+```python
+# app/services/auth_service.py
+from jose import jwt
+from passlib.context import CryptContext
+from app.config import settings
 
-export class AuthService {
-  async login(email: string, password: string) {
-    const user = await prisma.user.findUnique({ where: { email } })
-    if (!user) throw new UnauthorizedError('Invalid credentials')
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-    const valid = await bcrypt.compare(password, user.password)
-    if (!valid) throw new UnauthorizedError('Invalid credentials')
+async def login(email: str, password: str, db: AsyncSession):
+    user = await get_user_by_email(db, email)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    const accessToken = jwt.sign(
-      { userId: user.id, role: user.role },
-      process.env.JWT_SECRET!,
-      { expiresIn: '15m' }
+    if not pwd_context.verify(password, user.password):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    access_token = jwt.encode(
+        {"sub": str(user.id), "role": user.role, "exp": ...},
+        settings.JWT_SECRET,
+        algorithm="HS256"
     )
-
-    const refreshToken = jwt.sign(
-      { userId: user.id },
-      process.env.JWT_REFRESH_SECRET!,
-      { expiresIn: '7d' }
+    refresh_token = jwt.encode(
+        {"sub": str(user.id), "exp": ...},
+        settings.JWT_REFRESH_SECRET,
+        algorithm="HS256"
     )
-
-    return { user, accessToken, refreshToken }
-  }
-}
+    return {"user": user, "access_token": access_token, "refresh_token": refresh_token}
 ```
 
-#### 3.2.4 Validation - Zod
+#### 3.2.4 Validation - Pydantic v2
 
-```typescript
-// schemas/course.schema.ts
-import { z } from 'zod'
+```python
+# app/schemas/course.py
+from pydantic import BaseModel, Field
+from enum import Enum
 
-export const createCourseSchema = z.object({
-  title: z.string().min(3).max(200),
-  description: z.string().min(10).max(2000),
-  difficulty: z.enum(['BEGINNER', 'INTERMEDIATE', 'ADVANCED']),
-  duration: z.number().positive(),
-  profileIds: z.array(z.string().uuid())
-})
+class CourseDifficulty(str, Enum):
+    BEGINNER = "BEGINNER"
+    INTERMEDIATE = "INTERMEDIATE"
+    ADVANCED = "ADVANCED"
 
-export type CreateCourseInput = z.infer<typeof createCourseSchema>
+class CreateCourseRequest(BaseModel):
+    title: str = Field(min_length=3, max_length=200)
+    description: str = Field(min_length=10, max_length=2000)
+    difficulty: CourseDifficulty
+    duration: int = Field(gt=0)
+    profile_ids: list[str]
 ```
 
 #### 3.2.5 Middleware Stack
 
-```typescript
-// middleware/auth.middleware.ts
-export function authenticate(req: Request, res: Response, next: NextFunction) {
-  const token = req.headers.authorization?.split(' ')[1]
-  if (!token) throw new UnauthorizedError()
+```python
+# app/middleware/auth.py
+from fastapi import Depends, HTTPException
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from jose import jwt, JWTError
+from app.config import settings
 
-  try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET!)
-    req.user = payload
-    next()
-  } catch (error) {
-    throw new UnauthorizedError('Invalid token')
-  }
-}
+security = HTTPBearer()
 
-// middleware/authorize.middleware.ts
-export function authorize(...roles: Role[]) {
-  return (req: Request, res: Response, next: NextFunction) => {
-    if (!roles.includes(req.user.role)) {
-      throw new ForbiddenError()
-    }
-    next()
-  }
-}
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: AsyncSession = Depends(get_db)
+):
+    token = credentials.credentials
+    try:
+        payload = jwt.decode(token, settings.JWT_SECRET, algorithms=["HS256"])
+        user_id = payload.get("sub")
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    user = await get_user_by_id(db, user_id)
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+    return user
+
+def require_role(*roles):
+    async def role_checker(current_user = Depends(get_current_user)):
+        if current_user.role not in roles:
+            raise HTTPException(status_code=403, detail="Forbidden")
+        return current_user
+    return role_checker
 ```
 
 ### 3.3 Database Layer
@@ -646,17 +651,15 @@ services:
       retries: 5
 ```
 
-```typescript
-// config/redis.ts
-import { createClient } from 'redis'
+```python
+# app/config.py (fragmento Redis)
+import redis.asyncio as aioredis
 
-export const redisClient = createClient({
-  url: process.env.REDIS_URL,
-  password: process.env.REDIS_PASSWORD
-})
-
-redisClient.on('error', (err) => console.error('Redis Error:', err))
-await redisClient.connect()
+redis_client = aioredis.from_url(
+    settings.REDIS_URL,
+    password=settings.REDIS_PASSWORD,
+    decode_responses=True
+)
 ```
 
 ### 3.4 Infrastructure
@@ -683,20 +686,16 @@ CMD ["nginx", "-g", "daemon off;"]
 
 **Dockerfile - Backend**
 ```dockerfile
-FROM node:20-alpine
+FROM python:3.12-slim
 
 WORKDIR /app
-COPY package*.json ./
-RUN npm ci --only=production
-
-COPY prisma ./prisma
-RUN npx prisma generate
+COPY pyproject.toml ./
+RUN pip install --no-cache-dir -e .
 
 COPY . .
-RUN npm run build
 
-EXPOSE 5000
-CMD ["node", "dist/server.js"]
+EXPOSE 4000
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "4000"]
 ```
 
 **Dockerfile - Executor**
@@ -1246,296 +1245,67 @@ interface Certificate {
 
 **UNIQUE:** `certificateNumber`
 
-### 4.3 Schema Prisma Completo
+### 4.3 Modelos SQLAlchemy
 
-```prisma
-// prisma/schema.prisma
-generator client {
-  provider = "prisma-client-js"
-}
+Los modelos se definen en `backend-fastapi/app/models/` usando SQLAlchemy 2.0 declarative con Mapped types. A continuacion se muestra una representacion equivalente al schema anterior:
 
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
+```python
+# backend-fastapi/app/models/ (representacion simplificada)
+from sqlalchemy import String, Integer, Boolean, DateTime, ForeignKey, Text, JSON, Enum as SAEnum
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from app.database import Base
 
-model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String
-  role      Role     @default(STUDENT)
-  firstName String
-  lastName  String
-  profileId String?
+# Modelos principales (ver backend-fastapi/app/models/ para definicion completa)
 
-  profile       TrainingProfile? @relation(fields: [profileId], references: [id])
-  enrollments   Enrollment[]
-  progress      UserProgress[]
-  quizAttempts  QuizAttempt[]
-  labAttempts   LabAttempt[]
-  certificates  Certificate[]
+class User(Base):
+    __tablename__ = "users"
+    id = mapped_column(String, primary_key=True)
+    email = mapped_column(String, unique=True, index=True)
+    password = mapped_column(String)
+    role = mapped_column(SAEnum(UserRole), default=UserRole.STUDENT)
+    first_name = mapped_column(String)
+    last_name = mapped_column(String)
+    profile_id = mapped_column(String, ForeignKey("training_profiles.id"), nullable=True)
+    # relationships: profile, enrollments, progress, quiz_attempts, lab_attempts, certificates
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+class TrainingProfile(Base):
+    __tablename__ = "training_profiles"
+    id = mapped_column(String, primary_key=True)
+    name = mapped_column(String, unique=True)
+    description = mapped_column(String)
+    is_active = mapped_column(Boolean, default=True)
+    # relationships: users, courses
 
-  @@index([role])
-  @@index([profileId])
-}
+class Course(Base):
+    __tablename__ = "courses"
+    id = mapped_column(String, primary_key=True)
+    title = mapped_column(String)
+    description = mapped_column(String)
+    difficulty = mapped_column(SAEnum(CourseDifficulty))
+    duration = mapped_column(Integer)
+    is_published = mapped_column(Boolean, default=False)
+    # relationships: modules, profiles, enrollments, certificates
 
-enum Role {
-  ADMIN
-  INSTRUCTOR
-  STUDENT
-}
+class Module(Base):
+    __tablename__ = "modules"
+    id = mapped_column(String, primary_key=True)
+    course_id = mapped_column(String, ForeignKey("courses.id", ondelete="CASCADE"))
+    title = mapped_column(String)
+    order_index = mapped_column(Integer)
+    # relationships: course, lessons, quizzes, labs
 
-model TrainingProfile {
-  id          String   @id @default(uuid())
-  name        String   @unique
-  description String
-  isActive    Boolean  @default(true)
+class Enrollment(Base):
+    __tablename__ = "enrollments"
+    id = mapped_column(String, primary_key=True)
+    user_id = mapped_column(String, ForeignKey("users.id", ondelete="CASCADE"))
+    course_id = mapped_column(String, ForeignKey("courses.id", ondelete="CASCADE"))
+    status = mapped_column(SAEnum(EnrollmentStatus), default=EnrollmentStatus.ACTIVE)
+    progress = mapped_column(Integer, default=0)
+    # UniqueConstraint("user_id", "course_id")
 
-  users   User[]
-  courses CourseProfile[]
-
-  createdAt DateTime @default(now())
-}
-
-model Course {
-  id          String       @id @default(uuid())
-  title       String
-  description String
-  difficulty  Difficulty
-  duration    Int
-  imageUrl    String?
-  isPublished Boolean      @default(false)
-
-  modules      Module[]
-  profiles     CourseProfile[]
-  enrollments  Enrollment[]
-  certificates Certificate[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([isPublished])
-  @@index([difficulty])
-}
-
-enum Difficulty {
-  BEGINNER
-  INTERMEDIATE
-  ADVANCED
-}
-
-model CourseProfile {
-  courseId   String
-  profileId  String
-  orderIndex Int
-  addedAt    DateTime @default(now())
-
-  course  Course          @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  profile TrainingProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
-
-  @@id([courseId, profileId])
-}
-
-model Module {
-  id          String @id @default(uuid())
-  courseId    String
-  title       String
-  description String
-  orderIndex  Int
-
-  course  Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  lessons Lesson[]
-  quizzes Quiz[]
-  labs    Lab[]
-
-  createdAt DateTime @default(now())
-
-  @@index([courseId])
-}
-
-model Lesson {
-  id          String      @id @default(uuid())
-  moduleId    String
-  title       String
-  content     String      @db.Text
-  contentType ContentType
-  videoUrl    String?
-  duration    Int
-  orderIndex  Int
-
-  module   Module         @relation(fields: [moduleId], references: [id], onDelete: Cascade)
-  progress UserProgress[]
-
-  createdAt DateTime @default(now())
-
-  @@index([moduleId])
-}
-
-enum ContentType {
-  TEXT
-  VIDEO
-  INTERACTIVE
-}
-
-model Quiz {
-  id           String @id @default(uuid())
-  moduleId     String
-  title        String
-  description  String
-  passingScore Int
-  timeLimit    Int
-  orderIndex   Int
-
-  module    Module        @relation(fields: [moduleId], references: [id], onDelete: Cascade)
-  questions Question[]
-  attempts  QuizAttempt[]
-
-  createdAt DateTime @default(now())
-
-  @@index([moduleId])
-}
-
-model Question {
-  id           String       @id @default(uuid())
-  quizId       String
-  questionText String       @db.Text
-  questionType QuestionType
-  points       Int
-  orderIndex   Int
-
-  quiz    Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
-  answers Answer[]
-
-  @@index([quizId])
-}
-
-enum QuestionType {
-  MULTIPLE_CHOICE
-  TRUE_FALSE
-  MULTI_SELECT
-}
-
-model Answer {
-  id          String  @id @default(uuid())
-  questionId  String
-  answerText  String  @db.Text
-  isCorrect   Boolean
-  explanation String?
-
-  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
-
-  @@index([questionId])
-}
-
-model Lab {
-  id           String @id @default(uuid())
-  moduleId     String
-  title        String
-  description  String @db.Text
-  instructions String @db.Text
-  language     String
-  starterCode  String @db.Text
-  solutionCode String @db.Text
-  testCases    Json
-  timeLimit    Int
-  orderIndex   Int
-
-  module   Module       @relation(fields: [moduleId], references: [id], onDelete: Cascade)
-  attempts LabAttempt[]
-
-  @@index([moduleId])
-}
-
-model Enrollment {
-  id          String           @id @default(uuid())
-  userId      String
-  courseId    String
-  status      EnrollmentStatus @default(ACTIVE)
-  progress    Int              @default(0)
-  enrolledAt  DateTime         @default(now())
-  completedAt DateTime?
-
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, courseId])
-  @@index([status])
-  @@index([completedAt])
-}
-
-enum EnrollmentStatus {
-  ACTIVE
-  COMPLETED
-  DROPPED
-}
-
-model UserProgress {
-  id             String    @id @default(uuid())
-  userId         String
-  lessonId       String
-  completed      Boolean   @default(false)
-  timeSpent      Int       @default(0)
-  lastAccessedAt DateTime  @default(now())
-  completedAt    DateTime?
-
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, lessonId])
-}
-
-model QuizAttempt {
-  id          String   @id @default(uuid())
-  userId      String
-  quizId      String
-  score       Int
-  answers     Json
-  passed      Boolean
-  startedAt   DateTime @default(now())
-  completedAt DateTime
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  quiz Quiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([quizId])
-}
-
-model LabAttempt {
-  id              String   @id @default(uuid())
-  userId          String
-  labId           String
-  submittedCode   String   @db.Text
-  executionResult Json
-  passed          Boolean
-  attempts        Int      @default(1)
-  submittedAt     DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  lab  Lab  @relation(fields: [labId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([labId])
-}
-
-model Certificate {
-  id                String    @id @default(uuid())
-  userId            String
-  courseId          String
-  certificateNumber String    @unique
-  issuedAt          DateTime  @default(now())
-  expiresAt         DateTime?
-  verificationUrl   String
-
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([courseId])
-}
+# Modelos adicionales: Lesson, Quiz, Question, Answer, Lab, UserProgress,
+# QuizAttempt, LabAttempt, Certificate
+# Ver backend-fastapi/app/models/ para la definicion completa
 ```
 
 ---
@@ -1548,18 +1318,18 @@ model Certificate {
 
 **Estrategia de doble token:**
 
-```typescript
-// Access Token (corta duración)
+```python
+# Access Token (corta duracion)
 {
-  userId: "uuid",
-  role: "STUDENT",
-  exp: 900 // 15 minutos
+  "sub": "uuid",
+  "role": "STUDENT",
+  "exp": 900  # 15 minutos
 }
 
-// Refresh Token (larga duración)
+# Refresh Token (larga duracion)
 {
-  userId: "uuid",
-  exp: 604800 // 7 días
+  "sub": "uuid",
+  "exp": 604800  # 7 dias
 }
 ```
 
@@ -1601,207 +1371,189 @@ sequenceDiagram
     end
 ```
 
-**Implementación:**
+**Implementacion:**
 
-```typescript
-// services/token.service.ts
-import jwt from 'jsonwebtoken'
-import crypto from 'crypto'
+```python
+# app/services/auth_service.py (fragmento token)
+from jose import jwt, JWTError
+from datetime import datetime, timedelta
+import hashlib
 
-export class TokenService {
-  generateAccessToken(userId: string, role: Role): string {
-    return jwt.sign(
-      { userId, role },
-      process.env.JWT_SECRET!,
-      { expiresIn: '15m' }
-    )
-  }
-
-  generateRefreshToken(userId: string): string {
-    const token = jwt.sign(
-      { userId },
-      process.env.JWT_REFRESH_SECRET!,
-      { expiresIn: '7d' }
-    )
-    return token
-  }
-
-  verifyAccessToken(token: string): { userId: string; role: Role } {
-    try {
-      return jwt.verify(token, process.env.JWT_SECRET!) as any
-    } catch (error) {
-      throw new UnauthorizedError('Invalid or expired token')
+def create_access_token(user_id: str, role: str) -> str:
+    payload = {
+        "sub": user_id,
+        "role": role,
+        "exp": datetime.utcnow() + timedelta(minutes=15)
     }
-  }
+    return jwt.encode(payload, settings.JWT_SECRET, algorithm="HS256")
 
-  async verifyRefreshToken(token: string): Promise<string> {
-    const payload = jwt.verify(token, process.env.JWT_REFRESH_SECRET!) as any
-
-    // Verificar que el token no haya sido revocado
-    const tokenHash = crypto.createHash('sha256').update(token).digest('hex')
-    const storedToken = await redis.get(`refresh:${payload.userId}`)
-
-    if (storedToken !== tokenHash) {
-      throw new UnauthorizedError('Token revoked')
+def create_refresh_token(user_id: str) -> str:
+    payload = {
+        "sub": user_id,
+        "exp": datetime.utcnow() + timedelta(days=7)
     }
+    return jwt.encode(payload, settings.JWT_REFRESH_SECRET, algorithm="HS256")
 
-    return payload.userId
-  }
+def verify_access_token(token: str) -> dict:
+    try:
+        return jwt.decode(token, settings.JWT_SECRET, algorithms=["HS256"])
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
 
-  async revokeRefreshToken(userId: string) {
-    await redis.del(`refresh:${userId}`)
-  }
-}
+async def verify_refresh_token(token: str) -> str:
+    payload = jwt.decode(token, settings.JWT_REFRESH_SECRET, algorithms=["HS256"])
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    stored = await redis_client.get(f"refresh:{payload['sub']}")
+    if stored != token_hash:
+        raise HTTPException(status_code=401, detail="Token revoked")
+    return payload["sub"]
+
+async def revoke_refresh_token(user_id: str):
+    await redis_client.delete(f"refresh:{user_id}")
 ```
 
 #### 5.1.2 Password Hashing
 
-```typescript
-import bcrypt from 'bcrypt'
+```python
+from passlib.context import CryptContext
 
-const SALT_ROUNDS = 12
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-export async function hashPassword(password: string): Promise<string> {
-  return bcrypt.hash(password, SALT_ROUNDS)
-}
+def hash_password(password: str) -> str:
+    return pwd_context.hash(password)
 
-export async function verifyPassword(
-  password: string,
-  hash: string
-): Promise<boolean> {
-  return bcrypt.compare(password, hash)
-}
+def verify_password(password: str, hashed: str) -> bool:
+    return pwd_context.verify(password, hashed)
 ```
 
-**Política de contraseñas:**
-- Mínimo 8 caracteres
-- Al menos una letra mayúscula
-- Al menos una letra minúscula
-- Al menos un número
-- Al menos un carácter especial
+**Politica de contrasenas:**
+- Minimo 8 caracteres
+- Al menos una letra mayuscula
+- Al menos una letra minuscula
+- Al menos un numero
+- Al menos un caracter especial
 - No puede contener el email del usuario
 
-```typescript
-// validators/password.validator.ts
-import { z } from 'zod'
+```python
+# app/schemas/auth.py (fragmento validacion)
+from pydantic import BaseModel, field_validator
+import re
 
-export const passwordSchema = z.string()
-  .min(8, 'Password must be at least 8 characters')
-  .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
-  .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
-  .regex(/[0-9]/, 'Password must contain at least one number')
-  .regex(/[@$!%*?&#]/, 'Password must contain at least one special character')
+class RegisterRequest(BaseModel):
+    email: str
+    password: str
+
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, v):
+        if len(v) < 8:
+            raise ValueError("Password must be at least 8 characters")
+        if not re.search(r"[A-Z]", v):
+            raise ValueError("Password must contain at least one uppercase letter")
+        if not re.search(r"[a-z]", v):
+            raise ValueError("Password must contain at least one lowercase letter")
+        if not re.search(r"[0-9]", v):
+            raise ValueError("Password must contain at least one number")
+        if not re.search(r"[@$!%*?&#]", v):
+            raise ValueError("Password must contain at least one special character")
+        return v
 ```
 
 ### 5.2 Autorización (RBAC)
 
 #### 5.2.1 Roles y Permisos
 
-```typescript
-enum Role {
-  ADMIN = 'ADMIN',
-  INSTRUCTOR = 'INSTRUCTOR',
-  STUDENT = 'STUDENT'
-}
+```python
+from enum import Enum
 
-const PERMISSIONS = {
-  // User management
-  'users:read': [Role.ADMIN, Role.INSTRUCTOR],
-  'users:write': [Role.ADMIN],
-  'users:delete': [Role.ADMIN],
+class UserRole(str, Enum):
+    ADMIN = "ADMIN"
+    INSTRUCTOR = "INSTRUCTOR"
+    STUDENT = "STUDENT"
 
-  // Course management
-  'courses:create': [Role.ADMIN, Role.INSTRUCTOR],
-  'courses:update': [Role.ADMIN, Role.INSTRUCTOR],
-  'courses:delete': [Role.ADMIN],
-  'courses:publish': [Role.ADMIN],
+PERMISSIONS = {
+    # User management
+    "users:read": [UserRole.ADMIN, UserRole.INSTRUCTOR],
+    "users:write": [UserRole.ADMIN],
+    "users:delete": [UserRole.ADMIN],
 
-  // Profile management
-  'profiles:assign': [Role.ADMIN],
-  'profiles:create': [Role.ADMIN],
+    # Course management
+    "courses:create": [UserRole.ADMIN, UserRole.INSTRUCTOR],
+    "courses:update": [UserRole.ADMIN, UserRole.INSTRUCTOR],
+    "courses:delete": [UserRole.ADMIN],
+    "courses:publish": [UserRole.ADMIN],
 
-  // Content access
-  'courses:enroll': [Role.STUDENT],
-  'lessons:access': [Role.STUDENT, Role.INSTRUCTOR, Role.ADMIN],
-  'labs:execute': [Role.STUDENT, Role.INSTRUCTOR, Role.ADMIN],
+    # Profile management
+    "profiles:assign": [UserRole.ADMIN],
+    "profiles:create": [UserRole.ADMIN],
 
-  // Certificates
-  'certificates:issue': [Role.ADMIN],
-  'certificates:view': [Role.STUDENT, Role.ADMIN]
+    # Content access
+    "courses:enroll": [UserRole.STUDENT],
+    "lessons:access": [UserRole.STUDENT, UserRole.INSTRUCTOR, UserRole.ADMIN],
+    "labs:execute": [UserRole.STUDENT, UserRole.INSTRUCTOR, UserRole.ADMIN],
+
+    # Certificates
+    "certificates:issue": [UserRole.ADMIN],
+    "certificates:view": [UserRole.STUDENT, UserRole.ADMIN],
 }
 ```
 
 #### 5.2.2 Middleware de Autorización
 
-```typescript
-// middleware/authorize.middleware.ts
-export function authorize(...allowedRoles: Role[]) {
-  return (req: Request, res: Response, next: NextFunction) => {
-    const userRole = req.user.role
+```python
+# app/middleware/auth.py
+from fastapi import Depends, HTTPException
 
-    if (!allowedRoles.includes(userRole)) {
-      throw new ForbiddenError(
-        `Role ${userRole} not authorized to access this resource`
-      )
-    }
+def require_role(*allowed_roles: UserRole):
+    async def role_checker(current_user = Depends(get_current_user)):
+        if current_user.role not in allowed_roles:
+            raise HTTPException(
+                status_code=403,
+                detail=f"Role {current_user.role} not authorized to access this resource"
+            )
+        return current_user
+    return role_checker
 
-    next()
-  }
-}
+# Uso en routers
+@router.post("/api/courses")
+async def create_course(
+    data: CreateCourseRequest,
+    user = Depends(require_role(UserRole.ADMIN, UserRole.INSTRUCTOR))
+):
+    ...
 
-// Uso en rutas
-router.post(
-  '/api/courses',
-  authenticate,
-  authorize(Role.ADMIN, Role.INSTRUCTOR),
-  createCourse
-)
-
-router.post(
-  '/api/admin/users/:id/profile',
-  authenticate,
-  authorize(Role.ADMIN),
-  assignProfile
-)
+@router.post("/api/admin/users/{user_id}/profile")
+async def assign_profile(
+    user_id: str,
+    user = Depends(require_role(UserRole.ADMIN))
+):
+    ...
 ```
 
 #### 5.2.3 Resource-Level Authorization
 
-```typescript
-// middleware/ownership.middleware.ts
-export function requireOwnership(resourceType: 'enrollment' | 'progress') {
-  return async (req: Request, res: Response, next: NextFunction) => {
-    const userId = req.user.userId
-    const resourceId = req.params.id
+```python
+# app/middleware/auth.py (fragmento ownership)
+async def require_ownership(
+    resource_id: str,
+    current_user = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    if current_user.role == UserRole.ADMIN:
+        return current_user  # Admins bypass ownership check
 
-    if (req.user.role === Role.ADMIN) {
-      return next() // Admins bypass ownership check
-    }
+    enrollment = await db.get(Enrollment, resource_id)
+    if not enrollment or enrollment.user_id != str(current_user.id):
+        raise HTTPException(status_code=403, detail="You do not own this resource")
+    return current_user
 
-    let isOwner = false
-
-    if (resourceType === 'enrollment') {
-      const enrollment = await prisma.enrollment.findUnique({
-        where: { id: resourceId }
-      })
-      isOwner = enrollment?.userId === userId
-    }
-
-    if (!isOwner) {
-      throw new ForbiddenError('You do not own this resource')
-    }
-
-    next()
-  }
-}
-
-// Uso
-router.get(
-  '/api/enrollments/:id',
-  authenticate,
-  requireOwnership('enrollment'),
-  getEnrollment
-)
+# Uso en router
+@router.get("/api/enrollments/{enrollment_id}")
+async def get_enrollment(
+    enrollment_id: str,
+    user = Depends(require_ownership)
+):
+    ...
 ```
 
 ### 5.3 Sandboxing de Código
@@ -1962,72 +1714,54 @@ export class SandboxService {
 
 ### 5.4 Validación de Inputs
 
-#### 5.4.1 Zod Schemas
+#### 5.4.1 Pydantic Schemas
 
-```typescript
-// schemas/lab.schema.ts
-import { z } from 'zod'
+```python
+# app/schemas/lab.py
+from pydantic import BaseModel, Field
+from enum import Enum
 
-export const submitLabSchema = z.object({
-  labId: z.string().uuid(),
-  code: z.string()
-    .min(1, 'Code cannot be empty')
-    .max(10000, 'Code too large (max 10KB)'),
-  language: z.enum(['python', 'javascript', 'bash', 'c', 'java'])
-})
+class LabLanguage(str, Enum):
+    PYTHON = "python"
+    JAVASCRIPT = "javascript"
+    BASH = "bash"
+    C = "c"
+    JAVA = "java"
 
-// schemas/course.schema.ts
-export const createCourseSchema = z.object({
-  title: z.string()
-    .min(3, 'Title too short')
-    .max(200, 'Title too long')
-    .regex(/^[a-zA-Z0-9\s\-:]+$/, 'Invalid characters in title'),
-  description: z.string()
-    .min(10, 'Description too short')
-    .max(5000, 'Description too long'),
-  difficulty: z.enum(['BEGINNER', 'INTERMEDIATE', 'ADVANCED']),
-  duration: z.number().int().positive().max(10000),
-  profileIds: z.array(z.string().uuid()).min(1)
-})
+class SubmitLabRequest(BaseModel):
+    lab_id: str
+    code: str = Field(min_length=1, max_length=10000)
+    language: LabLanguage
 
-// Middleware de validación
-export function validate(schema: z.ZodSchema) {
-  return (req: Request, res: Response, next: NextFunction) => {
-    try {
-      schema.parse(req.body)
-      next()
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        throw new ValidationError(error.errors)
-      }
-      throw error
-    }
-  }
-}
+# app/schemas/course.py
+class CreateCourseRequest(BaseModel):
+    title: str = Field(min_length=3, max_length=200, pattern=r"^[a-zA-Z0-9\s\-:]+$")
+    description: str = Field(min_length=10, max_length=5000)
+    difficulty: CourseDifficulty
+    duration: int = Field(gt=0, le=10000)
+    profile_ids: list[str] = Field(min_length=1)
 
-// Uso
-router.post(
-  '/api/labs/:id/submit',
-  authenticate,
-  validate(submitLabSchema),
-  submitLab
-)
+# FastAPI valida automaticamente con Pydantic al declarar el tipo en el endpoint
+@router.post("/api/labs/{lab_id}/submit")
+async def submit_lab(
+    lab_id: str,
+    data: SubmitLabRequest,
+    user = Depends(get_current_user)
+):
+    ...
 ```
 
 #### 5.4.2 SQL Injection Prevention
 
-**Prisma ORM previene SQL injection automáticamente:**
+**SQLAlchemy previene SQL injection automaticamente:**
 
-```typescript
-// ✅ Seguro (Prisma)
-const user = await prisma.user.findUnique({
-  where: { email: userInput } // Parameterized automatically
-})
+```python
+# Seguro (SQLAlchemy ORM)
+result = await db.execute(select(User).where(User.email == user_input))
+user = result.scalar_one_or_none()
 
-// ❌ Inseguro (Raw SQL)
-const user = await prisma.$queryRaw`
-  SELECT * FROM users WHERE email = ${userInput}
-` // Don't use unless absolutely necessary
+# Inseguro (Raw SQL sin parametros - NO usar)
+# result = await db.execute(text(f"SELECT * FROM users WHERE email = '{user_input}'"))
 ```
 
 #### 5.4.3 XSS Prevention
@@ -2044,76 +1778,34 @@ function renderUserContent(html: string) {
   return <div dangerouslySetInnerHTML={{ __html: clean }} />
 }
 
-// Backend - Headers de seguridad
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'"],
-      fontSrc: ["'self'"],
-      objectSrc: ["'none'"],
-      mediaSrc: ["'self'"],
-      frameSrc: ["'none'"]
-    }
-  },
-  hsts: {
-    maxAge: 31536000,
-    includeSubDomains: true,
-    preload: true
-  }
-}))
+// Backend - Headers de seguridad (configurados via Nginx o middleware FastAPI)
+// En FastAPI, los headers de seguridad se configuran con middleware personalizado
+// o a traves de Nginx reverse proxy (ver seccion 2.3.6)
 ```
 
 ### 5.5 Rate Limiting
 
-```typescript
-// middleware/rate-limit.middleware.ts
-import rateLimit from 'express-rate-limit'
-import RedisStore from 'rate-limit-redis'
-import { redisClient } from '@/config/redis'
+```python
+# app/middleware/rate_limit.py
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
-// General API rate limit
-export const apiLimiter = rateLimit({
-  store: new RedisStore({
-    client: redisClient,
-    prefix: 'rl:api:'
-  }),
-  windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 100, // 100 requests por ventana
-  message: 'Too many requests, please try again later',
-  standardHeaders: true,
-  legacyHeaders: false
-})
+limiter = Limiter(key_func=get_remote_address, storage_uri=settings.REDIS_URL)
 
-// Auth endpoints (más estricto)
-export const authLimiter = rateLimit({
-  store: new RedisStore({
-    client: redisClient,
-    prefix: 'rl:auth:'
-  }),
-  windowMs: 15 * 60 * 1000,
-  max: 5, // Solo 5 intentos de login
-  skipSuccessfulRequests: true
-})
+# Uso en routers con decoradores
+@router.post("/api/auth/login")
+@limiter.limit("5/15minutes")  # 5 intentos de login por ventana de 15 min
+async def login(request: Request, data: LoginRequest):
+    ...
 
-// Lab execution (muy estricto)
-export const labLimiter = rateLimit({
-  store: new RedisStore({
-    client: redisClient,
-    prefix: 'rl:lab:'
-  }),
-  windowMs: 60 * 1000, // 1 minuto
-  max: 10, // 10 ejecuciones por minuto
-  keyGenerator: (req) => req.user.userId // Por usuario
-})
+@router.post("/api/labs/{lab_id}/execute")
+@limiter.limit("10/minute")  # 10 ejecuciones por minuto
+async def execute_lab(request: Request, lab_id: str, user = Depends(get_current_user)):
+    ...
 
-// Uso
-app.use('/api', apiLimiter)
-app.use('/api/auth', authLimiter)
-app.use('/api/labs/:id/execute', authenticate, labLimiter, executeLab)
+# Rate limit general configurado en main.py
+# app.state.limiter = limiter
+# 100 requests por 15 minutos por IP en /api/*
 ```
 
 ### 5.6 HTTPS/TLS
@@ -2172,7 +1864,7 @@ sequenceDiagram
     U->>F: Completa formulario registro
     F->>F: Validar frontend (Zod)
     F->>A: POST /api/auth/register
-    A->>A: Validar schema (Zod)
+    A->>A: Validar schema (Pydantic)
     A->>A: Hash password (bcrypt)
     A->>DB: INSERT user
     DB-->>A: User created
@@ -2755,73 +2447,36 @@ Content-Type: application/json
 
 ### 7.3 Error Handling
 
-```typescript
-// error-handler.middleware.ts
-export class AppError extends Error {
-  statusCode: number
-  code: string
-  details?: any
+```python
+# app/middleware/error_handler.py
+from fastapi import Request
+from fastapi.responses import JSONResponse
+from starlette.middleware.base import BaseHTTPMiddleware
 
-  constructor(message: string, statusCode: number, code: string, details?: any) {
-    super(message)
-    this.statusCode = statusCode
-    this.code = code
-    this.details = details
-  }
-}
+class ErrorHandlerMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        try:
+            response = await call_next(request)
+            return response
+        except Exception as exc:
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": {
+                        "code": "INTERNAL_SERVER_ERROR",
+                        "message": "An unexpected error occurred"
+                    }
+                }
+            )
 
-export class UnauthorizedError extends AppError {
-  constructor(message = 'Unauthorized') {
-    super(message, 401, 'UNAUTHORIZED')
-  }
-}
+# FastAPI usa HTTPException nativamente para errores de aplicacion:
+# raise HTTPException(status_code=401, detail="Unauthorized")
+# raise HTTPException(status_code=403, detail="Forbidden")
+# raise HTTPException(status_code=404, detail="Resource not found")
+# raise HTTPException(status_code=400, detail="Validation failed")
 
-export class ForbiddenError extends AppError {
-  constructor(message = 'Forbidden') {
-    super(message, 403, 'FORBIDDEN')
-  }
-}
-
-export class NotFoundError extends AppError {
-  constructor(resource: string) {
-    super(`${resource} not found`, 404, 'NOT_FOUND')
-  }
-}
-
-export class ValidationError extends AppError {
-  constructor(errors: any[]) {
-    super('Validation failed', 400, 'VALIDATION_ERROR', errors)
-  }
-}
-
-// Global error handler
-export function errorHandler(
-  error: Error,
-  req: Request,
-  res: Response,
-  next: NextFunction
-) {
-  if (error instanceof AppError) {
-    return res.status(error.statusCode).json({
-      success: false,
-      error: {
-        code: error.code,
-        message: error.message,
-        details: error.details
-      }
-    })
-  }
-
-  // Unexpected errors
-  console.error('Unexpected error:', error)
-  res.status(500).json({
-    success: false,
-    error: {
-      code: 'INTERNAL_SERVER_ERROR',
-      message: 'An unexpected error occurred'
-    }
-  })
-}
+# Pydantic valida automaticamente y retorna 422 con detalles del error
 ```
 
 ---
@@ -2851,17 +2506,17 @@ services:
       - cyber-network
     restart: unless-stopped
 
-  # Backend API
+  # Backend API (FastAPI)
   backend:
     build:
-      context: ./backend
+      context: ./backend-fastapi
       dockerfile: Dockerfile
     container_name: cyber-backend
     ports:
-      - "5000:5000"
+      - "4000:4000"
     environment:
-      - NODE_ENV=production
-      - DATABASE_URL=postgresql://postgres:${DB_PASSWORD}@postgres:5432/cybersecurity_platform
+      - ENVIRONMENT=production
+      - DATABASE_URL=postgresql+asyncpg://postgres:${DB_PASSWORD}@postgres:5432/cybersecurity_platform
       - REDIS_URL=redis://redis:6379
       - JWT_SECRET=${JWT_SECRET}
       - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
@@ -2872,7 +2527,7 @@ services:
       redis:
         condition: service_healthy
     volumes:
-      - ./backend/uploads:/app/uploads
+      - ./backend-fastapi/uploads:/app/uploads
     networks:
       - cyber-network
     restart: unless-stopped
@@ -3020,10 +2675,10 @@ docker-compose -f docker-compose.prod.yml up -d --build
 docker-compose logs -f [service_name]
 
 # Ejecutar migraciones
-docker-compose exec backend npx prisma migrate deploy
+docker-compose exec backend alembic upgrade head
 
 # Seed database
-docker-compose exec backend npm run seed
+docker-compose exec backend python -m app.scripts.seed_base
 
 # Backup database
 docker-compose exec postgres pg_dump -U postgres cybersecurity_platform > backup.sql
@@ -3057,24 +2712,29 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Setup Node.js
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Setup Node.js (frontend)
         uses: actions/setup-node@v3
         with:
           node-version: '20'
 
       - name: Install dependencies
         run: |
-          cd backend && npm ci
+          cd backend-fastapi && pip install -e ".[dev]"
           cd ../frontend && npm ci
 
       - name: Run tests
         run: |
-          cd backend && npm test
+          cd backend-fastapi && pytest
           cd ../frontend && npm test
 
       - name: Lint
         run: |
-          cd backend && npm run lint
+          cd backend-fastapi && ruff check .
           cd ../frontend && npm run lint
 
   build-and-deploy:
@@ -3108,51 +2768,45 @@ jobs:
             git pull origin main
             docker-compose -f docker-compose.prod.yml pull
             docker-compose -f docker-compose.prod.yml up -d
-            docker-compose exec backend npx prisma migrate deploy
+            docker-compose exec backend alembic upgrade head
 ```
 
 ### 8.5 Health Checks
 
-```typescript
-// backend/routes/health.route.ts
-import { Router } from 'express'
-import { prisma } from '@/config/database'
-import { redisClient } from '@/config/redis'
+```python
+# app/routers/health.py
+from fastapi import APIRouter, Depends
+from sqlalchemy import text
+from app.database import get_db
 
-const router = Router()
+router = APIRouter()
 
-router.get('/health', async (req, res) => {
-  const health = {
-    uptime: process.uptime(),
-    timestamp: Date.now(),
-    status: 'OK',
-    services: {
-      database: 'unknown',
-      redis: 'unknown'
+@router.get("/health")
+async def health_check(db = Depends(get_db)):
+    health = {
+        "status": "OK",
+        "services": {
+            "database": "unknown",
+            "redis": "unknown"
+        }
     }
-  }
 
-  try {
-    await prisma.$queryRaw`SELECT 1`
-    health.services.database = 'healthy'
-  } catch (error) {
-    health.services.database = 'unhealthy'
-    health.status = 'ERROR'
-  }
+    try:
+        await db.execute(text("SELECT 1"))
+        health["services"]["database"] = "healthy"
+    except Exception:
+        health["services"]["database"] = "unhealthy"
+        health["status"] = "ERROR"
 
-  try {
-    await redisClient.ping()
-    health.services.redis = 'healthy'
-  } catch (error) {
-    health.services.redis = 'unhealthy'
-    health.status = 'ERROR'
-  }
+    try:
+        await redis_client.ping()
+        health["services"]["redis"] = "healthy"
+    except Exception:
+        health["services"]["redis"] = "unhealthy"
+        health["status"] = "ERROR"
 
-  const statusCode = health.status === 'OK' ? 200 : 503
-  res.status(statusCode).json(health)
-})
-
-export default router
+    status_code = 200 if health["status"] == "OK" else 503
+    return JSONResponse(content=health, status_code=status_code)
 ```
 
 ---
@@ -3163,67 +2817,36 @@ export default router
 
 #### 9.1.1 Cache Layers
 
-```typescript
-// services/cache.service.ts
-import { redisClient } from '@/config/redis'
+```python
+# app/services/cache_service.py
+import json
+from app.config import redis_client
 
-export class CacheService {
-  // Cache de cursos (TTL: 5 minutos)
-  async getCourses(profileId?: string): Promise<Course[]> {
-    const cacheKey = `courses:${profileId || 'all'}`
+class CacheService:
+    # Cache de cursos (TTL: 5 minutos)
+    async def get_courses(self, profile_id: str | None = None) -> list:
+        cache_key = f"courses:{profile_id or 'all'}"
 
-    const cached = await redisClient.get(cacheKey)
-    if (cached) {
-      return JSON.parse(cached)
-    }
+        cached = await redis_client.get(cache_key)
+        if cached:
+            return json.loads(cached)
 
-    const courses = await prisma.course.findMany({
-      where: profileId ? {
-        profiles: { some: { profileId } }
-      } : { isPublished: true }
-    })
+        # Query con SQLAlchemy
+        stmt = select(Course).where(Course.is_published == True)
+        if profile_id:
+            stmt = stmt.join(CourseProfile).where(CourseProfile.profile_id == profile_id)
+        result = await db.execute(stmt)
+        courses = result.scalars().all()
 
-    await redisClient.setEx(cacheKey, 300, JSON.stringify(courses))
-    return courses
-  }
+        await redis_client.setex(cache_key, 300, json.dumps([c.to_dict() for c in courses]))
+        return courses
 
-  // Cache de módulos (TTL: 10 minutos)
-  async getModule(moduleId: string): Promise<Module> {
-    const cacheKey = `module:${moduleId}`
-
-    const cached = await redisClient.get(cacheKey)
-    if (cached) return JSON.parse(cached)
-
-    const module = await prisma.module.findUnique({
-      where: { id: moduleId },
-      include: { lessons: true, quizzes: true, labs: true }
-    })
-
-    if (module) {
-      await redisClient.setEx(cacheKey, 600, JSON.stringify(module))
-    }
-
-    return module
-  }
-
-  // Invalidar cache
-  async invalidateCourse(courseId: string) {
-    const keys = await redisClient.keys(`courses:*`)
-    const courseKey = `course:${courseId}`
-
-    await redisClient.del([...keys, courseKey])
-  }
-
-  // Cache de sesiones de usuario (TTL: 24 horas)
-  async setUserSession(userId: string, data: any) {
-    await redisClient.setEx(`session:${userId}`, 86400, JSON.stringify(data))
-  }
-
-  async getUserSession(userId: string) {
-    const session = await redisClient.get(`session:${userId}`)
-    return session ? JSON.parse(session) : null
-  }
-}
+    # Invalidar cache
+    async def invalidate_course(self, course_id: str):
+        keys = await redis_client.keys("courses:*")
+        course_key = f"course:{course_id}"
+        if keys:
+            await redis_client.delete(*keys, course_key)
 ```
 
 #### 9.1.2 Cache Patterns
@@ -3262,81 +2885,77 @@ async function updateCourse(id: string, data: any) {
 
 #### 9.2.1 Indexes
 
-```prisma
-// Índices críticos para performance
+```python
+# Indices definidos en los modelos SQLAlchemy
 
-model User {
-  @@index([email]) // Login lookup
-  @@index([role, profileId]) // Admin queries
-}
+class User(Base):
+    __tablename__ = "users"
+    # Index: email (unique), role, profile_id
 
-model Course {
-  @@index([isPublished, difficulty]) // Course listing
-  @@fulltext([title, description]) // Search
-}
+class Course(Base):
+    __tablename__ = "courses"
+    # Index: is_published, difficulty
+    # GIN index en title + description para busqueda full-text (opcional)
 
-model Enrollment {
-  @@index([userId, status]) // User enrollments
-  @@index([courseId, completedAt]) // Course analytics
-}
+class Enrollment(Base):
+    __tablename__ = "enrollments"
+    # Index: (user_id, status), (course_id, completed_at)
+    # UniqueConstraint: (user_id, course_id)
 
-model UserProgress {
-  @@index([userId, completedAt]) // Progress tracking
-  @@index([lessonId, completed]) // Lesson analytics
-}
+class UserProgress(Base):
+    __tablename__ = "user_progress"
+    # Index: (user_id, completed_at), (lesson_id, completed)
+    # UniqueConstraint: (user_id, lesson_id)
 ```
 
 #### 9.2.2 Query Optimization
 
-```typescript
-// ❌ N+1 Problem
-const enrollments = await prisma.enrollment.findMany()
-for (const enrollment of enrollments) {
-  const course = await prisma.course.findUnique({
-    where: { id: enrollment.courseId }
-  })
-}
+```python
+# N+1 Problem - evitar con eager loading
 
-// ✅ Optimized with include
-const enrollments = await prisma.enrollment.findMany({
-  include: {
-    course: {
-      include: {
-        modules: {
-          select: { id: true, title: true }
+# Incorrecto: N+1 queries
+enrollments = (await db.execute(select(Enrollment))).scalars().all()
+for enrollment in enrollments:
+    course = await db.get(Course, enrollment.course_id)  # N queries adicionales
+
+# Correcto: eager loading con joinedload/selectinload
+from sqlalchemy.orm import joinedload, selectinload
+
+stmt = (
+    select(Enrollment)
+    .options(
+        joinedload(Enrollment.course).selectinload(Course.modules),
+        joinedload(Enrollment.user)
+    )
+)
+enrollments = (await db.execute(stmt)).unique().scalars().all()
+
+# Paginacion
+PAGE_SIZE = 20
+
+async def get_courses(page: int = 1):
+    offset = (page - 1) * PAGE_SIZE
+    stmt = (
+        select(Course)
+        .where(Course.is_published == True)
+        .order_by(Course.created_at.desc())
+        .offset(offset)
+        .limit(PAGE_SIZE)
+    )
+    courses = (await db.execute(stmt)).scalars().all()
+    total = (await db.execute(
+        select(func.count(Course.id)).where(Course.is_published == True)
+    )).scalar()
+
+    return {
+        "courses": courses,
+        "pagination": {
+            "page": page,
+            "page_size": PAGE_SIZE,
+            "total": total,
+            "total_pages": (total + PAGE_SIZE - 1) // PAGE_SIZE
         }
-      }
-    },
-    user: {
-      select: { id: true, firstName: true, lastName: true }
     }
-  }
-})
-
-// ✅ Pagination
-const PAGE_SIZE = 20
-
-async function getCourses(page: number = 1) {
-  const [courses, total] = await Promise.all([
-    prisma.course.findMany({
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
-      where: { isPublished: true },
-      orderBy: { createdAt: 'desc' }
-    }),
-    prisma.course.count({ where: { isPublished: true } })
-  ])
-
-  return {
-    courses,
-    pagination: {
-      page,
-      pageSize: PAGE_SIZE,
-      total,
-      totalPages: Math.ceil(total / PAGE_SIZE)
-    }
-  }
-}
 ```
 
 ### 9.3 Load Balancing
@@ -3408,56 +3027,51 @@ docker-compose up -d --scale backend=2 --scale executor=1
 
 ### 9.5 CDN Integration
 
-```typescript
-// config/cdn.ts
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
+```python
+# app/services/cdn_service.py (ejemplo)
+import boto3
+from app.config import settings
 
-const s3Client = new S3Client({ region: 'us-east-1' })
+s3_client = boto3.client("s3", region_name="us-east-1")
 
-export async function uploadToCDN(
-  file: Buffer,
-  key: string,
-  contentType: string
-) {
-  await s3Client.send(new PutObjectCommand({
-    Bucket: process.env.CDN_BUCKET,
-    Key: key,
-    Body: file,
-    ContentType: contentType,
-    CacheControl: 'public, max-age=31536000' // 1 year
-  }))
+async def upload_to_cdn(file_data: bytes, key: str, content_type: str) -> str:
+    s3_client.put_object(
+        Bucket=settings.CDN_BUCKET,
+        Key=key,
+        Body=file_data,
+        ContentType=content_type,
+        CacheControl="public, max-age=31536000"  # 1 year
+    )
+    return f"{settings.CDN_URL}/{key}"
 
-  return `${process.env.CDN_URL}/${key}`
-}
-
-// Upload course images to CDN
-const imageUrl = await uploadToCDN(
-  imageBuffer,
-  `courses/${courseId}/cover.jpg`,
-  'image/jpeg'
+# Upload course images to CDN
+image_url = await upload_to_cdn(
+    image_buffer,
+    f"courses/{course_id}/cover.jpg",
+    "image/jpeg"
 )
 ```
 
 ### 9.6 Database Connection Pooling
 
-```typescript
-// config/database.ts
-import { PrismaClient } from '@prisma/client'
+```python
+# app/database.py
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from app.config import settings
 
-const prisma = new PrismaClient({
-  datasources: {
-    db: {
-      url: process.env.DATABASE_URL
-    }
-  },
-  log: ['error', 'warn'],
-  errorFormat: 'minimal'
-})
+engine = create_async_engine(
+    settings.DATABASE_URL,  # postgresql+asyncpg://user:pass@host:5432/db
+    pool_size=20,
+    max_overflow=10,
+    pool_timeout=30,
+    echo=False  # True para debug de queries
+)
 
-// Connection pool configuration (via DATABASE_URL)
-// postgresql://user:pass@host:5432/db?connection_limit=20&pool_timeout=10
+async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
-export { prisma }
+async def get_db():
+    async with async_session() as session:
+        yield session
 ```
 
 ---
@@ -3466,371 +3080,229 @@ export { prisma }
 
 ### 10.1 Logging Strategy
 
-#### 10.1.1 Winston Logger
+#### 10.1.1 Python Logging (structlog / logging)
 
-```typescript
-// config/logger.ts
-import winston from 'winston'
+```python
+# app/config.py (fragmento logging)
+import logging
+import structlog
 
-const logger = winston.createLogger({
-  level: process.env.LOG_LEVEL || 'info',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.errors({ stack: true }),
-    winston.format.json()
-  ),
-  defaultMeta: {
-    service: 'cybersecurity-platform',
-    environment: process.env.NODE_ENV
-  },
-  transports: [
-    // Console output
-    new winston.transports.Console({
-      format: winston.format.combine(
-        winston.format.colorize(),
-        winston.format.simple()
-      )
-    }),
+structlog.configure(
+    processors=[
+        structlog.contextvars.merge_contextvars,
+        structlog.processors.add_log_level,
+        structlog.processors.TimeStamper(fmt="iso"),
+        structlog.processors.StackInfoRenderer(),
+        structlog.processors.JSONRenderer()
+    ],
+    wrapper_class=structlog.make_filtering_bound_logger(logging.INFO),
+)
 
-    // Error logs file
-    new winston.transports.File({
-      filename: 'logs/error.log',
-      level: 'error',
-      maxsize: 10485760, // 10MB
-      maxFiles: 5
-    }),
+logger = structlog.get_logger(service="cybersecurity-platform")
 
-    // Combined logs file
-    new winston.transports.File({
-      filename: 'logs/combined.log',
-      maxsize: 10485760,
-      maxFiles: 10
-    })
-  ]
-})
+# Middleware de request logging para FastAPI
+from starlette.middleware.base import BaseHTTPMiddleware
 
-// HTTP request logger middleware
-export function requestLogger(req: Request, res: Response, next: NextFunction) {
-  const start = Date.now()
+class RequestLoggerMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        start = time.time()
+        response = await call_next(request)
+        duration = time.time() - start
 
-  res.on('finish', () => {
-    const duration = Date.now() - start
-
-    logger.info('HTTP Request', {
-      method: req.method,
-      url: req.url,
-      statusCode: res.statusCode,
-      duration: `${duration}ms`,
-      userAgent: req.headers['user-agent'],
-      userId: req.user?.userId
-    })
-  })
-
-  next()
-}
-
-export default logger
+        logger.info(
+            "HTTP Request",
+            method=request.method,
+            url=str(request.url),
+            status_code=response.status_code,
+            duration_ms=round(duration * 1000, 2),
+        )
+        return response
 ```
 
 #### 10.1.2 Structured Logging
 
-```typescript
-// services/audit.service.ts
-import logger from '@/config/logger'
+```python
+# app/services/audit_service.py
+import structlog
 
-export class AuditService {
-  logUserAction(userId: string, action: string, details?: any) {
-    logger.info('User Action', {
-      userId,
-      action,
-      details,
-      timestamp: new Date().toISOString()
-    })
-  }
+logger = structlog.get_logger()
 
-  logSecurityEvent(type: string, severity: 'low' | 'medium' | 'high', details: any) {
-    logger.warn('Security Event', {
-      type,
-      severity,
-      details,
-      timestamp: new Date().toISOString()
-    })
-  }
+class AuditService:
+    def log_user_action(self, user_id: str, action: str, details: dict | None = None):
+        logger.info("User Action", user_id=user_id, action=action, details=details)
 
-  logSystemError(error: Error, context?: any) {
-    logger.error('System Error', {
-      message: error.message,
-      stack: error.stack,
-      context,
-      timestamp: new Date().toISOString()
-    })
-  }
-}
+    def log_security_event(self, event_type: str, severity: str, details: dict):
+        logger.warning("Security Event", type=event_type, severity=severity, details=details)
 
-// Usage
-auditService.logUserAction(userId, 'COURSE_ENROLLED', { courseId })
-auditService.logSecurityEvent('FAILED_LOGIN_ATTEMPT', 'medium', { email, ip })
-auditService.logSystemError(error, { endpoint: '/api/courses', method: 'POST' })
+    def log_system_error(self, error: Exception, context: dict | None = None):
+        logger.error("System Error", message=str(error), context=context, exc_info=True)
+
+# Uso
+audit_service.log_user_action(user_id, "COURSE_ENROLLED", {"course_id": course_id})
+audit_service.log_security_event("FAILED_LOGIN_ATTEMPT", "medium", {"email": email, "ip": ip})
+audit_service.log_system_error(error, {"endpoint": "/api/courses", "method": "POST"})
 ```
 
 ### 10.2 Metrics Collection
 
-```typescript
-// middleware/metrics.middleware.ts
-import promClient from 'prom-client'
+```python
+# app/middleware/metrics.py
+from prometheus_client import Histogram, Counter, Gauge, generate_latest, CONTENT_TYPE_LATEST
+from starlette.middleware.base import BaseHTTPMiddleware
+import time
 
-// Create metrics
-const httpRequestDuration = new promClient.Histogram({
-  name: 'http_request_duration_seconds',
-  help: 'Duration of HTTP requests in seconds',
-  labelNames: ['method', 'route', 'status_code']
-})
+http_request_duration = Histogram(
+    "http_request_duration_seconds",
+    "Duration of HTTP requests in seconds",
+    ["method", "route", "status_code"]
+)
 
-const httpRequestTotal = new promClient.Counter({
-  name: 'http_requests_total',
-  help: 'Total number of HTTP requests',
-  labelNames: ['method', 'route', 'status_code']
-})
+http_request_total = Counter(
+    "http_requests_total",
+    "Total number of HTTP requests",
+    ["method", "route", "status_code"]
+)
 
-const activeUsers = new promClient.Gauge({
-  name: 'active_users_total',
-  help: 'Total number of active users'
-})
+active_users = Gauge("active_users_total", "Total number of active users")
 
-const labExecutions = new promClient.Counter({
-  name: 'lab_executions_total',
-  help: 'Total number of lab code executions',
-  labelNames: ['language', 'status']
-})
+lab_executions = Counter(
+    "lab_executions_total",
+    "Total number of lab code executions",
+    ["language", "status"]
+)
 
-// Middleware to track metrics
-export function metricsMiddleware(req: Request, res: Response, next: NextFunction) {
-  const start = Date.now()
+class MetricsMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        start = time.time()
+        response = await call_next(request)
+        duration = time.time() - start
 
-  res.on('finish', () => {
-    const duration = (Date.now() - start) / 1000
+        route = request.url.path
+        http_request_duration.labels(request.method, route, response.status_code).observe(duration)
+        http_request_total.labels(request.method, route, response.status_code).inc()
 
-    httpRequestDuration.observe(
-      { method: req.method, route: req.route?.path || 'unknown', status_code: res.statusCode },
-      duration
-    )
+        return response
 
-    httpRequestTotal.inc({
-      method: req.method,
-      route: req.route?.path || 'unknown',
-      status_code: res.statusCode
-    })
-  })
-
-  next()
-}
-
-// Metrics endpoint
-export async function getMetrics(req: Request, res: Response) {
-  res.set('Content-Type', promClient.register.contentType)
-  const metrics = await promClient.register.metrics()
-  res.send(metrics)
-}
+@router.get("/metrics")
+async def metrics():
+    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
 ```
 
 ### 10.3 Health Monitoring
 
-```typescript
-// routes/monitoring.route.ts
-import { Router } from 'express'
-import { prisma } from '@/config/database'
-import { redisClient } from '@/config/redis'
-import os from 'os'
+```python
+# app/routers/monitoring.py
+from fastapi import APIRouter, Depends
+from sqlalchemy import text
+import psutil, time, httpx
 
-const router = Router()
+router = APIRouter()
 
-// Health check endpoint
-router.get('/health', async (req, res) => {
-  const health = {
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    services: {
-      database: await checkDatabase(),
-      redis: await checkRedis(),
-      executor: await checkExecutor()
-    },
-    system: {
-      memory: {
-        total: os.totalmem(),
-        free: os.freemem(),
-        used: os.totalmem() - os.freemem(),
-        usagePercent: ((os.totalmem() - os.freemem()) / os.totalmem() * 100).toFixed(2)
-      },
-      cpu: {
-        cores: os.cpus().length,
-        model: os.cpus()[0].model,
-        loadAverage: os.loadavg()
-      }
+@router.get("/health")
+async def health(db = Depends(get_db)):
+    health = {
+        "status": "healthy",
+        "timestamp": datetime.utcnow().isoformat(),
+        "services": {
+            "database": await check_database(db),
+            "redis": await check_redis(),
+            "executor": await check_executor()
+        },
+        "system": {
+            "memory": {
+                "total": psutil.virtual_memory().total,
+                "free": psutil.virtual_memory().available,
+                "usage_percent": psutil.virtual_memory().percent
+            },
+            "cpu": {
+                "cores": psutil.cpu_count(),
+                "load_average": psutil.getloadavg()
+            }
+        }
     }
-  }
+    all_healthy = all(s["status"] == "healthy" for s in health["services"].values())
+    health["status"] = "healthy" if all_healthy else "degraded"
+    return JSONResponse(content=health, status_code=200 if all_healthy else 503)
 
-  const allHealthy = Object.values(health.services).every(s => s.status === 'healthy')
-  health.status = allHealthy ? 'healthy' : 'degraded'
+@router.get("/ready")
+async def readiness(db = Depends(get_db)):
+    try:
+        await db.execute(text("SELECT 1"))
+        await redis_client.ping()
+        return {"ready": True}
+    except Exception as e:
+        return JSONResponse(content={"ready": False, "error": str(e)}, status_code=503)
 
-  res.status(allHealthy ? 200 : 503).json(health)
-})
-
-// Readiness check (for Kubernetes)
-router.get('/ready', async (req, res) => {
-  try {
-    await prisma.$queryRaw`SELECT 1`
-    await redisClient.ping()
-    res.status(200).json({ ready: true })
-  } catch (error) {
-    res.status(503).json({ ready: false, error: error.message })
-  }
-})
-
-// Liveness check (for Kubernetes)
-router.get('/live', (req, res) => {
-  res.status(200).json({ alive: true })
-})
-
-async function checkDatabase() {
-  try {
-    await prisma.$queryRaw`SELECT 1`
-    return { status: 'healthy', latency: 0 }
-  } catch (error) {
-    return { status: 'unhealthy', error: error.message }
-  }
-}
-
-async function checkRedis() {
-  try {
-    const start = Date.now()
-    await redisClient.ping()
-    const latency = Date.now() - start
-    return { status: 'healthy', latency }
-  } catch (error) {
-    return { status: 'unhealthy', error: error.message }
-  }
-}
-
-async function checkExecutor() {
-  try {
-    const response = await fetch(`${process.env.EXECUTOR_URL}/health`)
-    const data = await response.json()
-    return { status: data.status === 'OK' ? 'healthy' : 'unhealthy' }
-  } catch (error) {
-    return { status: 'unhealthy', error: error.message }
-  }
-}
-
-export default router
+@router.get("/live")
+async def liveness():
+    return {"alive": True}
 ```
 
 ### 10.4 Error Tracking (Sentry Integration)
 
-```typescript
-// config/sentry.ts
-import * as Sentry from '@sentry/node'
-import { ProfilingIntegration } from '@sentry/profiling-node'
+```python
+# app/config.py (fragmento Sentry)
+import sentry_sdk
+from sentry_sdk.integrations.fastapi import FastApiIntegration
+from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
 
-export function initSentry(app: Express) {
-  Sentry.init({
-    dsn: process.env.SENTRY_DSN,
-    environment: process.env.NODE_ENV,
-    integrations: [
-      new Sentry.Integrations.Http({ tracing: true }),
-      new Sentry.Integrations.Express({ app }),
-      new ProfilingIntegration()
-    ],
-    tracesSampleRate: 0.1, // 10% of transactions
-    profilesSampleRate: 0.1
-  })
+def init_sentry():
+    sentry_sdk.init(
+        dsn=settings.SENTRY_DSN,
+        environment=settings.ENVIRONMENT,
+        integrations=[
+            FastApiIntegration(),
+            SqlalchemyIntegration(),
+        ],
+        traces_sample_rate=0.1,  # 10% of transactions
+        profiles_sample_rate=0.1,
+    )
 
-  // Request handler must be first
-  app.use(Sentry.Handlers.requestHandler())
-  app.use(Sentry.Handlers.tracingHandler())
-}
-
-export function sentryErrorHandler(app: Express) {
-  // Error handler must be before other error middleware
-  app.use(Sentry.Handlers.errorHandler())
-}
-
-// Manual error reporting
-import logger from './logger'
-
-export function reportError(error: Error, context?: any) {
-  logger.error(error.message, { stack: error.stack, context })
-
-  Sentry.captureException(error, {
-    extra: context
-  })
-}
+# Manual error reporting
+def report_error(error: Exception, context: dict | None = None):
+    logger.error(str(error), context=context, exc_info=True)
+    sentry_sdk.capture_exception(error)
 ```
 
 ### 10.5 Alerting
 
-```typescript
-// services/alert.service.ts
-import logger from '@/config/logger'
+```python
+# app/services/alert_service.py
+import httpx
+import structlog
+from app.config import settings
 
-interface Alert {
-  severity: 'info' | 'warning' | 'critical'
-  message: string
-  details?: any
-}
+logger = structlog.get_logger()
 
-export class AlertService {
-  async sendAlert(alert: Alert) {
-    logger.log(alert.severity, `ALERT: ${alert.message}`, alert.details)
+class AlertService:
+    async def send_alert(self, severity: str, message: str, details: dict | None = None):
+        logger.log(severity, f"ALERT: {message}", details=details)
 
-    // Send to external services
-    if (alert.severity === 'critical') {
-      await this.sendSlackNotification(alert)
-      await this.sendEmail(alert)
-    }
-  }
+        if severity == "critical":
+            await self._send_slack_notification(severity, message, details)
 
-  private async sendSlackNotification(alert: Alert) {
-    // Slack webhook integration
-    const webhook = process.env.SLACK_WEBHOOK_URL
-    if (!webhook) return
+    async def _send_slack_notification(self, severity: str, message: str, details: dict | None):
+        webhook = settings.SLACK_WEBHOOK_URL
+        if not webhook:
+            return
 
-    await fetch(webhook, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        text: `🚨 ${alert.severity.toUpperCase()}: ${alert.message}`,
-        blocks: [
-          {
-            type: 'section',
-            text: {
-              type: 'mrkdwn',
-              text: `*${alert.message}*\n\`\`\`${JSON.stringify(alert.details, null, 2)}\`\`\``
-            }
-          }
-        ]
-      })
-    })
-  }
+        async with httpx.AsyncClient() as client:
+            await client.post(webhook, json={
+                "text": f"[{severity.upper()}]: {message}",
+                "blocks": [
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": f"*{message}*\n```{details}```"
+                        }
+                    }
+                ]
+            })
 
-  private async sendEmail(alert: Alert) {
-    // Email notification (nodemailer)
-    // Implementation depends on email provider
-  }
-}
-
-// Usage examples
-alertService.sendAlert({
-  severity: 'critical',
-  message: 'Database connection lost',
-  details: { timestamp: new Date(), service: 'postgres' }
-})
-
-alertService.sendAlert({
-  severity: 'warning',
-  message: 'High memory usage detected',
-  details: { usage: '85%', threshold: '80%' }
-})
+# Uso
+await alert_service.send_alert("critical", "Database connection lost", {"service": "postgres"})
+await alert_service.send_alert("warning", "High memory usage detected", {"usage": "85%"})
 ```
 
 ---
@@ -3853,8 +3325,10 @@ alertService.sendAlert({
 ### B. Referencias
 
 - **React Documentation:** https://react.dev
-- **Node.js Documentation:** https://nodejs.org/docs
-- **Prisma Documentation:** https://www.prisma.io/docs
+- **FastAPI Documentation:** https://fastapi.tiangolo.com
+- **SQLAlchemy Documentation:** https://docs.sqlalchemy.org
+- **Alembic Documentation:** https://alembic.sqlalchemy.org
+- **Pydantic Documentation:** https://docs.pydantic.dev
 - **PostgreSQL Documentation:** https://www.postgresql.org/docs
 - **Redis Documentation:** https://redis.io/docs
 - **Docker Documentation:** https://docs.docker.com
@@ -3862,9 +3336,10 @@ alertService.sendAlert({
 
 ### C. Change Log
 
-| Versión | Fecha | Cambios |
+| Version | Fecha | Cambios |
 |---------|-------|---------|
 | 1.0 | 2026-02-24 | Documento inicial de arquitectura |
+| 2.0 | 2026-04-14 | Migracion de Express/Prisma/Zod a FastAPI/SQLAlchemy/Pydantic |
 
 ---
 

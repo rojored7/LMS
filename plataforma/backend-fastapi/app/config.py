@@ -1,7 +1,7 @@
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -22,7 +22,7 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    NODE_ENV: Literal["development", "production", "test"] = "development"
+    APP_ENV: Literal["development", "production", "test"] = "development"
     PORT: int = 4000
     HOST: str = "0.0.0.0"
     FRONTEND_URL: str = "http://localhost:3000"
@@ -98,15 +98,15 @@ class Settings(BaseSettings):
 
     @property
     def is_production(self) -> bool:
-        return self.NODE_ENV == "production"
+        return self.APP_ENV == "production"
 
     @property
     def is_development(self) -> bool:
-        return self.NODE_ENV == "development"
+        return self.APP_ENV == "development"
 
     @property
     def is_test(self) -> bool:
-        return self.NODE_ENV == "test"
+        return self.APP_ENV == "test"
 
 
 @lru_cache

@@ -59,7 +59,7 @@ services:
       - ./database/backups:/backups
 
       # Docker socket (para acceder a volúmenes)
-      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/run/docker.sock:/var/run/docker.sock:ro
 
       # Credenciales GCS (opcional)
       - ./credentials:/credentials:ro
@@ -153,7 +153,7 @@ services:
     volumes:
       - ./scripts:/scripts:ro
       - ./database/backups:/backups
-      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     command: >
       sh -c '
         echo "Instalando dependencias..."

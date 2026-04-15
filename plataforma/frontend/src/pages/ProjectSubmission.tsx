@@ -3,7 +3,7 @@
  * Page for submitting project files
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Send } from 'lucide-react';
 import { Button } from '../components/common/Button';
@@ -24,26 +24,25 @@ export const ProjectSubmission: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (projectId) {
-      loadMySubmission();
-    }
-  }, [projectId]);
-
-  const loadMySubmission = async () => {
+  const loadMySubmission = useCallback(async () => {
     if (!projectId) return;
 
     try {
       setLoading(true);
       const submission = await projectService.getMySubmission(projectId);
       setMySubmission(submission);
-    } catch (err: any) {
-      // It's OK if there's no submission yet
-      console.log('No previous submission found');
+    } catch {
+      // No previous submission found - expected for first-time users
     } finally {
       setLoading(false);
     }
-  };
+  }, [projectId]);
+
+  useEffect(() => {
+    if (projectId) {
+      loadMySubmission();
+    }
+  }, [projectId, loadMySubmission]);
 
   const handleFilesSelected = (newFiles: File[]) => {
     setSelectedFiles((prev) => [...prev, ...newFiles]);
@@ -97,9 +96,7 @@ export const ProjectSubmission: React.FC = () => {
 
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-          Enviar Proyecto
-        </h1>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Enviar Proyecto</h1>
         <p className="text-gray-600 dark:text-gray-400">
           Sube tus archivos y agrega una descripción de tu proyecto
         </p>

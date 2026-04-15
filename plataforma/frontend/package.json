@@ -21,7 +21,7 @@
     "@hookform/resolvers": "^5.2.2",
     "@monaco-editor/react": "^4.6.0",
     "@tanstack/react-query": "^5.20.0",
-    "@uiw/react-md-editor": "^4.0.11",
+    "@uiw/react-md-editor": "^4.1.0",
     "@xterm/addon-fit": "^0.11.0",
     "@xterm/xterm": "^6.0.0",
     "axios": "^1.6.7",
@@ -53,6 +53,7 @@
     "zustand": "^4.5.0"
   },
   "devDependencies": {
+    "@mswjs/data": "^0.16.2",
     "@testing-library/jest-dom": "^6.4.2",
     "@testing-library/react": "^14.2.1",
     "@testing-library/user-event": "^14.5.2",
@@ -73,6 +74,7 @@
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",
     "jsdom": "^28.1.0",
+    "msw": "^2.12.13",
     "postcss": "^8.4.35",
     "prettier": "^3.2.5",
     "tailwindcss": "^3.4.1",

@@ -1,21 +1,18 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   PlusIcon,
   MagnifyingGlassIcon,
   FunnelIcon,
   ArrowDownTrayIcon,
-  PencilIcon,
-  DocumentDuplicateIcon,
-  TrashIcon,
-  EyeIcon,
-  EyeSlashIcon,
-  EllipsisVerticalIcon,
   ArrowLeftIcon,
   Bars3Icon,
   XMarkIcon,
 } from '@heroicons/react/24/outline';
 import DataTable, { DataTableColumn } from '../components/common/DataTable';
+import StatusBadge from '../components/courses/StatusBadge';
+import CourseCard from '../components/courses/CourseCard';
+import CourseActionMenu from '../components/courses/CourseActionMenu';
 import useCourseManagement from '../hooks/useCourseManagement';
 import { useUiStore } from '../store/uiStore';
 
@@ -64,279 +61,24 @@ const CourseListPage: React.FC = () => {
     }
   };
 
-  // Status badge
-  const StatusBadge: React.FC<{ isPublished: boolean }> = ({ isPublished }) => (
-    <span
-      className={`
-        inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-        ${
-          isPublished
-            ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
-            : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
-        }
-      `}
-    >
-      {isPublished ? 'Publicado' : 'Borrador'}
-    </span>
+  // Callbacks for child components
+  const handleEdit = useCallback(
+    (courseId: string) => {
+      navigate(`/admin/courses/${courseId}/edit`);
+    },
+    [navigate]
   );
 
-  // Mobile Card Component
-  const CourseCard: React.FC<{ course: any }> = ({ course }) => {
-    const [showActions, setShowActions] = useState(false);
+  const handleDuplicateInit = useCallback((course: any) => {
+    setSelectedCourse(course);
+    setDuplicateTitle(`${course.title} (Copia)`);
+    setShowDuplicateModal(true);
+  }, []);
 
-    return (
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 hover:shadow-md transition-shadow">
-        {/* Card Header with Thumbnail */}
-        <div className="flex space-x-4 mb-3">
-          <div className="flex-shrink-0 w-20 h-20 bg-gray-200 dark:bg-gray-700 rounded-lg overflow-hidden">
-            {course.thumbnail ? (
-              <img
-                src={course.thumbnail}
-                alt={course.title}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-gray-400 dark:text-gray-500">
-                <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-                  />
-                </svg>
-              </div>
-            )}
-          </div>
-
-          <div className="flex-1 min-w-0">
-            <h3 className="font-medium text-gray-900 dark:text-gray-100 truncate">
-              {course.title}
-            </h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2 mt-1">
-              {course.description}
-            </p>
-          </div>
-
-          {/* Mobile Action Menu */}
-          <div className="relative">
-            <button
-              onClick={() => setShowActions(!showActions)}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-            >
-              <EllipsisVerticalIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-            </button>
-
-            {showActions && (
-              <>
-                <div className="fixed inset-0 z-10" onClick={() => setShowActions(false)} />
-                <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-20">
-                  <button
-                    onClick={() => {
-                      navigate(`/admin/courses/${course.id}/edit`);
-                      setShowActions(false);
-                    }}
-                    className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center space-x-2"
-                  >
-                    <PencilIcon className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                    <span className="dark:text-gray-200">Editar</span>
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      setSelectedCourse(course);
-                      setDuplicateTitle(`${course.title} (Copia)`);
-                      setShowDuplicateModal(true);
-                      setShowActions(false);
-                    }}
-                    className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center space-x-2"
-                  >
-                    <DocumentDuplicateIcon className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                    <span className="dark:text-gray-200">Duplicar</span>
-                  </button>
-
-                  <button
-                    onClick={async () => {
-                      await exportCourse(course.id, `${course.slug}.zip`);
-                      setShowActions(false);
-                    }}
-                    className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center space-x-2"
-                  >
-                    <ArrowDownTrayIcon className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                    <span className="dark:text-gray-200">Exportar</span>
-                  </button>
-
-                  <div className="border-t border-gray-200 dark:border-gray-700" />
-
-                  {course.isPublished ? (
-                    <button
-                      onClick={async () => {
-                        await unpublishCourse(course.id);
-                        setShowActions(false);
-                      }}
-                      className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center space-x-2"
-                    >
-                      <EyeSlashIcon className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                      <span className="dark:text-gray-200">Despublicar</span>
-                    </button>
-                  ) : (
-                    <button
-                      onClick={async () => {
-                        await publishCourse(course.id);
-                        setShowActions(false);
-                      }}
-                      className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center space-x-2"
-                    >
-                      <EyeIcon className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                      <span className="dark:text-gray-200">Publicar</span>
-                    </button>
-                  )}
-
-                  <div className="border-t border-gray-200 dark:border-gray-700" />
-
-                  <button
-                    onClick={() => {
-                      setSelectedCourse(course);
-                      setShowDeleteModal(true);
-                      setShowActions(false);
-                    }}
-                    className="w-full text-left px-4 py-3 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center space-x-2 text-red-600 dark:text-red-400"
-                  >
-                    <TrashIcon className="w-4 h-4" />
-                    <span>Eliminar</span>
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Card Footer with Badges and Stats */}
-        <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-          <span
-            className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getLevelBadgeClass(course.level)}`}
-          >
-            {course.level}
-          </span>
-          <StatusBadge isPublished={course.isPublished} />
-          <span className="text-xs text-gray-500 dark:text-gray-400">{course.duration}h</span>
-          <span className="text-xs text-gray-500 dark:text-gray-400">
-            {course.moduleCount || 0} módulos
-          </span>
-          <span className="text-xs text-gray-500 dark:text-gray-400">
-            {course.enrollmentCount || 0} estudiantes
-          </span>
-        </div>
-      </div>
-    );
-  };
-
-  // Action menu for desktop table
-  const ActionMenu: React.FC<{ course: any }> = ({ course }) => {
-    const [isOpen, setIsOpen] = useState(false);
-
-    return (
-      <div className="relative">
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            setIsOpen(!isOpen);
-          }}
-          className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-        >
-          <EllipsisVerticalIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-        </button>
-
-        {isOpen && (
-          <>
-            <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)} />
-            <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-20">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  navigate(`/admin/courses/${course.id}/edit`);
-                  setIsOpen(false);
-                }}
-                className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center space-x-2"
-              >
-                <PencilIcon className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                <span className="dark:text-gray-200">Editar</span>
-              </button>
-
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setSelectedCourse(course);
-                  setDuplicateTitle(`${course.title} (Copia)`);
-                  setShowDuplicateModal(true);
-                  setIsOpen(false);
-                }}
-                className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center space-x-2"
-              >
-                <DocumentDuplicateIcon className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                <span className="dark:text-gray-200">Duplicar</span>
-              </button>
-
-              <button
-                onClick={async (e) => {
-                  e.stopPropagation();
-                  await exportCourse(course.id, `${course.slug}.zip`);
-                  setIsOpen(false);
-                }}
-                className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center space-x-2"
-              >
-                <ArrowDownTrayIcon className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                <span className="dark:text-gray-200">Exportar</span>
-              </button>
-
-              <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
-
-              {course.isPublished ? (
-                <button
-                  onClick={async (e) => {
-                    e.stopPropagation();
-                    await unpublishCourse(course.id);
-                    setIsOpen(false);
-                  }}
-                  className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center space-x-2"
-                >
-                  <EyeSlashIcon className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                  <span className="dark:text-gray-200">Despublicar</span>
-                </button>
-              ) : (
-                <button
-                  onClick={async (e) => {
-                    e.stopPropagation();
-                    await publishCourse(course.id);
-                    setIsOpen(false);
-                  }}
-                  className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center space-x-2"
-                >
-                  <EyeIcon className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                  <span className="dark:text-gray-200">Publicar</span>
-                </button>
-              )}
-
-              <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
-
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setSelectedCourse(course);
-                  setShowDeleteModal(true);
-                  setIsOpen(false);
-                }}
-                className="w-full text-left px-4 py-2 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center space-x-2 text-red-600 dark:text-red-400"
-              >
-                <TrashIcon className="w-4 h-4" />
-                <span>Eliminar</span>
-              </button>
-            </div>
-          </>
-        )}
-      </div>
-    );
-  };
+  const handleDeleteInit = useCallback((course: any) => {
+    setSelectedCourse(course);
+    setShowDeleteModal(true);
+  }, []);
 
   // Table columns definition for desktop
   const columns: DataTableColumn<any>[] = useMemo(
@@ -370,7 +112,7 @@ const CourseListPage: React.FC = () => {
       },
       {
         key: 'title',
-        header: 'Título',
+        header: 'Titulo',
         accessor: (course) => (
           <div className="max-w-md">
             <Link
@@ -402,7 +144,7 @@ const CourseListPage: React.FC = () => {
       },
       {
         key: 'duration',
-        header: 'Duración',
+        header: 'Duracion',
         accessor: (course) => (
           <span className="text-gray-900 dark:text-gray-100">{course.duration} horas</span>
         ),
@@ -411,7 +153,7 @@ const CourseListPage: React.FC = () => {
       },
       {
         key: 'modules',
-        header: 'Módulos',
+        header: 'Modulos',
         accessor: (course) => (
           <span className="text-gray-900 dark:text-gray-100">{course.moduleCount || 0}</span>
         ),
@@ -437,11 +179,29 @@ const CourseListPage: React.FC = () => {
       {
         key: 'actions',
         header: '',
-        accessor: (course) => <ActionMenu course={course} />,
+        accessor: (course) => (
+          <CourseActionMenu
+            course={course}
+            onEdit={handleEdit}
+            onDuplicate={handleDuplicateInit}
+            onExport={exportCourse}
+            onPublish={publishCourse}
+            onUnpublish={unpublishCourse}
+            onDelete={handleDeleteInit}
+          />
+        ),
         width: '60px',
       },
     ],
-    [navigate]
+    [
+      navigate,
+      handleEdit,
+      handleDuplicateInit,
+      handleDeleteInit,
+      exportCourse,
+      publishCourse,
+      unpublishCourse,
+    ]
   );
 
   // Handle delete confirmation
@@ -480,7 +240,7 @@ const CourseListPage: React.FC = () => {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
                 <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">
-                  Gestión de Cursos
+                  Gestion de Cursos
                 </h1>
                 <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
                   {totalCourses} {totalCourses === 1 ? 'curso' : 'cursos'} en total
@@ -574,7 +334,7 @@ const CourseListPage: React.FC = () => {
                 <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
                 <input
                   type="text"
-                  placeholder="Buscar por título..."
+                  placeholder="Buscar por titulo..."
                   value={filters.search || ''}
                   onChange={(e) => setFilters({ ...filters, search: e.target.value, page: 1 })}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
@@ -644,9 +404,9 @@ const CourseListPage: React.FC = () => {
                     onChange={(e) => setFilters({ ...filters, sortBy: e.target.value, page: 1 })}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                   >
-                    <option value="createdAt">Fecha de creación</option>
-                    <option value="title">Título</option>
-                    <option value="duration">Duración</option>
+                    <option value="createdAt">Fecha de creacion</option>
+                    <option value="title">Titulo</option>
+                    <option value="duration">Duracion</option>
                     <option value="level">Nivel</option>
                   </select>
                 </div>
@@ -705,7 +465,17 @@ const CourseListPage: React.FC = () => {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {courses.map((course) => (
-                    <CourseCard key={course.id} course={course} />
+                    <CourseCard
+                      key={course.id}
+                      course={course}
+                      getLevelBadgeClass={getLevelBadgeClass}
+                      onEdit={handleEdit}
+                      onDuplicate={handleDuplicateInit}
+                      onExport={exportCourse}
+                      onPublish={publishCourse}
+                      onUnpublish={unpublishCourse}
+                      onDelete={handleDeleteInit}
+                    />
                   ))}
                 </div>
               )}
@@ -730,7 +500,7 @@ const CourseListPage: React.FC = () => {
         {totalPages > 1 && !isLoading && !error && (
           <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="text-sm text-gray-700 dark:text-gray-300">
-              Mostrando página {currentPage} de {totalPages}
+              Mostrando pagina {currentPage} de {totalPages}
             </div>
             <div className="flex space-x-2">
               <button
@@ -788,10 +558,10 @@ const CourseListPage: React.FC = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full">
             <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">
-              Confirmar eliminación
+              Confirmar eliminacion
             </h3>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
-              ¿Estás seguro de que deseas eliminar el curso "{selectedCourse.title}"? Esta acción no
+              Estas seguro de que deseas eliminar el curso "{selectedCourse.title}"? Esta accion no
               se puede deshacer.
             </p>
             <div className="flex justify-end space-x-3">
@@ -823,18 +593,18 @@ const CourseListPage: React.FC = () => {
               Duplicar curso
             </h3>
             <p className="text-gray-600 dark:text-gray-400 mb-4">
-              Se creará una copia del curso "{selectedCourse.title}".
+              Se creara una copia del curso "{selectedCourse.title}".
             </p>
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Título del nuevo curso
+                Titulo del nuevo curso
               </label>
               <input
                 type="text"
                 value={duplicateTitle}
                 onChange={(e) => setDuplicateTitle(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                placeholder="Ingresa el título del curso duplicado"
+                placeholder="Ingresa el titulo del curso duplicado"
               />
             </div>
             <div className="flex justify-end space-x-3">

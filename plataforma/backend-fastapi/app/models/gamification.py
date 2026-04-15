@@ -1,21 +1,13 @@
 import enum
 from datetime import datetime, timezone
-from uuid import uuid4
 
-from sqlalchemy import Boolean, DateTime, Integer, JSON, String, Text
+from sqlalchemy import Boolean, DateTime, Index, Integer, JSON, String, Text
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
-
-
-def _gen_id() -> str:
-    return uuid4().hex
-
-
-def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+from app.models.common import gen_id as _gen_id, utcnow as _utcnow
 
 
 class NotificationType(str, enum.Enum):
@@ -82,3 +74,9 @@ class Notification(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
 
     user: Mapped["User"] = relationship(back_populates="notifications")
+
+    __table_args__ = (
+        Index("ix_notifications_user_id", "user_id"),
+        Index("ix_notifications_user_read", "user_id", "read"),
+        Index("ix_notifications_created_at", "created_at"),
+    )

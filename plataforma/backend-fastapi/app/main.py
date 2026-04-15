@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
@@ -42,9 +43,11 @@ async def lifespan(app: FastAPI):
     else:
         logger.warning("redis_connection_failed")
 
-    logger.info("server_starting", port=settings.PORT, env=settings.NODE_ENV)
+    logger.info("server_starting", port=settings.PORT, env=settings.APP_ENV)
     yield
 
+    from app.services.executor_client import ExecutorClient
+    await ExecutorClient.close()
     await close_redis()
     logger.info("server_stopped")
 
@@ -54,12 +57,14 @@ app = FastAPI(
     description="API para la plataforma de aprendizaje de ciberseguridad",
     version="2.0.0",
     lifespan=lifespan,
-    docs_url="/api-docs",
-    redoc_url="/api-redoc",
+    docs_url=None if settings.is_production else "/api-docs",
+    redoc_url=None if settings.is_production else "/api-redoc",
+    openapi_url=None if settings.is_production else "/openapi.json",
 )
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 
 register_exception_handlers(app)
 
@@ -67,8 +72,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "Accept", "X-Requested-With"],
 )
 
 
@@ -76,10 +81,20 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next) -> Response:
         response = await call_next(request)
         response.headers["X-Content-Type-Options"] = "nosniff"
-        response.headers["X-XSS-Protection"] = "1; mode=block"
+        # X-XSS-Protection omitted (deprecated in modern browsers)
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
-        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        if settings.is_production:
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; "
+            "script-src 'self'; "
+            "style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data: https:; "
+            "font-src 'self'; "
+            "connect-src 'self'; "
+            "frame-ancestors 'none'"
+        )
         return response
 
 
@@ -132,6 +147,8 @@ async def health_ready():
     db_ok = await check_database_connection()
     redis_ok = await check_redis_connection()
     status = "ready" if db_ok and redis_ok else "degraded"
+    if settings.is_production:
+        return {"status": status}
     return {
         "status": status,
         "database": "connected" if db_ok else "disconnected",

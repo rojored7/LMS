@@ -1,0 +1,14 @@
+{
+  "name": "ciber-plataforma-e2e",
+  "version": "1.0.0",
+  "description": "E2E test runner for Ciber Plataforma",
+  "scripts": {
+    "test:e2e": "playwright test --config=e2e/playwright.config.ts",
+    "test:e2e:chromium": "playwright test --config=e2e/playwright.config.ts --project=chromium",
+    "test:e2e:report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.59.1",
+    "typescript": "^5.9.3"
+  }
+}

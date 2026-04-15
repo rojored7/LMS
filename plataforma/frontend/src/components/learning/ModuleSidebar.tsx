@@ -18,6 +18,8 @@ interface ModuleProgressInfo {
   moduleId: string;
   progress: number;
   lessons?: { total: number; completed: number };
+  quizzes?: { total: number; passed: number };
+  labs?: { total: number; passed: number };
 }
 
 interface ModuleSidebarProps {
@@ -112,6 +114,27 @@ export const ModuleSidebar: React.FC<ModuleSidebarProps> = ({
                       </div>
                       <span className="text-xs text-gray-500 flex-shrink-0">{progress}%</span>
                     </div>
+                    {progressEntry &&
+                    (progressEntry.quizzes?.total || progressEntry.labs?.total) ? (
+                      <div className="flex items-center space-x-3 mt-1 text-xs text-gray-400">
+                        {progressEntry.lessons && progressEntry.lessons.total > 0 && (
+                          <span>
+                            {progressEntry.lessons.completed}/{progressEntry.lessons.total}{' '}
+                            lecciones
+                          </span>
+                        )}
+                        {progressEntry.quizzes && progressEntry.quizzes.total > 0 && (
+                          <span>
+                            {progressEntry.quizzes.passed}/{progressEntry.quizzes.total} quizzes
+                          </span>
+                        )}
+                        {progressEntry.labs && progressEntry.labs.total > 0 && (
+                          <span>
+                            {progressEntry.labs.passed}/{progressEntry.labs.total} labs
+                          </span>
+                        )}
+                      </div>
+                    ) : null}
                   </button>
                 </div>
 

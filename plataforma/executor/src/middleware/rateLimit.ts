@@ -30,17 +30,18 @@ export class RateLimiter {
    * Express middleware for rate limiting
    */
   middleware() {
-    return async (req: Request, res: Response, next: NextFunction) => {
+    return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
       try {
         // Get user identifier (from auth token, IP, or header)
         const userId = this.getUserId(req);
 
         if (!userId) {
           logger.warn('Rate limit: No user identifier found');
-          return res.status(400).json({
+          res.status(400).json({
             success: false,
             error: 'User identification required',
           });
+          return;
         }
 
         const allowed = await this.checkRateLimit(userId);
@@ -53,7 +54,7 @@ export class RateLimiter {
             resetAt: allowed.resetAt,
           });
 
-          return res.status(429).json({
+          res.status(429).json({
             success: false,
             error: 'Rate limit exceeded',
             details: {
@@ -63,6 +64,7 @@ export class RateLimiter {
               resetAt: allowed.resetAt,
             },
           });
+          return;
         }
 
         // Add rate limit info to response headers
@@ -151,18 +153,12 @@ export class RateLimiter {
   private getUserId(req: Request): string | null {
     // Priority order:
     // 1. User ID from authenticated session (if auth middleware is present)
-    // 2. X-User-Id header
-    // 3. IP address as fallback
+    // 2. IP address as fallback
+    // NOTE: Never trust client-provided headers for rate limiting identity
 
     // From auth middleware (if implemented)
     if ((req as any).user?.id) {
       return (req as any).user.id;
-    }
-
-    // From header
-    const headerUserId = req.headers['x-user-id'];
-    if (headerUserId && typeof headerUserId === 'string') {
-      return headerUserId;
     }
 
     // Fallback to IP

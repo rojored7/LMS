@@ -1,20 +1,12 @@
 import enum
 from datetime import datetime, timezone
-from uuid import uuid4
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, Numeric, String, Text, JSON
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
-
-
-def _gen_id() -> str:
-    return uuid4().hex
-
-
-def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+from app.models.common import gen_id as _gen_id, utcnow as _utcnow
 
 
 class QuestionType(str, enum.Enum):
@@ -70,7 +62,11 @@ class QuizAttempt(Base):
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     quiz: Mapped[Quiz] = relationship(back_populates="quiz_attempts")
-    __table_args__ = (Index("ix_quiz_attempts_user_id", "user_id"), Index("ix_quiz_attempts_quiz_id", "quiz_id"))
+    __table_args__ = (
+        Index("ix_quiz_attempts_user_id", "user_id"),
+        Index("ix_quiz_attempts_quiz_id", "quiz_id"),
+        Index("ix_quiz_attempts_user_quiz", "user_id", "quiz_id"),
+    )
 
 
 class Lab(Base):

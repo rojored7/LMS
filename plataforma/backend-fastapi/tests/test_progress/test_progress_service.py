@@ -206,3 +206,99 @@ async def test_get_course_progress_no_enrollment(db_session: AsyncSession) -> No
     service = ProgressService(db_session)
     progress = await service.get_course_progress("nonexistent", "nonexistent")
     assert progress == 0
+
+
+async def test_detailed_progress_includes_quizzes_and_labs(db_session: AsyncSession) -> None:
+    data = await _seed_full_course(db_session)
+    service = ProgressService(db_session)
+
+    result = await service.get_detailed_course_progress(data["user"].id, data["course"].id)
+    mod = result["modules"][0]
+
+    assert mod["lessons"] == {"total": 1, "completed": 0}
+    assert mod["quizzes"] == {"total": 1, "passed": 0}
+    assert mod["labs"] == {"total": 1, "passed": 0}
+    assert mod["progress"] == 0
+    assert result["overallProgress"] == 0
+
+
+async def test_detailed_progress_counts_passed_quiz(db_session: AsyncSession) -> None:
+    data = await _seed_full_course(db_session)
+    qs = data["questions"]
+    service = ProgressService(db_session)
+
+    await service.submit_quiz_attempt(
+        data["user"].id, data["quiz"].id,
+        {qs[0].id: "4", qs[1].id: "False", qs[2].id: "ls"},
+    )
+
+    result = await service.get_detailed_course_progress(data["user"].id, data["course"].id)
+    mod = result["modules"][0]
+    assert mod["quizzes"] == {"total": 1, "passed": 1}
+    assert mod["progress"] == 33
+
+
+async def test_detailed_progress_counts_passed_lab(db_session: AsyncSession) -> None:
+    data = await _seed_full_course(db_session)
+    service = ProgressService(db_session)
+
+    await service.submit_lab(
+        data["user"].id, data["lab"].id, "code", "python", passed=True,
+    )
+
+    result = await service.get_detailed_course_progress(data["user"].id, data["course"].id)
+    mod = result["modules"][0]
+    assert mod["labs"] == {"total": 1, "passed": 1}
+    assert mod["progress"] == 33
+
+
+async def test_detailed_and_recalculate_consistent(db_session: AsyncSession) -> None:
+    data = await _seed_full_course(db_session)
+    qs = data["questions"]
+    service = ProgressService(db_session)
+
+    await service.mark_lesson_complete(data["user"].id, data["lesson"].id)
+    detailed = await service.get_detailed_course_progress(data["user"].id, data["course"].id)
+    enrollment_progress = await service.get_course_progress(data["user"].id, data["course"].id)
+    assert detailed["overallProgress"] == enrollment_progress
+
+    await service.submit_quiz_attempt(
+        data["user"].id, data["quiz"].id,
+        {qs[0].id: "4", qs[1].id: "False", qs[2].id: "ls"},
+    )
+    detailed = await service.get_detailed_course_progress(data["user"].id, data["course"].id)
+    enrollment_progress = await service.get_course_progress(data["user"].id, data["course"].id)
+    assert detailed["overallProgress"] == enrollment_progress
+
+    await service.submit_lab(
+        data["user"].id, data["lab"].id, "code", "python", passed=True,
+    )
+    detailed = await service.get_detailed_course_progress(data["user"].id, data["course"].id)
+    enrollment_progress = await service.get_course_progress(data["user"].id, data["course"].id)
+    assert detailed["overallProgress"] == enrollment_progress
+
+
+async def test_detailed_progress_failed_quiz_not_counted(db_session: AsyncSession) -> None:
+    data = await _seed_full_course(db_session)
+    service = ProgressService(db_session)
+
+    await service.submit_quiz_attempt(data["user"].id, data["quiz"].id, {})
+
+    result = await service.get_detailed_course_progress(data["user"].id, data["course"].id)
+    mod = result["modules"][0]
+    assert mod["quizzes"] == {"total": 1, "passed": 0}
+    assert result["overallProgress"] == 0
+
+
+async def test_detailed_progress_failed_lab_not_counted(db_session: AsyncSession) -> None:
+    data = await _seed_full_course(db_session)
+    service = ProgressService(db_session)
+
+    await service.submit_lab(
+        data["user"].id, data["lab"].id, "bad", "python", passed=False,
+    )
+
+    result = await service.get_detailed_course_progress(data["user"].id, data["course"].id)
+    mod = result["modules"][0]
+    assert mod["labs"] == {"total": 1, "passed": 0}
+    assert result["overallProgress"] == 0

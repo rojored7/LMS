@@ -1,10 +1,13 @@
 from fastapi import APIRouter, Depends
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.middleware.auth import get_current_user, require_instructor
+from app.models.course import Module
 from app.models.user import User
 from app.schemas.common import ApiResponse
+from app.utils.enrollment_check import verify_enrollment_or_staff
 from app.schemas.quiz import (
     QuestionCreate,
     QuestionUpdate,
@@ -21,8 +24,12 @@ router = APIRouter(prefix="/api/quizzes", tags=["quizzes"])
 @router.get("/module/{module_id}")
 async def list_quizzes(
     module_id: str,
+    user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    mod = (await db.execute(select(Module).where(Module.id == module_id))).scalar_one_or_none()
+    if mod:
+        await verify_enrollment_or_staff(db, user.id, mod.course_id, user.role)
     service = QuizService(db)
     quizzes = await service.list_by_module(module_id)
     data = [QuizResponse.model_validate(q).model_dump() for q in quizzes]
@@ -32,10 +39,14 @@ async def list_quizzes(
 @router.get("/{quiz_id}")
 async def get_quiz(
     quiz_id: str,
+    user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     service = QuizService(db)
     quiz = await service.get_by_id(quiz_id)
+    mod = (await db.execute(select(Module).where(Module.id == quiz.module_id))).scalar_one_or_none()
+    if mod:
+        await verify_enrollment_or_staff(db, user.id, mod.course_id, user.role)
     return ApiResponse(success=True, data=QuizResponse.model_validate(quiz).model_dump()).model_dump()
 
 
@@ -83,6 +94,10 @@ async def submit_attempt(
     db: AsyncSession = Depends(get_db),
 ):
     service = QuizService(db)
+    quiz = await service.get_by_id(quiz_id)
+    mod = (await db.execute(select(Module).where(Module.id == quiz.module_id))).scalar_one_or_none()
+    if mod:
+        await verify_enrollment_or_staff(db, user.id, mod.course_id, user.role)
     result = await service.submit_attempt(quiz_id, user.id, body.answers)
     return ApiResponse(success=True, data=result).model_dump()
 

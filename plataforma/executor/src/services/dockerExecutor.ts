@@ -1,6 +1,4 @@
 import Docker from 'dockerode';
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const tar = require('tar-stream');
 import { config, LANGUAGE_CONFIGS } from '../config';
 import { ExecuteRequest, ExecutionResult, Language } from '../types';
 import { logger } from '../utils/logger';
@@ -136,22 +134,16 @@ export class DockerExecutor {
         // Resource limits
         Memory: this.parseMemoryLimit(config.SANDBOX_MEMORY_LIMIT),
         MemorySwap: this.parseMemoryLimit(config.SANDBOX_MEMORY_LIMIT), // Same as memory to disable swap
-        NanoCpus: parseInt(config.SANDBOX_CPU_LIMIT) * 1e9,
+        NanoCpus: Math.round(parseFloat(config.SANDBOX_CPU_LIMIT) * 1e9),
 
         // Security - tmpfs for sandbox, capabilities dropped, no privileges
         Privileged: false,
-        ReadonlyRootfs: false,
-        CapDrop: [
-          'NET_RAW',
-          'SYS_ADMIN',
-          'SYS_PTRACE',
-          'SYS_MODULE',
-          'MKNOD',
-          'AUDIT_WRITE',
-          'NET_BIND_SERVICE',
-        ],
+        ReadonlyRootfs: true,
+        CapDrop: ['ALL'],
+        CapAdd: [],
         SecurityOpt: ['no-new-privileges'],
-        Tmpfs: { '/tmp': 'size=10m,mode=1777' },
+        PidsLimit: 50,
+        Tmpfs: { '/tmp': 'size=10m,mode=1777', '/sandbox': 'size=50m,mode=1777' },
 
         // No volume mounts
         Binds: [],
@@ -189,22 +181,25 @@ export class DockerExecutor {
   ): Promise<void> {
     const langConfig = LANGUAGE_CONFIGS[language];
     const fileName = langConfig.fileName;
+    const filePath = `/sandbox/${fileName}`;
 
     try {
-      // Create a tar archive with the code file
-      const pack = tar.pack();
-
-      // Add the code file to the archive
-      pack.entry({ name: fileName }, code, (err: Error | null) => {
-        if (err) {
-          logger.error('Failed to create tar entry', { error: err.message });
-        }
+      // Write code via exec + sh -c to bypass ReadonlyRootfs restriction on putArchive
+      const exec = await container.exec({
+        Cmd: ['sh', '-c', `cat > ${filePath}`],
+        AttachStdin: true,
+        AttachStdout: false,
+        AttachStderr: false,
       });
-
-      pack.finalize();
-
-      // Upload to container
-      await container.putArchive(pack, { path: '/sandbox' });
+      const stream = await exec.start({ hijack: true, stdin: true });
+      stream.write(code);
+      stream.end();
+      // Wait for exec to finish
+      await new Promise<void>((resolve) => {
+        stream.on('end', resolve);
+        stream.on('close', resolve);
+        setTimeout(resolve, 1000);
+      });
       logger.debug('Code copied to container', { fileName });
     } catch (error) {
       logger.error('Failed to copy code to container', {

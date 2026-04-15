@@ -1,3 +1,4 @@
+import json
 from datetime import datetime, timezone
 
 from sqlalchemy import func, select
@@ -36,7 +37,7 @@ class ProgressService:
             progress.last_access = datetime.now(timezone.utc)
         await self.db.flush()
         await self.db.refresh(progress)
-        await self._recalculate_course_progress(user_id, lesson.module_id)
+        await self.recalculate_course_progress(user_id, lesson.module_id)
         return progress
 
     async def submit_quiz_attempt(self, user_id: str, quiz_id: str, answers: dict) -> QuizAttempt:
@@ -47,14 +48,21 @@ class ProgressService:
         count_result = await self.db.execute(select(func.count()).select_from(QuizAttempt).where(QuizAttempt.user_id == user_id, QuizAttempt.quiz_id == quiz_id))
         if (count_result.scalar() or 0) >= quiz.attempts:
             raise ConflictError(f"Limite de intentos alcanzado ({quiz.attempts})")
-        score = await self._calculate_score(quiz_id, answers)
+        from app.models.assessment import Question
+        from app.services.scoring import calculate_quiz_score
+        q_result = await self.db.execute(
+            select(Question).where(Question.quiz_id == quiz_id).order_by(Question.order)
+        )
+        questions = list(q_result.scalars().all())
+        correct, total = calculate_quiz_score(questions, answers) if questions else (0, 0)
+        score = round((correct / total) * 100) if total > 0 else 0
         passed = score >= quiz.passing_score
         attempt = QuizAttempt(user_id=user_id, quiz_id=quiz_id, answers=answers, score=score, passed=passed, completed_at=datetime.now(timezone.utc))
         self.db.add(attempt)
         await self.db.flush()
         await self.db.refresh(attempt)
         if passed:
-            await self._recalculate_course_progress(user_id, quiz.module_id)
+            await self.recalculate_course_progress(user_id, quiz.module_id)
         return attempt
 
     async def submit_lab(self, user_id: str, lab_id: str, code: str, language: str, passed: bool | None = None, stdout: str = "", stderr: str = "", exit_code: int = 0, execution_time: int = 0) -> LabSubmission:
@@ -64,7 +72,8 @@ class ProgressService:
             raise NotFoundError("Lab no encontrado")
         if passed is None:
             from app.services.executor_client import executor_client
-            exec_result = await executor_client.execute_code(code=code, language=language, tests=lab.tests if isinstance(lab.tests, dict) else None)
+            test_code = json.dumps(lab.tests) if isinstance(lab.tests, dict) else None
+            exec_result = await executor_client.execute_code(code=code, language=language, test_code=test_code)
             passed = exec_result["passed"]
             stdout = exec_result["stdout"]
             stderr = exec_result["stderr"]
@@ -75,7 +84,7 @@ class ProgressService:
         await self.db.flush()
         await self.db.refresh(submission)
         if passed:
-            await self._recalculate_course_progress(user_id, lab.module_id)
+            await self.recalculate_course_progress(user_id, lab.module_id)
         return submission
 
     async def get_course_progress(self, user_id: str, course_id: str) -> int:
@@ -88,19 +97,45 @@ class ProgressService:
         module_ids = [m.id for m in modules]
         if not module_ids:
             return {"overallProgress": 0, "modules": []}
-        totals_result = await self.db.execute(select(Lesson.module_id, func.count().label("cnt")).where(Lesson.module_id.in_(module_ids)).group_by(Lesson.module_id))
-        totals_map = {row.module_id: row.cnt for row in totals_result}
-        completed_result = await self.db.execute(select(UserProgress.module_id, func.count().label("cnt")).where(UserProgress.user_id == user_id, UserProgress.module_id.in_(module_ids), UserProgress.completed == True).group_by(UserProgress.module_id))  # noqa: E712
-        completed_map = {row.module_id: row.cnt for row in completed_result}
-        total_all = sum(totals_map.values())
-        completed_all = sum(completed_map.values())
-        overall = round((completed_all / total_all) * 100) if total_all > 0 else 0
+
+        # Totales por modulo
+        lesson_totals = await self.db.execute(select(Lesson.module_id, func.count().label("cnt")).where(Lesson.module_id.in_(module_ids)).group_by(Lesson.module_id))
+        lesson_totals_map = {row.module_id: row.cnt for row in lesson_totals}
+        quiz_totals = await self.db.execute(select(Quiz.module_id, func.count().label("cnt")).where(Quiz.module_id.in_(module_ids)).group_by(Quiz.module_id))
+        quiz_totals_map = {row.module_id: row.cnt for row in quiz_totals}
+        lab_totals = await self.db.execute(select(Lab.module_id, func.count().label("cnt")).where(Lab.module_id.in_(module_ids)).group_by(Lab.module_id))
+        lab_totals_map = {row.module_id: row.cnt for row in lab_totals}
+
+        # Completados por modulo
+        lesson_completed = await self.db.execute(select(UserProgress.module_id, func.count().label("cnt")).where(UserProgress.user_id == user_id, UserProgress.module_id.in_(module_ids), UserProgress.lesson_id.isnot(None), UserProgress.completed == True).group_by(UserProgress.module_id))  # noqa: E712
+        lesson_completed_map = {row.module_id: row.cnt for row in lesson_completed}
+        quiz_passed = await self.db.execute(select(Quiz.module_id, func.count(func.distinct(QuizAttempt.quiz_id)).label("cnt")).join(QuizAttempt, QuizAttempt.quiz_id == Quiz.id).where(Quiz.module_id.in_(module_ids), QuizAttempt.user_id == user_id, QuizAttempt.passed == True).group_by(Quiz.module_id))  # noqa: E712
+        quiz_passed_map = {row.module_id: row.cnt for row in quiz_passed}
+        lab_passed = await self.db.execute(select(Lab.module_id, func.count(func.distinct(LabSubmission.lab_id)).label("cnt")).join(LabSubmission, LabSubmission.lab_id == Lab.id).where(Lab.module_id.in_(module_ids), LabSubmission.user_id == user_id, LabSubmission.passed == True).group_by(Lab.module_id))  # noqa: E712
+        lab_passed_map = {row.module_id: row.cnt for row in lab_passed}
+
+        # Agregados
+        total_all = sum(lesson_totals_map.values()) + sum(quiz_totals_map.values()) + sum(lab_totals_map.values())
+        completed_all = sum(lesson_completed_map.values()) + sum(quiz_passed_map.values()) + sum(lab_passed_map.values())
+        overall = min(100, round((completed_all / total_all) * 100)) if total_all > 0 else 0
+
         module_progress = []
         for mod in modules:
-            total = totals_map.get(mod.id, 0)
-            completed = completed_map.get(mod.id, 0)
-            pct = round((completed / total) * 100) if total > 0 else 0
-            module_progress.append({"moduleId": mod.id, "moduleTitle": mod.title, "progress": pct, "lessons": {"total": total, "completed": completed}})
+            l_total = lesson_totals_map.get(mod.id, 0)
+            l_done = lesson_completed_map.get(mod.id, 0)
+            q_total = quiz_totals_map.get(mod.id, 0)
+            q_done = quiz_passed_map.get(mod.id, 0)
+            lb_total = lab_totals_map.get(mod.id, 0)
+            lb_done = lab_passed_map.get(mod.id, 0)
+            item_total = l_total + q_total + lb_total
+            item_done = l_done + q_done + lb_done
+            pct = min(100, round((item_done / item_total) * 100)) if item_total > 0 else 0
+            module_progress.append({
+                "moduleId": mod.id, "moduleTitle": mod.title, "progress": pct,
+                "lessons": {"total": l_total, "completed": l_done},
+                "quizzes": {"total": q_total, "passed": q_done},
+                "labs": {"total": lb_total, "passed": lb_done},
+            })
         return {"overallProgress": overall, "modules": module_progress}
 
     async def get_lesson_progress(self, user_id: str, lesson_id: str) -> dict | None:
@@ -110,63 +145,119 @@ class ProgressService:
             return None
         return {"completed": progress.completed, "completedAt": progress.completed_at.isoformat() if progress.completed_at else None, "timeSpent": progress.time_spent if hasattr(progress, "time_spent") else 0}
 
-    async def _recalculate_course_progress(self, user_id: str, module_id: str) -> None:
+    async def recalculate_course_progress(self, user_id: str, module_id: str) -> None:
+        # Query 1: Get course_id from module
         module_result = await self.db.execute(select(Module).where(Module.id == module_id))
         module = module_result.scalar_one_or_none()
         if module is None:
             return
         course_id = module.course_id
-        modules_result = await self.db.execute(select(Module.id).where(Module.course_id == course_id))
+
+        # Query 2: Get all module_ids for the course
+        modules_result = await self.db.execute(
+            select(Module.id).where(Module.course_id == course_id)
+        )
         module_ids = [m for m in modules_result.scalars().all()]
         if not module_ids:
             return
-        total_lessons = (await self.db.execute(select(func.count()).select_from(Lesson).where(Lesson.module_id.in_(module_ids)))).scalar() or 0
-        total_quizzes = (await self.db.execute(select(func.count()).select_from(Quiz).where(Quiz.module_id.in_(module_ids)))).scalar() or 0
-        total_labs = (await self.db.execute(select(func.count()).select_from(Lab).where(Lab.module_id.in_(module_ids)))).scalar() or 0
-        total_items = total_lessons + total_quizzes + total_labs
+
+        # Query 3: Get all totals in one query using subqueries
+        lessons_sq = (
+            select(func.count())
+            .select_from(Lesson)
+            .where(Lesson.module_id.in_(module_ids))
+            .correlate(None)
+            .scalar_subquery()
+        )
+        quizzes_sq = (
+            select(func.count())
+            .select_from(Quiz)
+            .where(Quiz.module_id.in_(module_ids))
+            .correlate(None)
+            .scalar_subquery()
+        )
+        labs_sq = (
+            select(func.count())
+            .select_from(Lab)
+            .where(Lab.module_id.in_(module_ids))
+            .correlate(None)
+            .scalar_subquery()
+        )
+        totals = await self.db.execute(
+            select(lessons_sq.label("lessons"), quizzes_sq.label("quizzes"), labs_sq.label("labs"))
+        )
+        row = totals.one()
+        total_items = (row.lessons or 0) + (row.quizzes or 0) + (row.labs or 0)
         if total_items == 0:
             return
-        completed_lessons = (await self.db.execute(select(func.count()).select_from(UserProgress).where(UserProgress.user_id == user_id, UserProgress.module_id.in_(module_ids), UserProgress.lesson_id.isnot(None), UserProgress.completed == True))).scalar() or 0  # noqa: E712
-        passed_quizzes = (await self.db.execute(select(func.count(func.distinct(QuizAttempt.quiz_id))).where(QuizAttempt.user_id == user_id, QuizAttempt.quiz_id.in_(select(Quiz.id).where(Quiz.module_id.in_(module_ids))), QuizAttempt.passed == True))).scalar() or 0  # noqa: E712
-        passed_labs = (await self.db.execute(select(func.count(func.distinct(LabSubmission.lab_id))).where(LabSubmission.user_id == user_id, LabSubmission.lab_id.in_(select(Lab.id).where(Lab.module_id.in_(module_ids))), LabSubmission.passed == True))).scalar() or 0  # noqa: E712
-        completed_items = completed_lessons + passed_quizzes + passed_labs
+
+        # Query 4: Get all completed counts in one query
+        done_lessons_sq = (
+            select(func.count())
+            .select_from(UserProgress)
+            .where(
+                UserProgress.user_id == user_id,
+                UserProgress.module_id.in_(module_ids),
+                UserProgress.lesson_id.isnot(None),
+                UserProgress.completed == True,  # noqa: E712
+            )
+            .correlate(None)
+            .scalar_subquery()
+        )
+        done_quizzes_sq = (
+            select(func.count(func.distinct(QuizAttempt.quiz_id)))
+            .where(
+                QuizAttempt.user_id == user_id,
+                QuizAttempt.quiz_id.in_(
+                    select(Quiz.id).where(Quiz.module_id.in_(module_ids))
+                ),
+                QuizAttempt.passed == True,  # noqa: E712
+            )
+            .correlate(None)
+            .scalar_subquery()
+        )
+        done_labs_sq = (
+            select(func.count(func.distinct(LabSubmission.lab_id)))
+            .where(
+                LabSubmission.user_id == user_id,
+                LabSubmission.lab_id.in_(
+                    select(Lab.id).where(Lab.module_id.in_(module_ids))
+                ),
+                LabSubmission.passed == True,  # noqa: E712
+            )
+            .correlate(None)
+            .scalar_subquery()
+        )
+        completed = await self.db.execute(
+            select(
+                done_lessons_sq.label("lessons"),
+                done_quizzes_sq.label("quizzes"),
+                done_labs_sq.label("labs"),
+            )
+        )
+        crow = completed.one()
+        completed_items = (crow.lessons or 0) + (crow.quizzes or 0) + (crow.labs or 0)
+
+        # Query 5: Update enrollment
         progress = min(100, round((completed_items / total_items) * 100))
-        enrollment_result = await self.db.execute(select(Enrollment).where(Enrollment.user_id == user_id, Enrollment.course_id == course_id))
+        enrollment_result = await self.db.execute(
+            select(Enrollment).where(
+                Enrollment.user_id == user_id, Enrollment.course_id == course_id
+            )
+        )
         enrollment = enrollment_result.scalar_one_or_none()
         if enrollment:
             enrollment.progress = progress
             enrollment.last_accessed_at = datetime.now(timezone.utc)
-            if progress == 100:
+            if progress >= 100:
                 enrollment.completed_at = datetime.now(timezone.utc)
             await self.db.flush()
 
-    async def _calculate_score(self, quiz_id: str, answers: dict) -> int:
-        from app.models.assessment import Question
-        result = await self.db.execute(select(Question).where(Question.quiz_id == quiz_id).order_by(Question.order))
-        questions = result.scalars().all()
-        if not questions:
-            return 0
-        correct_count = 0
-        for question in questions:
-            user_answer = answers.get(question.id)
-            if user_answer is None:
-                continue
-            expected = question.correct_answer
-            if isinstance(expected, list):
-                if isinstance(user_answer, list) and sorted(str(a) for a in user_answer) == sorted(str(e) for e in expected):
-                    correct_count += 1
-            elif isinstance(expected, dict):
-                answer_val = expected.get("value", expected)
-                if str(user_answer).strip().lower() == str(answer_val).strip().lower():
-                    correct_count += 1
-            else:
-                if str(user_answer).strip().lower() == str(expected).strip().lower():
-                    correct_count += 1
-        return round((correct_count / len(questions)) * 100)
-
-    async def get_detailed_progress(self, user_id: str) -> list[dict]:
+    async def get_detailed_progress(self, user_id: str, skip: int = 0, limit: int = 50) -> list[dict]:
         result = await self.db.execute(
-            select(Enrollment).options(selectinload(Enrollment.course)).where(Enrollment.user_id == user_id)
+            select(Enrollment).options(selectinload(Enrollment.course))
+            .where(Enrollment.user_id == user_id)
+            .offset(skip).limit(limit)
         )
         enrollments = list(result.scalars().all())
         data = []
@@ -210,7 +301,7 @@ class ProgressService:
         }
 
     async def mark_lab_complete(self, user_id: str, module_id: str) -> None:
-        await self._recalculate_course_progress(user_id, module_id)
+        await self.recalculate_course_progress(user_id, module_id)
 
     async def update_project_status(self, user_id: str, module_id: str, status: str) -> None:
-        await self._recalculate_course_progress(user_id, module_id)
+        await self.recalculate_course_progress(user_id, module_id)

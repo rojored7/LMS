@@ -32,7 +32,7 @@ class AuthService:
         await self.db.flush()
 
         tokens = await self._generate_tokens(user)
-        logger.info("user_registered", user_id=user.id, email=email)
+        logger.info("user_registered", user_id=user.id)
         return {"user": user, "tokens": tokens}
 
     async def login(self, email: str, password: str) -> dict:
@@ -86,14 +86,24 @@ class AuthService:
         if not user:
             return {"message": "Si el email existe, se enviara un enlace de restablecimiento"}
 
+        # Invalidar tokens de reset previos no usados
+        await self.db.execute(
+            delete(PasswordResetToken).where(
+                PasswordResetToken.user_id == user.id,
+                PasswordResetToken.used_at.is_(None),
+            )
+        )
+
         token_value = secrets.token_urlsafe(48)
         expires_at = datetime.now(timezone.utc) + timedelta(hours=1)
         reset_token = PasswordResetToken(user_id=user.id, token=token_value, expires_at=expires_at)
         self.db.add(reset_token)
         await self.db.flush()
 
-        # TODO: enviar reset_url por email en vez de retornarlo
-        # reset_url = f"{settings.FRONTEND_URL}/reset-password?token={token_value}"
+        reset_url = f"{settings.FRONTEND_URL}/reset-password?token={token_value}"
+        from app.services.email_service import send_password_reset_email
+        await send_password_reset_email(user.email, reset_url)
+
         logger.info("password_reset_requested", user_id=user.id)
         return {"message": "Si el email existe, se enviara un enlace de restablecimiento"}
 

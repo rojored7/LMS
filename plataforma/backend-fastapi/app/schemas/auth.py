@@ -1,8 +1,9 @@
 from datetime import datetime
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 from app.schemas.common import CamelModel
+from app.utils.validators import validate_password_strength
 
 
 class LoginRequest(BaseModel):
@@ -14,6 +15,11 @@ class RegisterRequest(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8, max_length=128)
     name: str = Field(min_length=2, max_length=255)
+
+    @field_validator("password")
+    @classmethod
+    def check_password(cls, v: str) -> str:
+        return validate_password_strength(v)
 
 
 class RefreshRequest(BaseModel):
@@ -28,10 +34,20 @@ class ResetPasswordRequest(BaseModel):
     token: str
     password: str = Field(min_length=8, max_length=128)
 
+    @field_validator("password")
+    @classmethod
+    def check_password(cls, v: str) -> str:
+        return validate_password_strength(v)
+
 
 class ChangePasswordRequest(BaseModel):
     current_password: str
     new_password: str = Field(min_length=8, max_length=128)
+
+    @field_validator("new_password")
+    @classmethod
+    def check_password(cls, v: str) -> str:
+        return validate_password_strength(v)
 
 
 class TokenResponse(CamelModel):

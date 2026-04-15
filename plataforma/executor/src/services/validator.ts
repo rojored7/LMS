@@ -15,11 +15,11 @@ export class Validator {
       return this.validateSingleTest(output, test);
     });
 
-    const passedCount = results.filter(r => r.passed).length;
+    const passedCount = results.filter((r) => r.passed).length;
     logger.info('Validation completed', {
       total: tests.length,
       passed: passedCount,
-      failed: tests.length - passedCount
+      failed: tests.length - passedCount,
     });
 
     return results;
@@ -65,7 +65,7 @@ export class Validator {
       logger.debug('Test validation result', {
         type: test.type,
         passed,
-        error
+        error,
       });
 
       return {
@@ -105,17 +105,27 @@ export class Validator {
    * Regex validation
    */
   private validateRegex(output: string, pattern: string): { passed: boolean; error?: string } {
+    const MAX_PATTERN_LENGTH = 200;
+    const MAX_OUTPUT_LENGTH = 10000;
+
+    if (pattern.length > MAX_PATTERN_LENGTH) {
+      return { passed: false, error: `Regex pattern too long (max ${MAX_PATTERN_LENGTH} chars)` };
+    }
+
+    const truncatedOutput =
+      output.length > MAX_OUTPUT_LENGTH ? output.substring(0, MAX_OUTPUT_LENGTH) : output;
+
     try {
       const regex = new RegExp(pattern);
-      const passed = regex.test(output);
+      const passed = regex.test(truncatedOutput);
       return {
         passed,
-        error: passed ? undefined : `Output does not match regex pattern: ${pattern}`
+        error: passed ? undefined : `Output does not match regex pattern: ${pattern}`,
       };
     } catch (err) {
       return {
         passed: false,
-        error: `Invalid regex pattern: ${pattern}`
+        error: `Invalid regex pattern: ${pattern}`,
       };
     }
   }
@@ -124,10 +134,7 @@ export class Validator {
    * Normalizes output by trimming whitespace and normalizing line endings
    */
   private normalizeOutput(output: string): string {
-    return output
-      .trim()
-      .replace(/\r\n/g, '\n')
-      .replace(/\r/g, '\n');
+    return output.trim().replace(/\r\n/g, '\n').replace(/\r/g, '\n');
   }
 }
 

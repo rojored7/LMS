@@ -274,3 +274,163 @@ src/
 4. **PRUEBA** en navegador después de cambios
 5. **VERIFICA** que el build funcione (`npm run build`)
 6. **DOCUMENTA** componentes complejos con JSDoc
+
+---
+
+## Reglas de Accesibilidad (A11y)
+
+**IMPORTANTE**: Todos los elementos interactivos DEBEN cumplir con WCAG 2.1 para evitar bugs de accesibilidad en SonarQube.
+
+### Regla 1: Elementos Clickeables SIEMPRE con Teclado
+
+**Problema SonarQube**: `jsx-a11y/click-events-have-key-events`, `jsx-a11y/no-static-element-interactions`
+
+❌ **INCORRECTO**:
+```tsx
+<div onClick={handleClick}>
+  Clickeame
+</div>
+```
+
+✅ **CORRECTO**:
+```tsx
+<div
+  role="button"
+  tabIndex={0}
+  onClick={handleClick}
+  onKeyDown={(e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      handleClick();
+    }
+  }}
+>
+  Clickeame
+</div>
+```
+
+### Regla 2: Elementos Interactivos DEBEN Tener Role y TabIndex
+
+**Problema SonarQube**: `jsx-a11y/interactive-supports-focus`
+
+❌ **INCORRECTO**:
+```tsx
+<span onClick={handleDelete}>🗑️</span>
+```
+
+✅ **CORRECTO**:
+```tsx
+<span
+  role="button"
+  tabIndex={0}
+  aria-label="Eliminar elemento"
+  onClick={handleDelete}
+  onKeyDown={(e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      handleDelete();
+    }
+  }}
+>
+  🗑️
+</span>
+```
+
+### Regla 3: Imágenes SIEMPRE con Alt Text
+
+❌ **INCORRECTO**:
+```tsx
+<img src={course.imageUrl} />
+```
+
+✅ **CORRECTO**:
+```tsx
+<img src={course.imageUrl} alt={`Imagen del curso ${course.title}`} />
+```
+
+### Regla 4: Links DEBEN Tener Contenido Significativo
+
+❌ **INCORRECTO**:
+```tsx
+<a href={url}>Haz click aquí</a>
+```
+
+✅ **CORRECTO**:
+```tsx
+<a href={url}>Ver detalles del curso {courseName}</a>
+```
+
+### Checklist de Accesibilidad Pre-Commit
+
+Antes de hacer commit, verifica:
+
+- [ ] Todos los `onClick` tienen `onKeyDown` con Enter/Space
+- [ ] Elementos clickeables tienen `role="button"` y `tabIndex={0}`
+- [ ] Imágenes tienen `alt` descriptivo (NO vacío)
+- [ ] Links tienen texto descriptivo (NO "click aquí")
+- [ ] Formularios tienen `label` asociados con `htmlFor`
+- [ ] Botones tienen texto o `aria-label`
+
+---
+
+## Reglas de SonarQube
+
+### Categorías de Issues
+
+1. **Reliability (Bugs)**: Código que causará errores en runtime
+2. **Maintainability (Code Smells)**: Deuda técnica, código difícil de mantener
+3. **Security (Vulnerabilities)**: Vulnerabilidades confirmadas
+4. **Security Hotspots**: Código que requiere revisión manual
+
+### Reglas Críticas de Frontend
+
+#### typescript:S6544 - Promise en condicionales sin await
+
+❌ **INCORRECTO**:
+```tsx
+if (fetchUser()) {  // Promise<User> se evalúa siempre a truthy
+  // ...
+}
+```
+
+✅ **CORRECTO**:
+```tsx
+const user = await fetchUser();
+if (user) {
+  // ...
+}
+```
+
+#### typescript:S5850 - Precedencia en regex poco clara
+
+❌ **INCORRECTO**:
+```tsx
+const regex = /foo|bar+/;  // ¿foo|(bar+) o (foo|bar)+?
+```
+
+✅ **CORRECTO**:
+```tsx
+const regex = /foo|(bar+)/;  // Explícito con paréntesis
+```
+
+#### typescript:S2068 - Contraseñas hardcodeadas
+
+❌ **INCORRECTO**:
+```tsx
+const apiKey = "sk-1234567890abcdef";
+```
+
+✅ **CORRECTO**:
+```tsx
+const apiKey = import.meta.env.VITE_API_KEY;
+```
+
+### Checklist de Calidad Pre-Commit
+
+Antes de crear PR, verifica:
+
+- [ ] 0 bugs de accesibilidad (onClick sin keyboard)
+- [ ] 0 Promises sin await en condicionales
+- [ ] 0 contraseñas/tokens hardcodeados
+- [ ] 0 regex sin escape de user input
+- [ ] Coverage de tests > 70%
+- [ ] Build exitoso sin warnings TypeScript

@@ -29,9 +29,11 @@ class CertificateService:
             raise NotFoundError("Certificado no encontrado")
         return cert
 
-    async def list_user_certificates(self, user_id: str) -> list[Certificate]:
+    async def list_user_certificates(self, user_id: str, skip: int = 0, limit: int = 50) -> list[Certificate]:
         result = await self.db.execute(
-            select(Certificate).where(Certificate.user_id == user_id).order_by(Certificate.issued_at.desc())
+            select(Certificate).where(Certificate.user_id == user_id)
+            .order_by(Certificate.issued_at.desc())
+            .offset(skip).limit(limit)
         )
         return list(result.scalars().all())
 
@@ -49,7 +51,7 @@ class CertificateService:
         enrollment = enrollment_result.scalar_one_or_none()
         if not enrollment:
             raise ValidationError("No estas inscrito en este curso")
-        if enrollment.progress < 100.0:
+        if enrollment.progress < 100:
             raise ValidationError("Debes completar el curso al 100% para obtener el certificado")
 
         verification_code = f"CERT-{secrets.token_hex(8).upper()}"
@@ -57,7 +59,6 @@ class CertificateService:
             user_id=user_id,
             course_id=course_id,
             verification_code=verification_code,
-            issued=True,
         )
         self.db.add(cert)
         await self.db.flush()

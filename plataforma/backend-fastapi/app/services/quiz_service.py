@@ -1,4 +1,5 @@
 import json
+from datetime import datetime, timezone
 
 import structlog
 from sqlalchemy import func, select
@@ -6,8 +7,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.middleware.error_handler import NotFoundError, ValidationError
-from app.models.assessment import Question, Quiz
+from app.models.assessment import Question, Quiz, QuizAttempt
 from app.models.progress import UserProgress
+from app.services.scoring import calculate_quiz_score
 
 logger = structlog.get_logger()
 
@@ -60,76 +62,19 @@ class QuizService:
         logger.info("quiz_deleted", quiz_id=quiz_id)
 
     async def submit_attempt(self, quiz_id: str, user_id: str, answers: dict[str, str]) -> dict:
-        from app.models.assessment import QuizAttempt
         quiz = await self.get_by_id(quiz_id)
+        attempt_number = await self._check_attempts_limit(quiz_id, user_id, quiz.attempts)
 
-        # Count previous attempts from QuizAttempt table
-        attempt_count_result = await self.db.execute(
-            select(func.count()).select_from(QuizAttempt).where(
-                QuizAttempt.quiz_id == quiz_id,
-                QuizAttempt.user_id == user_id,
-            )
-        )
-        current_attempts = attempt_count_result.scalar() or 0
-
-        if current_attempts >= quiz.attempts:
-            raise ValidationError(f"Has alcanzado el maximo de intentos ({quiz.attempts})")
-
-        total_questions = len(quiz.questions)
-        correct_count = 0
-
-        for question in quiz.questions:
-            user_answer = answers.get(question.id, "").strip().lower()
-            correct = question.correct_answer
-            opts = question.options if isinstance(question.options, list) else []
-
-            if isinstance(correct, int):
-                # correct_answer is an index into options list
-                if 0 <= correct < len(opts):
-                    correct_text = str(opts[correct]).strip().lower()
-                    if user_answer == correct_text:
-                        correct_count += 1
-            elif isinstance(correct, str):
-                # Try direct string match first
-                if user_answer == correct.strip().lower():
-                    correct_count += 1
-                # Also try as index string (e.g., "1")
-                elif correct.isdigit():
-                    idx = int(correct)
-                    if 0 <= idx < len(opts) and user_answer == str(opts[idx]).strip().lower():
-                        correct_count += 1
-            elif isinstance(correct, dict):
-                answer_val = correct.get("value", correct)
-                if user_answer == str(answer_val).strip().lower():
-                    correct_count += 1
-            elif isinstance(correct, list):
-                user_list = answers.get(question.id)
-                if isinstance(user_list, list) and sorted(str(a).lower() for a in user_list) == sorted(str(e).lower() for e in correct):
-                    correct_count += 1
-
+        correct_count, total_questions = calculate_quiz_score(quiz.questions, answers)
         score = round((correct_count / total_questions) * 100) if total_questions > 0 else 0
         passed = score >= quiz.passing_score
-        attempt_number = current_attempts + 1
 
-        # Store attempt in QuizAttempt
-        from datetime import datetime, timezone
-        attempt = QuizAttempt(
-            quiz_id=quiz_id,
-            user_id=user_id,
-            answers=answers,
-            score=score,
-            passed=passed,
-            started_at=datetime.now(timezone.utc),
-            completed_at=datetime.now(timezone.utc),
-        )
-        self.db.add(attempt)
-        await self.db.flush()
+        await self._store_attempt(quiz_id, user_id, answers, score, passed)
 
-        # Recalculate progress if passed
         if passed:
             from app.services.progress_service import ProgressService
             ps = ProgressService(self.db)
-            await ps._recalculate_course_progress(user_id, quiz.module_id)
+            await ps.recalculate_course_progress(user_id, quiz.module_id)
 
         return {
             "score": score,
@@ -139,6 +84,25 @@ class QuizService:
             "attemptNumber": attempt_number,
             "maxAttempts": quiz.attempts,
         }
+
+    async def _check_attempts_limit(self, quiz_id: str, user_id: str, max_attempts: int) -> int:
+        count_result = await self.db.execute(
+            select(func.count()).select_from(QuizAttempt).where(
+                QuizAttempt.quiz_id == quiz_id, QuizAttempt.user_id == user_id,
+            )
+        )
+        current = count_result.scalar() or 0
+        if current >= max_attempts:
+            raise ValidationError(f"Has alcanzado el maximo de intentos ({max_attempts})")
+        return current + 1
+
+    async def _store_attempt(self, quiz_id: str, user_id: str, answers: dict, score: int, passed: bool) -> None:
+        attempt = QuizAttempt(
+            quiz_id=quiz_id, user_id=user_id, answers=answers, score=score, passed=passed,
+            started_at=datetime.now(timezone.utc), completed_at=datetime.now(timezone.utc),
+        )
+        self.db.add(attempt)
+        await self.db.flush()
 
     async def add_question(self, quiz_id: str, data: dict) -> Question:
         await self.get_by_id(quiz_id, load_questions=False)

@@ -1,0 +1,78 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Test Database
+  postgres-test:
+    image: postgres:15-alpine
+    container_name: ciber-postgres-test
+    ports:
+      - "5435:5432"
+    environment:
+      POSTGRES_DB: ciber_platform_test
+      POSTGRES_USER: test_user
+      POSTGRES_PASSWORD: test_password
+    volumes:
+      - postgres-test-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test_user -d ciber_platform_test"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - ciber-test-network
+
+  # Redis Test Instance
+  redis-test:
+    image: redis:7-alpine
+    container_name: ciber-redis-test
+    ports:
+      - "6382:6379"
+    command: redis-server --requirepass test_password --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "test_password", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - ciber-test-network
+
+  # MinIO Test Storage (for file uploads)
+  minio-test:
+    image: minio/minio:latest
+    container_name: ciber-minio-test
+    ports:
+      - "9001:9000"
+      - "9002:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio-test-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - ciber-test-network
+
+  # Docker-in-Docker for Code Executor Tests
+  dind:
+    image: docker:dind
+    container_name: ciber-dind-test
+    privileged: true
+    environment:
+      DOCKER_TLS_CERTDIR: ""
+    ports:
+      - "2376:2375"
+    networks:
+      - ciber-test-network
+
+volumes:
+  postgres-test-data:
+  minio-test-data:
+
+networks:
+  ciber-test-network:
+    driver: bridge

@@ -54,42 +54,6 @@ export const validateRequest = (schema: ZodSchema) => {
 };
 
 /**
- * Sanitize request body
- * Removes potentially dangerous content
- */
-export const sanitizeRequest = (req: Request, res: Response, next: NextFunction) => {
-  if (req.body && typeof req.body === 'object') {
-    // Remove common XSS vectors if present in strings
-    const sanitize = (obj: any): any => {
-      if (typeof obj === 'string') {
-        // Basic sanitization - remove script tags and javascript: protocols
-        return obj
-          .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-          .replace(/javascript:/gi, '');
-      }
-
-      if (Array.isArray(obj)) {
-        return obj.map(sanitize);
-      }
-
-      if (typeof obj === 'object' && obj !== null) {
-        const sanitized: any = {};
-        for (const key in obj) {
-          sanitized[key] = sanitize(obj[key]);
-        }
-        return sanitized;
-      }
-
-      return obj;
-    };
-
-    req.body = sanitize(req.body);
-  }
-
-  next();
-};
-
-/**
  * Request size limiter
  * Ensures request payload is not too large
  */

@@ -17,7 +17,7 @@ const configSchema = z.object({
   SANDBOX_NETWORK_DISABLED: z
     .string()
     .transform((val) => val === 'true')
-    .default('false'),
+    .default('true'),
   SANDBOX_IMAGE: z.string().default('ciber-sandbox:latest'),
 
   // Redis Configuration
@@ -25,7 +25,11 @@ const configSchema = z.object({
 
   // Rate Limiting
   RATE_LIMIT_WINDOW_MS: z.string().transform(Number).default('60000'),
-  RATE_LIMIT_MAX_REQUESTS: z.string().transform(Number).default('5'),
+  RATE_LIMIT_MAX_REQUESTS: z
+    .string()
+    .transform(Number)
+    .default('5')
+    .refine((n) => n <= 50, 'RATE_LIMIT_MAX_REQUESTS no debe exceder 50'),
 
   // Docker Configuration
   DOCKER_SOCKET_PATH: z.string().default('/var/run/docker.sock'),

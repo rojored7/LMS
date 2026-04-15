@@ -1,10 +1,15 @@
+import enum
+import math
+
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
+import structlog
 
 from app.database import get_db
 from app.middleware.auth import require_admin
 from app.models.user import User, UserRole
+from app.schemas.admin import AdminEnrollmentResponse, AdminUserWithEnrollments
 from app.schemas.common import ApiResponse, PaginationMeta
 from app.schemas.user import UserResponse
 from app.services.admin_service import AdminService
@@ -14,13 +19,16 @@ from app.services.user_service import UserService
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
 
+logger = structlog.get_logger()
+
+
 class RoleUpdateRequest(BaseModel):
-    role: str
+    role: UserRole
 
 
 class BulkRoleRequest(BaseModel):
     user_ids: list[str]
-    role: str
+    role: UserRole
 
 
 class AssignCourseRequest(BaseModel):
@@ -54,7 +62,6 @@ async def list_users(
     service = UserService(db)
     users_list, total = await service.get_all_users(page=page, limit=limit, role=role, search=search)
     users = [_serialize_user(u) for u in users_list]
-    import math
     pages = math.ceil(total / limit) if limit > 0 else 1
     return ApiResponse(
         success=True,
@@ -81,14 +88,9 @@ async def update_user_role(
     admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
-    if body.role not in [r.value for r in UserRole]:
-        return ApiResponse(
-            success=False,
-            error={"code": "VALIDATION_ERROR", "message": f"Rol invalido. Valores validos: {[r.value for r in UserRole]}"},
-        ).model_dump()
-
     service = UserService(db)
-    updated = await service.update_user_role(user_id, body.role, admin.role)
+    updated = await service.update_user_role(user_id, body.role.value, admin.role)
+    logger.info("admin_role_updated", target_user_id=user_id, new_role=body.role.value, admin_id=admin.id)
     return ApiResponse(success=True, data=_serialize_user(updated)).model_dump()
 
 
@@ -105,6 +107,7 @@ async def delete_user(
         ).model_dump()
     service = UserService(db)
     await service.delete_user(user_id)
+    logger.info("admin_user_deleted", target_user_id=user_id, admin_id=admin.id)
     return ApiResponse(success=True, data={"message": "Usuario eliminado"}).model_dump()
 
 
@@ -114,14 +117,9 @@ async def bulk_update_role(
     admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
-    if body.role not in [r.value for r in UserRole]:
-        return ApiResponse(
-            success=False,
-            error={"code": "VALIDATION_ERROR", "message": "Rol invalido"},
-        ).model_dump()
-
     service = AdminService(db)
-    count = await service.bulk_update_role(body.user_ids, body.role)
+    count = await service.bulk_update_role(body.user_ids, body.role.value)
+    logger.info("admin_bulk_role_updated", count=count, new_role=body.role.value, admin_id=admin.id)
     return ApiResponse(success=True, data={"updated": count}).model_dump()
 
 
@@ -146,31 +144,16 @@ async def get_user_enrollments(
     user = await user_service.get_user_by_id(user_id)
     course_service = CourseService(db)
     enrollments = await course_service.get_user_enrollments(user_id)
-    enrollment_data = []
-    for e in enrollments:
-        enrollment_data.append({
-            "id": e.id,
-            "enrolledAt": e.enrolled_at.isoformat() if e.enrolled_at else None,
-            "completedAt": e.completed_at.isoformat() if e.completed_at else None,
-            "progress": e.progress or 0,
-            "course": {
-                "id": e.course.id,
-                "slug": e.course.slug,
-                "title": e.course.title,
-                "thumbnail": None,
-                "level": e.course.level.value if hasattr(e.course.level, "value") else str(e.course.level),
-                "duration": e.course.duration or 0,
-            } if e.course else None,
-        })
-    data = {
-        "id": user.id,
-        "email": user.email,
-        "name": user.name,
-        "role": user.role.value if hasattr(user.role, "value") else str(user.role),
-        "avatar": user.avatar,
-        "createdAt": user.created_at.isoformat() if user.created_at else None,
-        "enrollments": enrollment_data,
-    }
+    enrollment_data = [AdminEnrollmentResponse.model_validate(e).model_dump() for e in enrollments]
+    data = AdminUserWithEnrollments(
+        id=user.id,
+        email=user.email,
+        name=user.name,
+        role=user.role.value if isinstance(user.role, enum.Enum) else str(user.role),
+        avatar=user.avatar,
+        created_at=user.created_at,
+        enrollments=enrollment_data,
+    ).model_dump()
     return ApiResponse(success=True, data=data).model_dump()
 
 
@@ -182,20 +165,7 @@ async def assign_course_to_user(
 ):
     course_service = CourseService(db)
     enrollment, created = await course_service.enroll_user(body.userId, body.courseId)
-    data = {
-        "id": enrollment.id,
-        "enrolledAt": enrollment.enrolled_at.isoformat() if enrollment.enrolled_at else None,
-        "completedAt": enrollment.completed_at.isoformat() if enrollment.completed_at else None,
-        "progress": enrollment.progress or 0,
-        "course": {
-            "id": enrollment.course.id,
-            "slug": enrollment.course.slug,
-            "title": enrollment.course.title,
-            "thumbnail": None,
-            "level": enrollment.course.level.value if hasattr(enrollment.course.level, "value") else str(enrollment.course.level),
-            "duration": enrollment.course.duration or 0,
-        } if enrollment.course else None,
-    }
+    data = AdminEnrollmentResponse.model_validate(enrollment).model_dump()
     return ApiResponse(success=True, data={"enrollment": data}).model_dump()
 
 

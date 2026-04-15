@@ -6,77 +6,69 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Purpose**: Multi-course cybersecurity learning management system (LMS) with executable code labs, multi-profile training paths, and automated evaluation.
 
-**Stack**: Node.js 20 + TypeScript 5, Express 4, React 18, Prisma ORM, PostgreSQL 15, Redis 7, Docker
+**Stack**: Python 3.12, FastAPI, SQLAlchemy 2.0 async, React 18, PostgreSQL 15, Redis 7, Docker
 
 **Type**: Microservices web platform (Backend API + Frontend SPA + Code Executor)
 
 ## 2. ARCHITECTURE PATTERNS
 
 **Pattern**: Three-tier microservices with shared database
-- Backend: Express REST API with layered architecture (routes → controllers → services → Prisma)
+- Backend: FastAPI REST API with layered architecture (routers → services → SQLAlchemy models)
 - Frontend: React SPA with component-based architecture (pages → components → hooks → services)
 - Executor: Isolated Docker-based code execution service
 
 **Entry Points**:
-- Backend: `plataforma/backend/src/server.ts`
+- Backend: `plataforma/backend-fastapi/app/main.py`
 - Frontend: `plataforma/frontend/src/main.tsx`
 - Executor: `plataforma/executor/src/server.ts`
 
 **Core Packages**:
 - Public API: `/api/auth`, `/api/courses`, `/api/users` (REST endpoints)
-- Internal: `src/services/*` (business logic), `src/middleware/*` (auth, validation)
-- Generated: `prisma/migrations/*`, `node_modules/*` (DO NOT MODIFY)
+- Internal: `app/services/*` (business logic), `app/middleware/*` (auth, validation)
+- Generated: `alembic/versions/*`, `node_modules/*` (DO NOT MODIFY)
 
 ## 3. DETECTED CONVENTIONS
 
 **Code Language**: Spanish in comments and UI strings, English for variable/function names (Mixed)
 
 **Naming Patterns**:
-- Files: kebab-case (`auth.service.ts`, `course.controller.ts`)
-- TypeScript: PascalCase for types/interfaces, camelCase for functions/variables
-- Routes: REST convention (`/api/courses/:id/enroll`)
-- Database: snake_case for Prisma schema fields, camelCase in TypeScript
+- Backend Python: snake_case for modules and functions (`auth_service.py`, `get_current_user`)
+- Backend Classes/Enums: PascalCase (`UserRole`, `CourseService`)
+- Frontend TypeScript: PascalCase for types/components, camelCase for functions
+- Routes: REST convention (`/api/courses/{id}/enroll`)
+- Database: snake_case (`users`, `refresh_tokens`)
 
 **Test Pattern**:
-- Backend: Jest with `__tests__/` directory structure (44+ test files)
+- Backend: pytest with `backend-fastapi/tests/` directory
 - Frontend: Vitest + React Testing Library (5 test files)
-- E2E: Playwright (15 test specs implemented in /e2e)
-- Test files: `*.test.ts` or `*.spec.ts`
+- E2E: Playwright (15 test specs in /e2e)
+- Test files: `test_*.py` (backend), `*.test.tsx` (frontend)
 
 ## 4. HIDDEN COMPLEXITY
 
-**Critical Middleware Chain (Backend)**:
-- Global error handlers registered BEFORE routes: `handleUncaughtException()`, `handleUnhandledRejection()`
-- Request flow: helmet → cors → compression → requestLogger → rateLimit → routes → errorHandler → notFoundHandler
-- Authentication: Two middleware types exist:
-  - `authenticate`: Required auth, throws 401 if no token
-  - `optionalAuth`: Optional auth, validates token if present but doesn't throw error
+**Middleware Chain (Backend FastAPI)**:
+- FastAPI lifespan events handle startup/shutdown (database pool, Redis)
+- Middleware stack: CORS → SecurityHeaders → SlowAPI rate limiter → error handler
+- Authentication via FastAPI dependencies:
+  - `get_current_user`: Required auth, raises 401 if no token
+  - `get_optional_user`: Optional auth, returns None if no token
 
-**Route Resolution Order (CRITICAL)**:
-- Specific routes MUST come before generic `:param` routes
-- Example: `/enrolled` must be registered before `/:idOrSlug` or it will be interpreted as ID
-
-**Prisma Connection Management**:
-- Singleton pattern in `utils/prisma.ts` - do NOT create new PrismaClient instances
-- Connection checked on startup, graceful shutdown on SIGTERM/SIGINT
-- Database connection pooling handled automatically by Prisma
+**SQLAlchemy Connection Management**:
+- Async engine with asyncpg in `app/database.py`
+- Session factory via `get_db` FastAPI dependency
+- Connection pool size 10, max overflow 20
+- Lifespan handles graceful shutdown
 
 **Redis Connection**:
-- Singleton in `utils/redis.ts`
-- Used for: JWT token blacklist, session storage, caching
-- Must configure password via `REDIS_PASSWORD` env var
+- Async redis client singleton in `app/main.py` lifespan
+- Used for: JWT token blacklist, rate limiting
+- Must configure via `REDIS_URL` env var
 
 **JWT Token Flow**:
-- Access token: 15 minutes expiry (configured via `JWT_EXPIRES_IN` in .env)
+- Access token: 15 minutes expiry (configured via `JWT_EXPIRES_IN_MINUTES` in .env)
 - Refresh token: 7 days expiry, stored in database `refresh_tokens` table
 - Token blacklist in Redis for logout/revocation
 - Automatic token refresh via `/api/auth/refresh` endpoint
-
-**Socket.IO Real-Time Features**:
-- WebSocket integration in `backend/src/server.ts` and `backend/src/sockets/chat.socket.ts`
-- Real-time chat messaging with room-based conversations
-- Course-specific chat rooms for collaborative learning
-- Connected on port 4000 alongside REST API
 
 **Docker Executor Security**:
 - Each code execution creates ephemeral Docker container
@@ -87,12 +79,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Configuration Loading Order**:
 1. Environment variables from `.env` file
 2. Docker Compose environment overrides
-3. Default values in `src/config/index.ts`
-4. Zod schema validation on startup
+3. Pydantic Settings in `backend-fastapi/app/config.py`
+4. Validation via Pydantic field validators on startup
 
 ## 5. BUSINESS RULES
 
-**Main Entities** (25 Prisma models + 6 enums):
+**Main Entities** (24 SQLAlchemy models + 6 enums):
 - **User**: Three roles (ADMIN, INSTRUCTOR, STUDENT), each with different permissions
 - **Course**: Published/unpublished state, supports slug or ID for lookups
 - **TrainingProfile**: Multi-profile training paths with course associations
@@ -115,9 +107,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
    - Enrollment requires authentication, accepts courseId or slug
 
 2. **Content Seed → Database Import**:
-   - Entry: `npm run seed:curso` in backend container
-   - Reads Markdown course structure from root `01_Fundamentos_*` folders
-   - Imports to Prisma via `seed-ciberseguridad.ts`
+   - Entry: `python -m app.scripts.seed_base` in backend container
+   - Course import via ZIP upload or content-importer service
+   - Imports to SQLAlchemy via `db_importer.py`
 
 3. **Code Lab Execution**:
    - Entry: `POST /execute` on executor service
@@ -140,60 +132,52 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## 6. DEVELOPMENT CONSTRAINTS
 
 **Database Migrations**:
-- NEVER edit `prisma/migrations/*` directly
-- Changes go through: edit `schema.prisma` → `npm run migrate` → commit both
-- Schema changes require container rebuild or manual `prisma generate`
+- NEVER edit `alembic/versions/*` directly
+- Changes go through: edit SQLAlchemy models → `alembic revision --autogenerate -m "desc"` → `alembic upgrade head`
 
 **Security Hardening**:
-- JWT secrets MUST be 32+ characters (enforced by Zod schema)
-- CORS origins configured via `CORS_ORIGIN` env var (comma-separated)
-- Rate limiting: 100 requests per 15 minutes per IP on `/api/` routes
-- Helmet CSP: Allows `unsafe-inline` for styles only
+- JWT secrets MUST be 32+ characters (enforced by Pydantic validators)
+- CORS origins configured via `CORS_ORIGINS` env var (JSON array)
+- Rate limiting: slowapi with global middleware
+- Security headers via custom FastAPI middleware
 
 **Generated Code Paths**:
-- `node_modules/` (npm dependencies)
-- `dist/` (TypeScript compilation output)
-- `.prisma/client/` (Prisma generated types)
-- Backend: Generated on `npm install` and `prisma generate`
+- `alembic/versions/` (migration files)
+- `node_modules/` (frontend/executor dependencies)
+- `__pycache__/` (Python bytecode)
 
 **Docker Development Mode**:
-- Backend/Frontend use volume mounts for hot reload (nodemon/Vite HMR)
-- Changes to `src/` auto-reload, changes to `package.json` require rebuild
-- Production mode: Multi-stage build with compiled assets only
-
-**TypeScript Configuration**:
-- Backend: `--transpileOnly` flag used in dev to skip type checking for speed
-- Strict mode enabled, but uses `as any` escape hatch in `prisma.ts` for complex types
-- Custom types extend Express Request via `src/types/express.d.ts`
+- Backend uses volume mounts for hot reload (uvicorn --reload)
+- Frontend uses Vite HMR
+- Changes to `app/` auto-reload, changes to `pyproject.toml` require rebuild
 
 ## 7. QUICK REFERENCE
 
 **Entry Points**:
-- Backend: `/plataforma/backend/src/server.ts`
+- Backend: `/plataforma/backend-fastapi/app/main.py`
 - Frontend: `/plataforma/frontend/src/main.tsx`
 - Executor: `/plataforma/executor/src/server.ts`
 
 **Configuration**:
 - Environment: `/plataforma/.env` (copy from `.env.example`)
-- Backend Config: `/plataforma/backend/src/config/index.ts`
-- Prisma Schema: `/plataforma/backend/prisma/schema.prisma`
+- Backend Config: `/plataforma/backend-fastapi/app/config.py`
+- Database Models: `/plataforma/backend-fastapi/app/models/`
 - Docker Services: `/plataforma/docker-compose.yml`
 
 **Scripts**:
 - Start platform: `docker-compose up -d` (or `make start`)
-- Seed course: `docker exec ciber-backend npm run seed:curso`
-- Migrations: `docker exec ciber-backend npm run migrate`
-- Backend tests: `docker exec ciber-backend npm test`
+- Seed base data: `docker exec ciber-backend python -m app.scripts.seed_base`
+- Migrations: `docker exec ciber-backend alembic upgrade head`
+- Backend tests: `docker exec ciber-backend pytest`
 - Logs: `docker logs ciber-backend --tail 50`
 
 **Key Directories**:
-- Backend routes: `/plataforma/backend/src/routes/`
-- Backend services: `/plataforma/backend/src/services/`
-- Backend middleware: `/plataforma/backend/src/middleware/`
+- Backend routers: `/plataforma/backend-fastapi/app/routers/`
+- Backend services: `/plataforma/backend-fastapi/app/services/`
+- Backend middleware: `/plataforma/backend-fastapi/app/middleware/`
 - Frontend pages: `/plataforma/frontend/src/pages/`
 - Frontend components: `/plataforma/frontend/src/components/`
-- Database seeds: `/plataforma/backend/prisma/seed*.ts`
-- Course content: Root level `01_Fundamentos_*` to `09_Proyecto_Final/`
+- Database seeds: `/plataforma/backend-fastapi/app/scripts/`
 
 ## 8. COMMON DEVELOPMENT TASKS
 
@@ -215,13 +199,13 @@ docker exec -it ciber-backend sh
 **Database Operations**:
 ```bash
 # Run migrations
-docker exec ciber-backend npx prisma migrate dev
+docker exec ciber-backend alembic upgrade head
 
-# Reset database (WARNING: deletes all data)
-docker exec ciber-backend npx prisma migrate reset
+# Create new migration
+docker exec ciber-backend alembic revision --autogenerate -m "description"
 
-# Seed cybersecurity course
-docker exec ciber-backend npm run seed:curso
+# Seed base data
+docker exec ciber-backend python -m app.scripts.seed_base
 
 # Access PostgreSQL shell
 docker exec -it ciber-postgres psql -U ciber_admin -d ciber_platform
@@ -230,13 +214,13 @@ docker exec -it ciber-postgres psql -U ciber_admin -d ciber_platform
 **Testing**:
 ```bash
 # Backend tests
-docker exec ciber-backend npm test
+docker exec ciber-backend pytest
 
 # Frontend tests (from host)
 cd plataforma/frontend && npm test
 
 # Test coverage
-docker exec ciber-backend npm run test:coverage
+docker exec ciber-backend pytest --cov=app
 
 # E2E tests with Playwright (via MCP)
 # Use mcp__playwright__* tools for interactive testing
@@ -255,37 +239,35 @@ rm -f *.png
 
 **Adding New Features**:
 1. **New API Endpoint**:
-   - Create service in `src/services/*.service.ts`
-   - Create controller in `src/controllers/*.controller.ts`
-   - Add routes in `src/routes/*.routes.ts`
-   - Register routes in `src/server.ts`
-   - Copy files to container: `docker cp` or rebuild
+   - Create service in `backend-fastapi/app/services/`
+   - Create router in `backend-fastapi/app/routers/`
+   - Register router in `backend-fastapi/app/main.py`
+   - Add auth dependencies as needed
 
 2. **Database Schema Change**:
-   - Edit `prisma/schema.prisma`
-   - Run: `docker exec ciber-backend npx prisma migrate dev --name description`
-   - Prisma auto-generates migration SQL and TypeScript types
+   - Edit SQLAlchemy models in `backend-fastapi/app/models/`
+   - Run: `alembic revision --autogenerate -m "description"` then `alembic upgrade head`
 
 3. **Frontend Page**:
-   - Create page component in `src/pages/`
-   - Add route in `src/App.tsx`
-   - Create API service in `src/services/api/`
+   - Create page component in `frontend/src/pages/`
+   - Add route in `frontend/src/App.tsx`
+   - Create API service in `frontend/src/services/api/`
    - Use Zustand store for state management
 
 **Port Configuration**:
 - Frontend: 3000 (Vite dev server)
-- Backend: 4000 (Express API)
+- Backend: 4000 (FastAPI/uvicorn)
 - Executor: 5000 (Code execution service)
-- PostgreSQL: 5433 (host) → 5432 (container)
-- Redis: 6380 (host) → 6379 (container)
+- PostgreSQL: 5433 (host) -> 5432 (container)
+- Redis: 6380 (host) -> 6379 (container)
 - Nginx: 80 (reverse proxy)
 
 **Important Notes**:
-- Backend uses nodemon for auto-reload, changes to `src/` reflect immediately
+- Backend uses uvicorn --reload for hot reload
 - Frontend uses Vite HMR, changes reflect in <1 second
-- Changes to `package.json` or `Dockerfile` require: `docker-compose up -d --build <service>`
+- Changes to `pyproject.toml` or `Dockerfile` require: `docker-compose up -d --build <service>`
 - JWT tokens expire after 15 minutes; frontend auto-refreshes via `/api/auth/refresh`
-- Course enrollment is idempotent: duplicate enrollment returns 200 with existing record (not 500 error)
+- Course enrollment is idempotent: duplicate enrollment returns 200 with existing record
 
 ## 9. ADVANCED FEATURES
 

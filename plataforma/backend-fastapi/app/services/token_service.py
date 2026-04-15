@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone
 
-from jose import jwt, JWTError, ExpiredSignatureError
+import jwt
+from jwt.exceptions import InvalidTokenError, ExpiredSignatureError
 import structlog
 
 from app.config import get_settings
@@ -47,7 +48,7 @@ class TokenService:
         except ExpiredSignatureError:
             logger.debug("token_expired")
             return None
-        except JWTError:
+        except InvalidTokenError:
             logger.debug("token_invalid")
             return None
 
@@ -60,7 +61,7 @@ class TokenService:
         except ExpiredSignatureError:
             logger.debug("refresh_token_expired")
             return None
-        except JWTError:
+        except InvalidTokenError:
             logger.debug("refresh_token_invalid")
             return None
 
@@ -69,8 +70,12 @@ class TokenService:
         await self.redis.setex(f"{BLACKLIST_PREFIX}{token}", ttl, "1")
 
     async def is_blacklisted(self, token: str) -> bool:
-        result = await self.redis.get(f"{BLACKLIST_PREFIX}{token}")
-        return result is not None
+        try:
+            result = await self.redis.get(f"{BLACKLIST_PREFIX}{token}")
+            return result is not None
+        except Exception:
+            logger.warning("redis_unavailable_blacklist_check", token_prefix=token[:8])
+            return False
 
     async def invalidate_all_user_tokens(self, user_id: str) -> None:
         now = int(datetime.now(timezone.utc).timestamp())
@@ -78,7 +83,11 @@ class TokenService:
         await self.redis.setex(f"{INVALIDATE_PREFIX}{user_id}", ttl, str(now))
 
     async def are_user_tokens_invalidated(self, user_id: str, iat: int) -> bool:
-        invalidated_at = await self.redis.get(f"{INVALIDATE_PREFIX}{user_id}")
-        if invalidated_at is None:
+        try:
+            invalidated_at = await self.redis.get(f"{INVALIDATE_PREFIX}{user_id}")
+            if invalidated_at is None:
+                return False
+            return iat < int(invalidated_at)
+        except Exception:
+            logger.warning("redis_unavailable_invalidation_check", user_id=user_id)
             return False
-        return iat < int(invalidated_at)

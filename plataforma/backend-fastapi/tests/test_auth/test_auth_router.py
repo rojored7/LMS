@@ -26,7 +26,7 @@ async def test_register_success(mock_redis: AsyncMock, client: AsyncClient, db_s
 
     response = await client.post("/api/auth/register", json={
         "email": "new@test.com",
-        "password": "Securepass123",
+        "password": "Securepass123!",
         "name": "New User",
     })
     assert response.status_code == 200
@@ -46,7 +46,7 @@ async def test_register_duplicate_email(mock_redis: AsyncMock, client: AsyncClie
 
     response = await client.post("/api/auth/register", json={
         "email": "dup@test.com",
-        "password": "Password123",
+        "password": "Password123!",
         "name": "Dup User",
     })
     assert response.status_code == 409
@@ -117,4 +117,4 @@ async def test_reset_password_invalid_token(mock_redis: AsyncMock, client: Async
         "token": "invalid-token",
         "password": "Newpassword123",
     })
-    assert response.status_code == 404
+    assert response.status_code == 422

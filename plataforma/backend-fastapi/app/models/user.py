@@ -1,6 +1,5 @@
 import enum
 from datetime import datetime, timezone
-from uuid import uuid4
 
 from sqlalchemy import Boolean, DateTime, Index, Integer, String, Text
 from sqlalchemy import Enum as SAEnum
@@ -8,14 +7,7 @@ from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
-
-
-def _gen_id() -> str:
-    return uuid4().hex
-
-
-def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+from app.models.common import gen_id as _gen_id, utcnow as _utcnow
 
 
 class UserRole(str, enum.Enum):
@@ -46,6 +38,7 @@ class User(Base):
     user_badges: Mapped[list["UserBadge"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     notifications: Mapped[list["Notification"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     certificates: Mapped[list["Certificate"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    # TODO: Implementar servicio de chat - migrar desde Socket.IO Express
     chat_messages: Mapped[list["ChatMessage"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     user_progress: Mapped[list["UserProgress"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     training_profile: Mapped["TrainingProfile | None"] = relationship(back_populates="users")
@@ -61,6 +54,7 @@ class TrainingProfile(Base):
     description: Mapped[str] = mapped_column(Text, nullable=False)
     icon: Mapped[str | None] = mapped_column(String(100), nullable=True)
     color: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
     users: Mapped[list[User]] = relationship(back_populates="training_profile")
     course_profiles: Mapped[list["CourseProfile"]] = relationship(back_populates="profile")
 

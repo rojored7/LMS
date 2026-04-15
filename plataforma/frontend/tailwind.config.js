@@ -46,7 +46,7 @@ export default {
         mono: ['Fira Code', 'Monaco', 'Courier New', 'monospace'],
       },
       borderRadius: {
-        'itac': '12px',
+        itac: '12px',
       },
       animation: {
         'fade-in': 'fadeIn 0.3s ease-in',

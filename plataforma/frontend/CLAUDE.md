@@ -38,16 +38,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 4. HIDDEN COMPLEXITY
 
-**Axios Interceptor Chain (CRITICAL)**:
-- Request interceptor (src/services/api.ts:24): Auto-injects JWT from localStorage into Authorization header
-- Response interceptor (src/services/api.ts:49): Handles token refresh on 401 errors
+**Axios Client (CRITICAL)**:
+- Configured with `withCredentials: true` in src/services/api.ts - sends HttpOnly cookies automatically
+- NO request interceptor for token injection (tokens are in cookies, not headers)
+- Response interceptor: returns `response.data` (unwraps envelope), handles 401 with auto-refresh
 - Singleton `refreshTokenPromise` pattern prevents multiple simultaneous refresh calls
-- Token refresh flow: 401 → check `refreshToken` in localStorage → POST /auth/refresh → update `accessToken` → retry original request
-- If refresh fails: clears localStorage, redirects to `/login`, rejects promise
+- Token refresh flow: 401 -> POST /auth/refresh with withCredentials:true (cookie sent automatically) -> retry original request
+- If refresh fails: redirects to `/login`
 
 **Zustand Persistence Middleware**:
 - `authStore` uses `persist()` middleware with localStorage
-- Only persists: `user`, `accessToken`, `refreshToken`, `isAuthenticated` (src/store/authStore.ts:156)
+- Only persists: `user`, `isAuthenticated` (NO tokens - they are in HttpOnly cookies)
 - Actions and transient state (isLoading, error) NOT persisted
 - Key: `auth-storage` in localStorage
 
@@ -87,16 +88,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Toast**: Auto-dismisses after duration, sequential ID from counter (not UUID)
 
 **Critical workflows**:
-1. **Auth Flow**: Login → Store tokens in localStorage + Zustand → Axios interceptor adds to headers → 401 triggers refresh → Refresh fail clears auth
-   - Entry: `src/pages/Login.tsx` → `authStore.login()` → `authService.login()`
+1. **Auth Flow**: Login -> Backend sets HttpOnly cookies -> Axios sends cookies via withCredentials:true -> 401 triggers refresh via cookie -> Refresh fail redirects to /login
+   - Entry: `src/pages/Login.tsx` -> `authStore.login()` -> `authService.login()`
+   - Tokens are NEVER stored in localStorage. Only `user` and `isAuthenticated` are persisted in Zustand.
 2. **Protected Navigation**: Route access → ProtectedRoute checks auth → Checks role → Redirects to /login or /403 if unauthorized
    - Entry: `src/App.tsx` routes with `<ProtectedRoute requiredRoles={[...]}>`
 3. **Course Enrollment**: Enroll button → `courseStore.enrollInCourse()` → Refresh enrolledCourses → Update selectedCourse if viewing same course
    - Entry: `src/pages/CourseDetail.tsx` → `courseStore.enrollInCourse()`
 
 **External integrations**:
-- Backend API via Axios (default: http://localhost:3000/api, configurable via VITE_API_URL)
-- LocalStorage for token persistence and auth state
+- Backend API via Axios with `withCredentials: true` (default: http://localhost:4000/api, configurable via VITE_API_URL)
+- HttpOnly cookies for JWT tokens (set by backend, NOT stored in localStorage)
+- Zustand persist for user profile and isAuthenticated flag only
 - Dark mode via Tailwind `dark:` classes and document.documentElement.classList
 
 **State machines**:

@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { Lab, LabSubmissionResult } from '../../services/api/lab.service';
 import { useSubmitLab } from '../../hooks/useLabs';
 import { CodeEditor } from './CodeEditor';
+import { MarkdownRenderer } from './MarkdownRenderer';
 import { BeakerIcon, PlayIcon } from '@heroicons/react/24/outline';
 
 interface LabExecutorProps {
@@ -57,7 +58,6 @@ export const LabExecutor: React.FC<LabExecutorProps> = ({ lab }) => {
             </div>
             <div>
               <h1 className="text-2xl font-bold">{lab.title}</h1>
-              {lab.description && <p className="mt-1 text-green-100">{lab.description}</p>}
               <div className="mt-2 flex items-center space-x-4 text-sm">
                 <span className="px-3 py-1 bg-white/20 rounded-full font-medium">
                   {lab.language}
@@ -67,6 +67,15 @@ export const LabExecutor: React.FC<LabExecutorProps> = ({ lab }) => {
           </div>
         </div>
       </div>
+
+      {/* Lab Description (Markdown) */}
+      {lab.description && (
+        <div className="px-6 pt-6">
+          <div className="prose prose-sm max-w-none bg-gray-50 rounded-lg p-4 border border-gray-200">
+            <MarkdownRenderer content={lab.description} />
+          </div>
+        </div>
+      )}
 
       {/* Main Content */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6">

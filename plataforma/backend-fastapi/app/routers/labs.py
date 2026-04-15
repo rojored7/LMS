@@ -1,86 +1,56 @@
 from fastapi import APIRouter, Depends, Request
-from pydantic import BaseModel
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.middleware.auth import get_current_user, require_instructor
 from app.middleware.rate_limit import limiter
-from app.models.user import User
-from app.schemas.common import ApiResponse, CamelModel
-from app.services.executor_client import ExecutorClient
+from app.models.course import Module
+from app.models.user import User, UserRole
+from app.schemas.common import ApiResponse
+from app.schemas.lab import (
+    LabCreate,
+    LabResponse,
+    LabResponseStudent,
+    LabUpdate,
+    SubmissionResponse,
+    SubmitCodeRequest,
+)
 from app.services.lab_service import LabService
+from app.utils.enrollment_check import verify_enrollment_or_staff
 
 router = APIRouter(prefix="/api/labs", tags=["labs"])
-
-
-class LabCreate(BaseModel):
-    title: str
-    description: str | None = None
-    starter_code: str | None = None
-    solution: str | None = None
-    tests: dict | None = None
-    hints: list[str] | None = None
-    language: str = "python"
-
-
-class LabUpdate(BaseModel):
-    title: str | None = None
-    description: str | None = None
-    starter_code: str | None = None
-    solution: str | None = None
-    tests: dict | None = None
-    hints: list[str] | None = None
-    language: str | None = None
-
-
-class SubmitCodeRequest(BaseModel):
-    code: str
-
-
-class LabResponse(CamelModel):
-    id: str
-    title: str
-    description: str | None = None
-    language: str = "python"
-    starter_code: str | None = None
-    solution: str | None = None
-    tests: dict | list | None = None
-    hints: list[str] | None = None
-    module_id: str
-
-
-class SubmissionResponse(CamelModel):
-    id: str
-    user_id: str
-    lab_id: str
-    code: str
-    language: str = "python"
-    passed: bool
-    stdout: str | None = None
-    stderr: str | None = None
-    exit_code: int = 0
-    execution_time: int = 0
 
 
 @router.get("/module/{module_id}")
 async def list_labs(
     module_id: str,
+    user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    mod = (await db.execute(select(Module).where(Module.id == module_id))).scalar_one_or_none()
+    if mod:
+        await verify_enrollment_or_staff(db, user.id, mod.course_id, user.role)
     service = LabService(db)
     labs = await service.list_by_module(module_id)
-    data = [LabResponse.model_validate(lab).model_dump() for lab in labs]
+    schema = LabResponse if user.role in (UserRole.ADMIN, UserRole.INSTRUCTOR) else LabResponseStudent
+    data = [schema.model_validate(lab).model_dump() for lab in labs]
     return ApiResponse(success=True, data=data).model_dump()
 
 
 @router.get("/{lab_id}")
 async def get_lab(
     lab_id: str,
+    user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     service = LabService(db)
     lab = await service.get_by_id(lab_id)
-    return ApiResponse(success=True, data=LabResponse.model_validate(lab).model_dump()).model_dump()
+    mod = (await db.execute(select(Module).where(Module.id == lab.module_id))).scalar_one_or_none()
+    if mod:
+        await verify_enrollment_or_staff(db, user.id, mod.course_id, user.role)
+    schema = LabResponse if user.role in (UserRole.ADMIN, UserRole.INSTRUCTOR) else LabResponseStudent
+    return ApiResponse(success=True, data=schema.model_validate(lab).model_dump()).model_dump()
 
 
 @router.post("/module/{module_id}")
@@ -129,11 +99,17 @@ async def submit_lab(
 ):
     lab_service = LabService(db)
     lab = await lab_service.get_by_id(lab_id)
+    mod = (await db.execute(select(Module).where(Module.id == lab.module_id))).scalar_one_or_none()
+    if mod:
+        await verify_enrollment_or_staff(db, user.id, mod.course_id, user.role)
 
-    executor = ExecutorClient()
-    exec_result = await executor.execute_code(
+    import json as _json
+    from app.services.executor_client import executor_client
+    test_code = _json.dumps(lab.tests) if lab.tests else None
+    exec_result = await executor_client.execute_code(
         code=body.code,
         language=lab.language,
+        test_code=test_code,
     )
 
     # Executor wraps results: { success, result: { passed, stdout, stderr, exitCode, executionTime } }

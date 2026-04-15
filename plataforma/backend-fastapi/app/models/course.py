@@ -8,7 +8,7 @@ from sqlalchemy import JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
-from app.models.user import _gen_id, _utcnow
+from app.models.common import gen_id as _gen_id, utcnow as _utcnow
 
 
 class CourseLevel(str, enum.Enum):
@@ -38,6 +38,7 @@ class Course(Base):
     tags: Mapped[list | None] = mapped_column(JSON, nullable=True)
     is_published: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     author: Mapped[str] = mapped_column(String(255), nullable=False)
+    author_id: Mapped[str | None] = mapped_column(String(32), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     version: Mapped[str] = mapped_column(String(20), default="1.0", nullable=False)
     price: Mapped[float] = mapped_column(Numeric(10, 2), default=0.0, nullable=False)
 

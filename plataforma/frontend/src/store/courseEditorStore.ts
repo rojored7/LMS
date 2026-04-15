@@ -1,6 +1,11 @@
 import { create } from 'zustand';
-import { devtools, persist } from 'zustand/middleware';
-import { CourseModule, CourseLesson, CourseQuiz, CourseLab } from '../services/api/courseManagement.service';
+import { devtools } from 'zustand/middleware';
+import {
+  CourseModule,
+  CourseLesson,
+  CourseQuiz,
+  CourseLab,
+} from '../services/api/courseManagement.service';
 
 export interface Course {
   id: string;
@@ -98,55 +103,67 @@ const initialState = {
   activeTab: 'overview' as const,
 };
 
+// Clean up old persisted state from localStorage
+if (typeof window !== 'undefined') {
+  localStorage.removeItem('course-editor-storage');
+}
+
 export const useCourseEditorStore = create<CourseEditorState>()(
   devtools(
-    persist(
-      (set, get) => ({
-        ...initialState,
+    (set, get) => ({
+      ...initialState,
 
-        // Course actions
-        setCourse: (course) => set({
+      // Course actions
+      setCourse: (course) =>
+        set({
           currentCourse: course,
           originalCourse: JSON.parse(JSON.stringify(course)),
           isDirty: false,
           error: null,
         }),
 
-        updateCourse: (updates) => set((state) => ({
+      updateCourse: (updates) =>
+        set((state) => ({
           currentCourse: state.currentCourse ? { ...state.currentCourse, ...updates } : null,
           isDirty: true,
         })),
 
-        saveCourse: async () => {
-          const { currentCourse } = get();
-          if (!currentCourse) return;
+      saveCourse: async () => {
+        const { currentCourse } = get();
+        if (!currentCourse) return;
 
-          set({ isSaving: true, error: null });
-          try {
-            // API call would go here
-            await new Promise(resolve => setTimeout(resolve, 1000)); // Simulated save
+        set({ isSaving: true, error: null });
+        try {
+          const { default: courseManagementService } =
+            await import('@/services/api/courseManagement.service');
+          await courseManagementService.updateCourse(currentCourse.id, currentCourse);
 
-            set({
-              originalCourse: JSON.parse(JSON.stringify(currentCourse)),
-              isDirty: false,
-              isSaving: false,
-            });
-          } catch (error: any) {
-            set({
-              error: error.message || 'Error al guardar el curso',
-              isSaving: false,
-            });
-          }
-        },
+          set({
+            originalCourse: JSON.parse(JSON.stringify(currentCourse)),
+            isDirty: false,
+            isSaving: false,
+          });
+        } catch (error: unknown) {
+          const message = error instanceof Error ? error.message : 'Error al guardar el curso';
+          set({
+            error: message,
+            isSaving: false,
+          });
+        }
+      },
 
-        resetCourse: () => set((state) => ({
-          currentCourse: state.originalCourse ? JSON.parse(JSON.stringify(state.originalCourse)) : null,
+      resetCourse: () =>
+        set((state) => ({
+          currentCourse: state.originalCourse
+            ? JSON.parse(JSON.stringify(state.originalCourse))
+            : null,
           isDirty: false,
           error: null,
         })),
 
-        // Module actions
-        addModule: (module) => set((state) => {
+      // Module actions
+      addModule: (module) =>
+        set((state) => {
           if (!state.currentCourse) return state;
 
           const newModules = [...state.currentCourse.modules, module];
@@ -156,10 +173,11 @@ export const useCourseEditorStore = create<CourseEditorState>()(
           };
         }),
 
-        updateModule: (moduleId, updates) => set((state) => {
+      updateModule: (moduleId, updates) =>
+        set((state) => {
           if (!state.currentCourse) return state;
 
-          const newModules = state.currentCourse.modules.map(m =>
+          const newModules = state.currentCourse.modules.map((m) =>
             m.id === moduleId ? { ...m, ...updates } : m
           );
           return {
@@ -168,10 +186,11 @@ export const useCourseEditorStore = create<CourseEditorState>()(
           };
         }),
 
-        deleteModule: (moduleId) => set((state) => {
+      deleteModule: (moduleId) =>
+        set((state) => {
           if (!state.currentCourse) return state;
 
-          const newModules = state.currentCourse.modules.filter(m => m.id !== moduleId);
+          const newModules = state.currentCourse.modules.filter((m) => m.id !== moduleId);
           return {
             currentCourse: { ...state.currentCourse, modules: newModules },
             selectedModule: state.selectedModule?.id === moduleId ? null : state.selectedModule,
@@ -179,12 +198,13 @@ export const useCourseEditorStore = create<CourseEditorState>()(
           };
         }),
 
-        reorderModules: (moduleIds) => set((state) => {
+      reorderModules: (moduleIds) =>
+        set((state) => {
           if (!state.currentCourse) return state;
 
-          const moduleMap = new Map(state.currentCourse.modules.map(m => [m.id, m]));
+          const moduleMap = new Map(state.currentCourse.modules.map((m) => [m.id, m]));
           const newModules = moduleIds
-            .map(id => moduleMap.get(id))
+            .map((id) => moduleMap.get(id))
             .filter(Boolean) as CourseModule[];
 
           return {
@@ -193,13 +213,14 @@ export const useCourseEditorStore = create<CourseEditorState>()(
           };
         }),
 
-        selectModule: (module) => set({ selectedModule: module }),
+      selectModule: (module) => set({ selectedModule: module }),
 
-        // Lesson actions
-        addLesson: (moduleId, lesson) => set((state) => {
+      // Lesson actions
+      addLesson: (moduleId, lesson) =>
+        set((state) => {
           if (!state.currentCourse) return state;
 
-          const newModules = state.currentCourse.modules.map(m => {
+          const newModules = state.currentCourse.modules.map((m) => {
             if (m.id === moduleId) {
               const lessons = m.lessons || [];
               return { ...m, lessons: [...lessons, lesson] };
@@ -213,12 +234,13 @@ export const useCourseEditorStore = create<CourseEditorState>()(
           };
         }),
 
-        updateLesson: (moduleId, lessonId, updates) => set((state) => {
+      updateLesson: (moduleId, lessonId, updates) =>
+        set((state) => {
           if (!state.currentCourse) return state;
 
-          const newModules = state.currentCourse.modules.map(m => {
+          const newModules = state.currentCourse.modules.map((m) => {
             if (m.id === moduleId && m.lessons) {
-              const newLessons = m.lessons.map(l =>
+              const newLessons = m.lessons.map((l) =>
                 l.id === lessonId ? { ...l, ...updates } : l
               );
               return { ...m, lessons: newLessons };
@@ -232,12 +254,13 @@ export const useCourseEditorStore = create<CourseEditorState>()(
           };
         }),
 
-        deleteLesson: (moduleId, lessonId) => set((state) => {
+      deleteLesson: (moduleId, lessonId) =>
+        set((state) => {
           if (!state.currentCourse) return state;
 
-          const newModules = state.currentCourse.modules.map(m => {
+          const newModules = state.currentCourse.modules.map((m) => {
             if (m.id === moduleId && m.lessons) {
-              const newLessons = m.lessons.filter(l => l.id !== lessonId);
+              const newLessons = m.lessons.filter((l) => l.id !== lessonId);
               return { ...m, lessons: newLessons };
             }
             return m;
@@ -250,13 +273,14 @@ export const useCourseEditorStore = create<CourseEditorState>()(
           };
         }),
 
-        selectLesson: (lesson) => set({ selectedLesson: lesson }),
+      selectLesson: (lesson) => set({ selectedLesson: lesson }),
 
-        // Quiz actions
-        addQuiz: (moduleId, quiz) => set((state) => {
+      // Quiz actions
+      addQuiz: (moduleId, quiz) =>
+        set((state) => {
           if (!state.currentCourse) return state;
 
-          const newModules = state.currentCourse.modules.map(m => {
+          const newModules = state.currentCourse.modules.map((m) => {
             if (m.id === moduleId) {
               const quizzes = m.quizzes || [];
               return { ...m, quizzes: [...quizzes, quiz] };
@@ -270,14 +294,13 @@ export const useCourseEditorStore = create<CourseEditorState>()(
           };
         }),
 
-        updateQuiz: (moduleId, quizId, updates) => set((state) => {
+      updateQuiz: (moduleId, quizId, updates) =>
+        set((state) => {
           if (!state.currentCourse) return state;
 
-          const newModules = state.currentCourse.modules.map(m => {
+          const newModules = state.currentCourse.modules.map((m) => {
             if (m.id === moduleId && m.quizzes) {
-              const newQuizzes = m.quizzes.map(q =>
-                q.id === quizId ? { ...q, ...updates } : q
-              );
+              const newQuizzes = m.quizzes.map((q) => (q.id === quizId ? { ...q, ...updates } : q));
               return { ...m, quizzes: newQuizzes };
             }
             return m;
@@ -289,12 +312,13 @@ export const useCourseEditorStore = create<CourseEditorState>()(
           };
         }),
 
-        deleteQuiz: (moduleId, quizId) => set((state) => {
+      deleteQuiz: (moduleId, quizId) =>
+        set((state) => {
           if (!state.currentCourse) return state;
 
-          const newModules = state.currentCourse.modules.map(m => {
+          const newModules = state.currentCourse.modules.map((m) => {
             if (m.id === moduleId && m.quizzes) {
-              const newQuizzes = m.quizzes.filter(q => q.id !== quizId);
+              const newQuizzes = m.quizzes.filter((q) => q.id !== quizId);
               return { ...m, quizzes: newQuizzes };
             }
             return m;
@@ -307,13 +331,14 @@ export const useCourseEditorStore = create<CourseEditorState>()(
           };
         }),
 
-        selectQuiz: (quiz) => set({ selectedQuiz: quiz }),
+      selectQuiz: (quiz) => set({ selectedQuiz: quiz }),
 
-        // Lab actions
-        addLab: (moduleId, lab) => set((state) => {
+      // Lab actions
+      addLab: (moduleId, lab) =>
+        set((state) => {
           if (!state.currentCourse) return state;
 
-          const newModules = state.currentCourse.modules.map(m => {
+          const newModules = state.currentCourse.modules.map((m) => {
             if (m.id === moduleId) {
               const labs = m.labs || [];
               return { ...m, labs: [...labs, lab] };
@@ -327,14 +352,13 @@ export const useCourseEditorStore = create<CourseEditorState>()(
           };
         }),
 
-        updateLab: (moduleId, labId, updates) => set((state) => {
+      updateLab: (moduleId, labId, updates) =>
+        set((state) => {
           if (!state.currentCourse) return state;
 
-          const newModules = state.currentCourse.modules.map(m => {
+          const newModules = state.currentCourse.modules.map((m) => {
             if (m.id === moduleId && m.labs) {
-              const newLabs = m.labs.map(l =>
-                l.id === labId ? { ...l, ...updates } : l
-              );
+              const newLabs = m.labs.map((l) => (l.id === labId ? { ...l, ...updates } : l));
               return { ...m, labs: newLabs };
             }
             return m;
@@ -346,12 +370,13 @@ export const useCourseEditorStore = create<CourseEditorState>()(
           };
         }),
 
-        deleteLab: (moduleId, labId) => set((state) => {
+      deleteLab: (moduleId, labId) =>
+        set((state) => {
           if (!state.currentCourse) return state;
 
-          const newModules = state.currentCourse.modules.map(m => {
+          const newModules = state.currentCourse.modules.map((m) => {
             if (m.id === moduleId && m.labs) {
-              const newLabs = m.labs.filter(l => l.id !== labId);
+              const newLabs = m.labs.filter((l) => l.id !== labId);
               return { ...m, labs: newLabs };
             }
             return m;
@@ -364,36 +389,27 @@ export const useCourseEditorStore = create<CourseEditorState>()(
           };
         }),
 
-        selectLab: (lab) => set({ selectedLab: lab }),
+      selectLab: (lab) => set({ selectedLab: lab }),
 
-        // UI actions
-        setEditorMode: (mode) => set({ editorMode: mode }),
+      // UI actions
+      setEditorMode: (mode) => set({ editorMode: mode }),
 
-        toggleEditorMode: () => set((state) => ({
+      toggleEditorMode: () =>
+        set((state) => ({
           editorMode: state.editorMode === 'edit' ? 'preview' : 'edit',
         })),
 
-        setActiveTab: (tab) => set({ activeTab: tab }),
+      setActiveTab: (tab) => set({ activeTab: tab }),
 
-        setError: (error) => set({ error }),
+      setError: (error) => set({ error }),
 
-        setIsDirty: (dirty) => set({ isDirty: dirty }),
+      setIsDirty: (dirty) => set({ isDirty: dirty }),
 
-        // Utility
-        hasUnsavedChanges: () => get().isDirty,
+      // Utility
+      hasUnsavedChanges: () => get().isDirty,
 
-        reset: () => set(initialState),
-      }),
-      {
-        name: 'course-editor-storage',
-        partialize: (state) => ({
-          currentCourse: state.currentCourse,
-          originalCourse: state.originalCourse,
-          activeTab: state.activeTab,
-          editorMode: state.editorMode,
-        }),
-      }
-    ),
+      reset: () => set(initialState),
+    }),
     {
       name: 'CourseEditorStore',
     }

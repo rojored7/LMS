@@ -1,10 +1,11 @@
+import asyncio
 import math
 import shutil
 import tempfile
 import zipfile
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, Query, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 import structlog
@@ -21,22 +22,35 @@ logger = structlog.get_logger()
 
 router = APIRouter(prefix="/api/admin/courses", tags=["course-management"])
 
+MAX_ZIP_SIZE = 100 * 1024 * 1024
+MAX_EXTRACTED_SIZE = 500 * 1024 * 1024
+MAX_ZIP_FILES = 5000
 
-def _extract_zip_to_temp(upload: UploadFile) -> Path:
+
+async def _extract_zip_to_temp(upload: UploadFile) -> Path:
     tmp = Path(tempfile.mkdtemp(prefix="course_import_"))
     zip_path = tmp / "upload.zip"
-    content = upload.file.read()
+    content = await upload.read()
     if not content:
         raise ValueError("Archivo vacio")
-    with open(zip_path, "wb") as f:
-        f.write(content)
+    if len(content) > MAX_ZIP_SIZE:
+        raise ValueError(f"ZIP excede el tamano maximo ({MAX_ZIP_SIZE // (1024 * 1024)} MB)")
+    await asyncio.to_thread(zip_path.write_bytes, content)
     if not zipfile.is_zipfile(zip_path):
         raise ValueError("El archivo no es un ZIP valido.")
     with zipfile.ZipFile(zip_path, "r") as zf:
-        # Handle Windows-style backslash paths in ZIP entries
+        total_size = sum(info.file_size for info in zf.infolist())
+        if total_size > MAX_EXTRACTED_SIZE:
+            raise ValueError(f"Contenido excede el tamano maximo ({MAX_EXTRACTED_SIZE // (1024 * 1024)} MB)")
+        if len(zf.infolist()) > MAX_ZIP_FILES:
+            raise ValueError(f"ZIP contiene demasiados archivos (max {MAX_ZIP_FILES})")
+        dest = (tmp / "extracted").resolve()
         for info in zf.infolist():
             info.filename = info.filename.replace("\\", "/")
-            zf.extract(info, tmp / "extracted")
+            target = (dest / info.filename).resolve()
+            if not str(target).startswith(str(dest)):
+                raise ValueError(f"Ruta insegura detectada en el ZIP: {info.filename}")
+            zf.extract(info, dest)
     extracted = tmp / "extracted"
     for candidate in [extracted] + list(extracted.iterdir()):
         if candidate.is_dir() and (candidate / "config.json").exists():
@@ -71,7 +85,7 @@ async def validate_import(
 ) -> dict:
     tmp_dir = None
     try:
-        course_dir = _extract_zip_to_temp(courseZip)
+        course_dir = await _extract_zip_to_temp(courseZip)
         tmp_dir = course_dir
         while tmp_dir.parent != tmp_dir and not str(tmp_dir.parent).endswith(tempfile.gettempdir()):
             tmp_dir = tmp_dir.parent
@@ -104,24 +118,10 @@ async def import_course_zip(
 ) -> dict:
     tmp_dir = None
     try:
-        tmp_dir = Path(tempfile.mkdtemp(prefix="course_import_"))
-        zip_path = tmp_dir / "upload.zip"
-        with open(zip_path, "wb") as f:
-            f.write(courseZip.file.read())
-        with zipfile.ZipFile(zip_path, "r") as zf:
-            for info in zf.infolist():
-                info.filename = info.filename.replace("\\", "/")
-                zf.extract(info, tmp_dir / "extracted")
-
-        extracted = tmp_dir / "extracted"
-        course_dir = None
-        for candidate in [extracted] + list(extracted.iterdir()):
-            if candidate.is_dir() and (candidate / "config.json").exists():
-                course_dir = candidate
-                break
-        if course_dir is None:
-            dirs = [d for d in extracted.iterdir() if d.is_dir()]
-            course_dir = dirs[0] if dirs else extracted
+        course_dir = await _extract_zip_to_temp(courseZip)
+        tmp_dir = course_dir
+        while tmp_dir.parent != tmp_dir and "course_import_" not in tmp_dir.name:
+            tmp_dir = tmp_dir.parent
 
         parsed = _parse_course_dir(course_dir)
 
@@ -130,10 +130,12 @@ async def import_course_zip(
         await db.flush()
 
         return {"success": True, "data": {"courseId": course_id, "title": parsed.title, "message": f"Curso '{parsed.title}' importado exitosamente"}}
+    except ValueError as e:
+        logger.error("course_import_validation_failed", error=str(e))
+        raise HTTPException(status_code=422, detail=str(e))
     except Exception as e:
         logger.error("course_import_failed", error=str(e))
-        await db.rollback()
-        return {"success": False, "error": {"code": "IMPORT_ERROR", "message": str(e)}}
+        raise HTTPException(status_code=500, detail=f"Error al importar curso: {str(e)}")
     finally:
         if tmp_dir and tmp_dir.exists():
             shutil.rmtree(tmp_dir, ignore_errors=True)

@@ -42,44 +42,40 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - English: Code (variables, functions, types)
 
 **Naming patterns:**
-- Classes/Types: PascalCase (`UserRole`, `ExecuteRequest`)
-- Functions/methods: camelCase (`checkDatabaseConnection`, `executeCode`)
-- Files: kebab-case (`auth.routes.ts`, `error-handler.ts`)
+- Backend Python: snake_case for modules and functions (`auth_service.py`, `get_current_user`)
+- Backend Classes/Enums: PascalCase (`UserRole`, `CreateCourseRequest`)
+- Frontend TypeScript: PascalCase for types/components, camelCase for functions
 - Database tables: snake_case (`users`, `refresh_tokens`)
 - Routes: kebab-case (`/api/auth`, `/api/users`)
 
 **Test pattern:**
-- Backend: `backend/src/__tests__/` (Jest) - **44+ test files** covering controllers, services, middleware, utils
+- Backend: `backend-fastapi/tests/` (pytest) - test files covering routers, services, middleware, models
 - Frontend: `frontend/src/**/*.test.tsx` (Vitest) - **5 test files** for core pages
 - E2E: `/e2e/` (Playwright) - **15 test specs** covering user stories HU-003 through HU-027-045
-- Scripts: `npm test` (backend), `npm run test` (frontend), `make test-e2e`
+- Scripts: `pytest` (backend), `npm run test` (frontend), `make test-e2e`
 - Coverage threshold: 70%
 
 **Commit style:** Conventional commits (`feat:`, `fix:`, `docs:`, etc.)
 
 ## 4. HIDDEN COMPLEXITY
 
-**Middleware chain (backend/src/server.ts):**
-1. Helmet (security headers)
-2. CORS (configured via `corsOptions` from config)
-3. JSON/URL-encoded parsers (10mb limit)
-4. Cookie parser
-5. Compression
-6. Request logger (winston)
-7. Rate limiter (on /api/* routes)
-8. Authentication middleware (`backend/src/middleware/authenticate.ts`)
-9. Authorization middleware (`backend/src/middleware/authorize.ts`)
-10. Error handler (must be LAST)
+**Middleware chain (backend-fastapi/app/main.py):**
+1. CORS middleware (FastAPI CORSMiddleware)
+2. Request logger middleware
+3. Rate limiter (slowapi on /api/* routes)
+4. Error handler middleware
+5. Authentication dependencies (`app/middleware/auth.py` - get_current_user)
+6. Authorization dependencies (`app/middleware/auth.py` - require_role)
 
 **Critical execution order:**
-- Global error handlers MUST be registered BEFORE app initialization
-- Service initialization: PostgreSQL → Redis → HTTP server
-- Graceful shutdown: HTTP server → external connections (10s timeout)
+- FastAPI lifespan events handle startup/shutdown (database pool, Redis connection)
+- Service initialization: PostgreSQL (async engine) -> Redis -> uvicorn server
+- Graceful shutdown via lifespan context manager
 
 **Authentication flow:**
-- JWT tokens with refresh token rotation
-- Tokens stored in HTTP-only cookies + Redis
-- Middleware: `authenticate.ts` (required auth), `optionalAuth.ts` (optional)
+- JWT tokens with refresh token rotation (python-jose)
+- Tokens stored in Redis for blacklist
+- Dependencies: `get_current_user` (required auth), `get_optional_user` (optional)
 - Password reset tokens: single-use, expiring
 
 **Docker Executor security:**
@@ -97,8 +93,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Configuration loading:**
 1. `.env` file (required in development)
 2. Environment variables (override .env)
-3. Config object: `backend/src/config/index.ts`, `executor/src/config/index.ts`
-4. Validation: Zod schemas for critical configs
+3. Config object: `backend-fastapi/app/config.py` (Pydantic Settings), `executor/src/config/index.ts`
+4. Validation: Pydantic Settings with validators for critical configs
 
 ## 5. BUSINESS RULES
 
@@ -119,7 +115,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **External integrations:**
 - PostgreSQL: Main data store
 - Redis: Session cache, rate limiting, JWT blacklist
-- SMTP: Email notifications (nodemailer) - Gmail configured (redp41732@gmail.com)
+- SMTP: Email notifications - Gmail configured
 - Docker Engine: Code execution sandbox
 - Socket.IO: Real-time WebSocket connections for chat and notifications
 - Content Importer: Dedicated service for Markdown-to-database course import
@@ -145,16 +141,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Nginx: reverse proxy for all services
 
 **Security constraints:**
-- Helmet CSP headers configured (may need adjustments for inline scripts)
-- Rate limiting: 100 requests/15min per IP on /api/*
+- Security headers configured via middleware/Nginx
+- Rate limiting: 100 requests/15min per IP on /api/* (slowapi)
 - Code executor: 60s max timeout, 50KB max code size
-- Passwords: bcrypt hashed (10 rounds)
+- Passwords: bcrypt hashed via passlib
 - JWT expiry: **15 minutes** access (configured in .env), 7d refresh
 
 **Generated code:**
-- Prisma Client: `backend/node_modules/.prisma/client/` (regenerate: `npm run prisma:generate`)
-- Do NOT commit generated client
-- Migrations: Always create via `npx prisma migrate dev --name <name>`
+- Alembic migrations: `backend-fastapi/alembic/versions/`
+- Do NOT edit migrations manually
+- Migrations: Always create via `alembic revision --autogenerate -m "<name>"` then `alembic upgrade head`
 
 **i18n:** **Fully implemented** - Translation model in database, translation.service.ts, LanguageSelector component
 
@@ -163,21 +159,22 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## 7. QUICK REFERENCE
 
 **Main entry points:**
-- Backend: `/backend/src/server.ts`
+- Backend: `/backend-fastapi/app/main.py`
 - Frontend: `/frontend/src/main.tsx`
 - Executor: `/executor/src/server.ts`
 
 **Configuration:**
-- Backend config: `/backend/src/config/index.ts`
+- Backend config: `/backend-fastapi/app/config.py`
 - Executor config: `/executor/src/config/index.ts`
-- Database schema: `/backend/prisma/schema.prisma`
+- Database models: `/backend-fastapi/app/models/`
+- Alembic config: `/backend-fastapi/alembic.ini`
 - Docker Compose: `/docker-compose.yml`
 - Environment template: `/.env.example`
 
 **Tests:**
-- Backend tests: `/backend/src/__tests__/`
+- Backend tests: `/backend-fastapi/tests/`
 - Frontend tests: `/frontend/src/**/*.test.tsx`
-- Jest config (backend): `/backend/jest.config.js`
+- Pytest config (backend): `/backend-fastapi/pyproject.toml`
 - Vitest config (frontend): `/frontend/vite.config.ts`
 
 **Documentation:**
@@ -220,7 +217,7 @@ make test-backend
 make test-frontend
 
 # Database operations
-make migrate           # Run Prisma migrations
+make migrate           # Run Alembic migrations
 make reset-db          # Reset database (DESTRUCTIVE)
 make shell-db          # Open PostgreSQL shell
 make backup            # Create database backup
@@ -236,44 +233,31 @@ make deploy
 ### Backend (Development)
 
 ```bash
-cd backend
+cd backend-fastapi
 
 # Install dependencies
-npm install
-
-# Generate Prisma client
-npm run prisma:generate
+pip install -e ".[dev]"
 
 # Run migrations
-npm run migrate
+alembic upgrade head
+
+# Create new migration
+alembic revision --autogenerate -m "description"
 
 # Start dev server (with hot reload)
-npm run dev
-
-# Build for production
-npm run build
-
-# Start production server
-npm start
+uvicorn app.main:app --reload --host 0.0.0.0 --port 4000
 
 # Tests
-npm test
-npm run test:watch
-npm run test:coverage
-
-# Prisma Studio (database GUI)
-npm run prisma:studio
+pytest
+pytest --cov=app
+pytest -x -v  # stop on first failure, verbose
 
 # Linting
-npm run lint
-npm run lint:fix
-
-# Type checking
-npm run type-check
+ruff check .
+ruff format .
 
 # Seed database
-npm run seed
-npm run seed:curso
+python -m app.scripts.seed_base
 ```
 
 ### Frontend (Development)
@@ -346,8 +330,8 @@ docker-compose down
 docker-compose build --no-cache
 
 # Run command in service
-docker-compose exec backend npm run migrate
-docker-compose exec backend npx prisma studio
+docker-compose exec backend alembic upgrade head
+docker-compose exec backend python -m app.scripts.seed_base
 
 # Clean everything (DESTRUCTIVE)
 docker-compose down -v
@@ -357,40 +341,48 @@ docker-compose down -v
 
 ### Database Migrations
 
-Always create migrations when modifying `schema.prisma`:
+Always create migrations when modifying SQLAlchemy models:
 
 ```bash
-# Development
-npm run migrate              # Creates migration + applies it
+# Development - create and apply migration
+alembic revision --autogenerate -m "description"
+alembic upgrade head
 
-# Production
-npm run migrate:deploy       # Applies pending migrations only
+# Production - apply pending migrations only
+alembic upgrade head
 ```
 
 ### Adding New Routes
 
-1. Create controller in `backend/src/controllers/`
-2. Create route file in `backend/src/routes/`
-3. Register route in `backend/src/server.ts`
-4. Add middleware (authenticate/authorize) as needed
-5. Update API documentation
+1. Create service in `backend-fastapi/app/services/`
+2. Create schemas in `backend-fastapi/app/schemas/`
+3. Create router in `backend-fastapi/app/routers/`
+4. Register router in `backend-fastapi/app/main.py`
+5. Add auth dependencies (get_current_user/require_role) as needed
+6. Update API documentation
 
 ### Authentication
 
-All protected routes must use middleware:
+All protected routes use FastAPI dependencies:
 
-```typescript
-// Require authentication
-import { authenticate } from '../middleware/authenticate';
-router.get('/protected', authenticate, controller);
+```python
+from app.middleware.auth import get_current_user, require_role
+from app.models.user import UserRole
 
-// Require specific role
-import { authorize } from '../middleware/authorize';
-router.get('/admin', authenticate, authorize(['ADMIN']), controller);
+# Require authentication
+@router.get("/protected")
+async def protected_endpoint(user = Depends(get_current_user)):
+    ...
 
-// Optional authentication (user may or may not be logged in)
-import { optionalAuth } from '../middleware/optionalAuth';
-router.get('/public', optionalAuth, controller);
+# Require specific role
+@router.get("/admin")
+async def admin_endpoint(user = Depends(require_role(UserRole.ADMIN))):
+    ...
+
+# Optional authentication
+@router.get("/public")
+async def public_endpoint(user = Depends(get_optional_user)):
+    ...
 ```
 
 ### Code Executor Security
@@ -429,14 +421,17 @@ docker-compose logs postgres
 make restart
 ```
 
-**Prisma client errors:**
+**SQLAlchemy/Alembic errors:**
 ```bash
-# Regenerate client
-cd backend && npm run prisma:generate
+# Check current migration state
+cd backend-fastapi && alembic current
+
+# Re-run migrations
+alembic upgrade head
 ```
 
 **Port conflicts:**
-- Backend: 4000
+- Backend (FastAPI): 4000
 - Frontend: 3000
 - Executor: 5000
 - PostgreSQL: 5433 (external), 5432 (internal)
@@ -458,9 +453,9 @@ Change ports in `.env` if needed.
 
 ### Production Deployment
 
-1. Set `NODE_ENV=production`
+1. Set `ENVIRONMENT=production`
 2. Update `.env` with production secrets
-3. Run migrations: `npm run migrate:deploy`
+3. Run migrations: `alembic upgrade head`
 4. Build images: `docker-compose build`
 5. Deploy: `make deploy`
 6. Verify health endpoints: `/health`, `/health/ready`, `/health/live`
@@ -468,15 +463,14 @@ Change ports in `.env` if needed.
 ### Environment-Specific Behavior
 
 Development:
-- Hot reload enabled (nodemon, Vite HMR)
+- Hot reload enabled (uvicorn --reload, Vite HMR)
 - Verbose logging
-- Source maps enabled
-- Prisma Studio accessible
+- Debug mode enabled
+- Swagger docs accessible at /docs
 
 Production:
-- Optimized builds
+- Optimized builds (uvicorn with workers)
 - Error logging only
-- No source maps
 - Rate limiting enforced strictly
 - HTTPS required (configure in Nginx)
 
@@ -489,8 +483,8 @@ Production:
 - Caching strategies for static assets
 
 ### Internationalization (i18n)
-- **Translation** model in Prisma schema
-- `translation.service.ts` manages multi-language content
+- **Translation** model in SQLAlchemy models
+- Translation service manages multi-language content
 - `LanguageSelector.tsx` component for language switching
 - Database-driven translations for dynamic content
 - Support for Spanish (primary) + additional languages
@@ -502,8 +496,8 @@ Production:
 - Tracking of SCORM completion and scoring
 
 ### Real-Time Features (Socket.IO)
-- WebSocket server integrated in `backend/src/server.ts` (lines 50-53, 278-293)
-- `chat.socket.ts` handles real-time messaging
+- WebSocket server (pendiente de migracion a FastAPI WebSockets)
+- Chat messaging functionality
 - **ChatMessage** model stores chat history
 - Course-specific chat rooms for collaboration
 - `ChatWidget.tsx` component for in-app messaging
@@ -573,31 +567,30 @@ Production:
 
 ### API Routes (16 groups, 21 services)
 
-1. `/api/auth` - auth.service.ts (login, register, refresh, logout, password reset)
-2. `/api/users` - user.service.ts (CRUD, profile management)
-3. `/api/courses` - course.service.ts (CRUD, enrollment, search)
-4. `/api/modules` - module.service.ts (CRUD, ordering)
-5. `/api/lessons` - lesson.service.ts (CRUD, content rendering)
-6. `/api/quizzes` - quiz.service.ts (CRUD, attempts, grading)
-7. `/api/labs` - lab.service.ts (CRUD, execution, submissions)
-8. `/api/projects` - project.service.ts (CRUD, submissions, review)
-9. `/api/progress` - progress.service.ts (tracking, completion)
-10. `/api/certificates` - certificate.service.ts (generation, validation)
-11. `/api/notifications` - notification.service.ts (CRUD, mark read)
-12. `/api/badges` - badge.service.ts (CRUD, award logic)
-13. `/api/admin` - admin.service.ts (user management, bulk operations)
-14. `/api/training-profiles` - trainingProfile.service.ts (CRUD, course assignment)
-15. `/api/analytics` - analytics.service.ts (statistics, exports) **[commented out in server.ts]**
-16. `/api/export` - export.service.ts (CSV/PDF export) **[commented out in server.ts]**
+1. `/api/auth` - auth_service.py (login, register, refresh, logout, password reset)
+2. `/api/users` - user_service.py (CRUD, profile management)
+3. `/api/courses` - course_service.py (CRUD, enrollment, search)
+4. `/api/modules` - module management (in course routers)
+5. `/api/lessons` - lesson management (in course routers)
+6. `/api/quizzes` - quiz_service.py (CRUD, attempts, grading)
+7. `/api/labs` - lab routers (CRUD, execution, submissions)
+8. `/api/projects` - project management
+9. `/api/progress` - progress_service.py (tracking, completion)
+10. `/api/certificates` - certificate_service.py (generation, validation)
+11. `/api/notifications` - notification management
+12. `/api/badges` - badge management
+13. `/api/admin` - admin routers (user management, bulk operations)
+14. `/api/training-profiles` - training profile management
+15. `/api/analytics` - analytics (pendiente)
+16. `/api/export` - data export (pendiente)
 
 **Additional Services**:
-- token.service.ts (JWT management)
-- email.service.ts (SMTP, templates)
-- storage.service.ts (file uploads)
-- pdf.service.ts (certificate generation)
-- translation.service.ts (i18n)
+- auth_service.py (JWT management)
+- executor_client.py (code execution via Docker sandbox)
+- certificate_service.py (PDF generation)
+- progress_service.py (progress calculation)
 
-**Swagger Documentation**: `/api-docs` endpoint with OpenAPI spec
+**Swagger Documentation**: `/docs` endpoint (FastAPI auto-generated OpenAPI)
 
 ### State Management (Zustand)
 
@@ -639,12 +632,13 @@ Production:
 
 ### Test Coverage Summary
 
-**Backend**: 44+ test files
-- Controllers: 16 test files
-- Services: 16 test files
-- Middleware: 6 test files (authenticate, authorize, validate, errorHandler, logger, optionalAuth)
-- Utils: 2 test files
-- Integration: 4 test files
+**Backend (pytest)**: tests/ directory
+- test_auth/: auth router and token service tests
+- test_admin/: admin service tests
+- test_models/: gamification and progress model tests
+- test_middleware/: auth middleware tests
+- test_progress/: progress service tests
+- test_health.py: health endpoint tests
 
 **Frontend**: 5 test files
 - Login.test.tsx
@@ -693,16 +687,16 @@ Production:
 - ⚠️ Frontend test coverage (only 5 tests for 60+ components)
 
 **Known Issues**:
-- ⚠️ Duplicate middleware: `optionalAuth.ts` and `authenticateOptional` function
-- ⚠️ Deleted migration in git status (20260304131719_add_gamification_and_executor_fields)
-- ⚠️ 43 uncommitted file modifications
+- Backend migrado de Express/Prisma a FastAPI/SQLAlchemy (abril 2026)
+- El directorio backend/ original fue eliminado; ahora es backend-fastapi/
+- Uncommitted file modifications pendientes de commit
 
 ### Next Steps for Production Readiness
 
-1. **Enable commented routes**: Uncomment analytics and export routes in server.ts
+1. **Enable pending routes**: Implement analytics and export routers in FastAPI
 2. **Increase frontend test coverage**: Add tests for critical user flows
-3. **Commit pending changes**: 31 backend + 12 frontend modifications
+3. **Commit pending changes**: Backend and frontend modifications
 4. **Update user story tracking**: Move completed stories from pendientes/ to completadas/
-5. **Document content-importer**: Add README with usage instructions
+5. **Migrate Socket.IO**: Port real-time chat to FastAPI WebSockets
 6. **Load testing**: Stress test with concurrent users
 7. **Security audit**: Penetration testing for production deployment

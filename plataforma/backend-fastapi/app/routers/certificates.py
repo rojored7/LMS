@@ -1,11 +1,14 @@
 from datetime import datetime
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
+from pydantic import Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.middleware.auth import get_current_user
-from app.models.user import User
+from app.middleware.error_handler import AuthorizationError
+from app.models.user import User, UserRole
+from app.middleware.rate_limit import limiter
 from app.schemas.common import ApiResponse, CamelModel
 from app.services.certificate_service import CertificateService
 
@@ -33,26 +36,25 @@ async def list_my_certificates(
     return ApiResponse(success=True, data=data).model_dump()
 
 
+class GenerateCertificateRequest(CamelModel):
+    course_id: str = Field(min_length=1, max_length=36)
+
+
 @router.post("/generate")
 async def generate_certificate(
-    body: dict,
+    body: GenerateCertificateRequest,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    course_id = body.get("courseId") or body.get("course_id")
-    if not course_id:
-        return ApiResponse(
-            success=False,
-            error={"code": "VALIDATION_ERROR", "message": "courseId es requerido"},
-        ).model_dump()
-
     service = CertificateService(db)
-    cert = await service.generate(user.id, course_id)
+    cert = await service.generate(user.id, body.course_id)
     return ApiResponse(success=True, data=CertificateResponse.model_validate(cert).model_dump()).model_dump()
 
 
 @router.get("/verify/{code}")
+@limiter.limit("10/minute")
 async def verify_certificate(
+    request: Request,
     code: str,
     db: AsyncSession = Depends(get_db),
 ):
@@ -69,4 +71,6 @@ async def get_certificate(
 ):
     service = CertificateService(db)
     cert = await service.get_by_id(certificate_id)
+    if cert.user_id != user.id and user.role not in (UserRole.ADMIN, UserRole.INSTRUCTOR):
+        raise AuthorizationError("No tienes acceso a este certificado")
     return ApiResponse(success=True, data=CertificateResponse.model_validate(cert).model_dump()).model_dump()

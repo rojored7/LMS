@@ -9,14 +9,29 @@ import { persist } from 'zustand/middleware';
 import type { User } from '../types';
 import authService from '../services/auth.service';
 
-function mapUser(raw: any): User {
+interface RawUser {
+  id: string;
+  email: string;
+  name?: string;
+  role: string;
+  avatar?: string;
+  xp?: number;
+  theme?: string;
+  locale?: string;
+  trainingProfileId?: string;
+  createdAt?: string;
+}
+
+function mapUser(raw: RawUser): User {
   const name = raw.name || '';
-  const parts = name.split(' ');
+  const spaceIndex = name.indexOf(' ');
+  const firstName = spaceIndex === -1 ? name : name.substring(0, spaceIndex);
+  const lastName = spaceIndex === -1 ? '' : name.substring(spaceIndex + 1);
   return {
     ...raw,
     name,
-    firstName: parts[0] || '',
-    lastName: parts.slice(1).join(' ') || '',
+    firstName: firstName || '',
+    lastName: lastName || '',
     isActive: true,
   };
 }
