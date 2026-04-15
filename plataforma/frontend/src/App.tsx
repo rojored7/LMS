@@ -61,9 +61,9 @@ const queryClient = new QueryClient({
  */
 const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-screen bg-gray-50 overflow-x-hidden">
       <Sidebar />
-      <div className="flex-1 lg:ml-64">
+      <div className="flex-1 lg:ml-64 overflow-x-hidden">
         <main className="min-h-[calc(100vh-4rem)]">{children}</main>
       </div>
     </div>
@@ -136,8 +136,9 @@ function App() {
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
-          <div className="min-h-screen bg-gray-50">
+          <div className="min-h-screen bg-gray-50 overflow-x-hidden">
             <Header />
+            <div className="pt-16">
 
             <Routes>
               {/* Public Routes */}
@@ -419,6 +420,7 @@ function App() {
               <Route path={ROUTES.NOT_FOUND} element={<NotFound />} />
               <Route path="*" element={<Navigate to={ROUTES.NOT_FOUND} replace />} />
             </Routes>
+            </div>
 
             {/* Toast Notifications */}
             <ToastContainer />
