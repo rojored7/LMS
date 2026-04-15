@@ -142,7 +142,7 @@ export const ModuleSidebar: React.FC<ModuleSidebarProps> = ({
                 {isExpanded && (
                   <div className="bg-white">
                     {/* Lessons */}
-                    {module.lessons.map((lesson) => {
+                    {[...module.lessons].sort((a, b) => a.order - b.order).map((lesson) => {
                       const isActive = currentLessonId === lesson.id;
                       return (
                         <button

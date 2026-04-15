@@ -42,8 +42,8 @@ export const CourseLearning: React.FC = () => {
     if (modules) {
       const contentList: Array<{ id: string; type: 'lesson' | 'quiz' | 'lab' }> = [];
       modules.forEach((module) => {
-        // Add lessons
-        module.lessons.forEach((lesson) => {
+        // Add lessons (sorted by order)
+        [...module.lessons].sort((a: any, b: any) => (a.order || 0) - (b.order || 0)).forEach((lesson) => {
           contentList.push({ id: lesson.id, type: 'lesson' });
         });
         // Add quizzes

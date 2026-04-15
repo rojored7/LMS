@@ -87,7 +87,7 @@ class Module(Base):
     is_published: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     course: Mapped[Course] = relationship(back_populates="modules")
-    lessons: Mapped[list["Lesson"]] = relationship(back_populates="module", cascade="all, delete-orphan")
+    lessons: Mapped[list["Lesson"]] = relationship(back_populates="module", cascade="all, delete-orphan", order_by="Lesson.order")
     quizzes: Mapped[list["Quiz"]] = relationship(back_populates="module", cascade="all, delete-orphan")  # type: ignore[name-defined]
     labs: Mapped[list["Lab"]] = relationship(back_populates="module", cascade="all, delete-orphan")  # type: ignore[name-defined]
     user_progress: Mapped[list["UserProgress"]] = relationship(back_populates="module", cascade="all, delete-orphan")  # type: ignore[name-defined]
