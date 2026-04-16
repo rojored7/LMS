@@ -5,7 +5,7 @@
 import { UserRole } from '../types';
 
 // API Configuration
-export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+export const API_URL = import.meta.env.VITE_API_URL || `${window.location.origin}/api`;
 export const API_TIMEOUT = parseInt(import.meta.env.VITE_API_TIMEOUT || '30000');
 
 // Storage Keys
