@@ -123,6 +123,7 @@ info "Verificando puertos disponibles..."
 
 # Puertos por defecto
 HTTP_PORT=80
+HTTPS_PORT=443
 FRONTEND_PORT=3000
 BACKEND_PORT=4000
 EXECUTOR_PORT=5000
@@ -135,13 +136,25 @@ if [ "$CUSTOM_PORT" = "auto" ]; then
         HTTP_PORT=$(find_free_port 8080)
         warn "Puerto 80 ocupado. Usando puerto $HTTP_PORT"
     fi
+    if ! port_free 443; then
+        HTTPS_PORT=$(find_free_port 8443)
+        warn "Puerto 443 ocupado. Usando puerto $HTTPS_PORT para HTTPS"
+    fi
 elif [ -n "$CUSTOM_PORT" ]; then
     HTTP_PORT=$CUSTOM_PORT
+    # Si pidio puerto custom, HTTPS tambien va custom
+    HTTPS_PORT=$((HTTP_PORT + 363))
+fi
+
+# Verificar puerto HTTPS
+if ! port_free $HTTPS_PORT; then
+    HTTPS_PORT=$(find_free_port 8443)
+    warn "Puerto HTTPS ajustado a $HTTPS_PORT"
 fi
 
 # Verificar que los puertos estan libres
 PORTS_OK=true
-for CHECK_PORT in $HTTP_PORT $FRONTEND_PORT $BACKEND_PORT $EXECUTOR_PORT; do
+for CHECK_PORT in $HTTP_PORT $HTTPS_PORT $FRONTEND_PORT $BACKEND_PORT $EXECUTOR_PORT; do
     if ! port_free $CHECK_PORT; then
         CONFLICT_PROCESS=$(ss -tlnp 2>/dev/null | grep ":${CHECK_PORT} " | head -1 || lsof -iTCP:${CHECK_PORT} -sTCP:LISTEN 2>/dev/null | head -2 || echo "proceso desconocido")
         warn "Puerto $CHECK_PORT en uso: $CONFLICT_PROCESS"
@@ -161,7 +174,7 @@ if [ "$PORTS_OK" = false ]; then
     fi
 fi
 
-log "Puertos: HTTP=$HTTP_PORT | Frontend=$FRONTEND_PORT | Backend=$BACKEND_PORT | Executor=$EXECUTOR_PORT"
+log "Puertos: HTTP=$HTTP_PORT | HTTPS=$HTTPS_PORT | Frontend=$FRONTEND_PORT | Backend=$BACKEND_PORT | Executor=$EXECUTOR_PORT"
 
 # ----------------------------------------------------------
 # 3. Crear .env si no existe
@@ -197,20 +210,26 @@ else
     log ".env creado con secrets generados automaticamente"
 fi
 
-# Aplicar puerto HTTP al .env (siempre, incluso si .env ya existia)
+# Aplicar puertos al .env (siempre, incluso si .env ya existia)
 if [ "$HTTP_PORT" != "80" ]; then
     if grep -q "^NGINX_HTTP_PORT=" .env; then
         sed -i "s|^NGINX_HTTP_PORT=.*|NGINX_HTTP_PORT=${HTTP_PORT}|g" .env
     else
         echo "NGINX_HTTP_PORT=${HTTP_PORT}" >> .env
     fi
-
-    # Actualizar CORS y FRONTEND_URL si el puerto no es 80
     if grep -q "^CORS_ORIGIN=" .env; then
         sed -i "s|^CORS_ORIGIN=.*|CORS_ORIGIN=http://localhost:${HTTP_PORT},http://localhost:${FRONTEND_PORT},http://localhost|g" .env
     fi
-
     log "Puerto HTTP configurado: $HTTP_PORT"
+fi
+
+if [ "$HTTPS_PORT" != "443" ]; then
+    if grep -q "^NGINX_HTTPS_PORT=" .env; then
+        sed -i "s|^NGINX_HTTPS_PORT=.*|NGINX_HTTPS_PORT=${HTTPS_PORT}|g" .env
+    else
+        echo "NGINX_HTTPS_PORT=${HTTPS_PORT}" >> .env
+    fi
+    log "Puerto HTTPS configurado: $HTTPS_PORT"
 fi
 
 # ----------------------------------------------------------
@@ -230,7 +249,7 @@ fi
 # ----------------------------------------------------------
 info "Levantando servicios con Docker Compose..."
 
-NGINX_HTTP_PORT=$HTTP_PORT $COMPOSE up -d --build
+NGINX_HTTP_PORT=$HTTP_PORT NGINX_HTTPS_PORT=$HTTPS_PORT $COMPOSE up -d --build
 
 log "Servicios levantados"
 
