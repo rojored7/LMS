@@ -3,7 +3,12 @@ set -e
 
 # ============================================================
 # setup.sh - Despliegue automatizado de la plataforma LMS
-# Uso: chmod +x setup.sh && ./setup.sh
+#
+# Uso:
+#   ./setup.sh              # Usa puertos por defecto (80, 3000, 4000, 5000)
+#   ./setup.sh --port 8080  # Nginx en puerto 8080 (si 80 esta ocupado)
+#   ./setup.sh --port auto  # Detecta automaticamente un puerto libre
+#
 # Requisitos: Docker >= 20.10, Docker Compose >= 2.0
 # ============================================================
 
@@ -17,6 +22,66 @@ log()   { echo -e "${GREEN}[OK]${NC} $1"; }
 warn()  { echo -e "${YELLOW}[!!]${NC} $1"; }
 error() { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
 info()  { echo -e "${CYAN}[>>]${NC} $1"; }
+
+# ----------------------------------------------------------
+# Funcion: verificar si un puerto esta libre
+# ----------------------------------------------------------
+port_free() {
+    local port=$1
+    if command -v ss &>/dev/null; then
+        ! ss -tlnH 2>/dev/null | grep -q ":${port} "
+    elif command -v netstat &>/dev/null; then
+        ! netstat -tln 2>/dev/null | grep -q ":${port} "
+    elif command -v lsof &>/dev/null; then
+        ! lsof -iTCP:${port} -sTCP:LISTEN &>/dev/null
+    else
+        # Si no hay herramienta, intentar conectar
+        ! (echo >/dev/tcp/localhost/${port}) 2>/dev/null
+    fi
+}
+
+# ----------------------------------------------------------
+# Funcion: encontrar primer puerto libre desde un inicio
+# ----------------------------------------------------------
+find_free_port() {
+    local start=$1
+    local port=$start
+    while [ $port -lt $((start + 100)) ]; do
+        if port_free $port; then
+            echo $port
+            return 0
+        fi
+        port=$((port + 1))
+    done
+    echo $start
+    return 1
+}
+
+# ----------------------------------------------------------
+# Parsear argumentos
+# ----------------------------------------------------------
+CUSTOM_PORT=""
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --port)
+            CUSTOM_PORT="$2"
+            shift 2
+            ;;
+        --help|-h)
+            echo "Uso: ./setup.sh [opciones]"
+            echo ""
+            echo "Opciones:"
+            echo "  --port PUERTO   Puerto HTTP para Nginx (default: 80)"
+            echo "  --port auto     Detectar automaticamente puerto libre"
+            echo "  --help          Mostrar esta ayuda"
+            exit 0
+            ;;
+        *)
+            warn "Argumento desconocido: $1"
+            shift
+            ;;
+    esac
+done
 
 echo ""
 echo "========================================"
@@ -37,24 +102,69 @@ if ! docker compose version &>/dev/null && ! docker-compose --version &>/dev/nul
     error "Docker Compose no esta instalado. Instala Docker Compose v2+"
 fi
 
-# Detectar comando de compose
 if docker compose version &>/dev/null; then
     COMPOSE="docker compose"
 else
     COMPOSE="docker-compose"
 fi
 
-DOCKER_VERSION=$(docker --version | grep -oP '\d+\.\d+' | head -1)
+DOCKER_VERSION=$(docker --version | grep -oE '[0-9]+\.[0-9]+' | head -1)
 log "Docker: $DOCKER_VERSION"
 log "Compose: $($COMPOSE version --short 2>/dev/null || echo 'OK')"
 
-# Verificar que Docker daemon esta corriendo
 if ! docker info &>/dev/null; then
     error "Docker daemon no esta corriendo. Inicia Docker Desktop o el servicio dockerd."
 fi
 
 # ----------------------------------------------------------
-# 2. Crear .env si no existe
+# 2. Resolver puertos
+# ----------------------------------------------------------
+info "Verificando puertos disponibles..."
+
+# Puertos por defecto
+HTTP_PORT=80
+FRONTEND_PORT=3000
+BACKEND_PORT=4000
+EXECUTOR_PORT=5000
+
+# Si el usuario pidio --port auto, buscar puerto libre
+if [ "$CUSTOM_PORT" = "auto" ]; then
+    if port_free 80; then
+        HTTP_PORT=80
+    else
+        HTTP_PORT=$(find_free_port 8080)
+        warn "Puerto 80 ocupado. Usando puerto $HTTP_PORT"
+    fi
+elif [ -n "$CUSTOM_PORT" ]; then
+    HTTP_PORT=$CUSTOM_PORT
+fi
+
+# Verificar que los puertos estan libres
+PORTS_OK=true
+for CHECK_PORT in $HTTP_PORT $FRONTEND_PORT $BACKEND_PORT $EXECUTOR_PORT; do
+    if ! port_free $CHECK_PORT; then
+        CONFLICT_PROCESS=$(ss -tlnp 2>/dev/null | grep ":${CHECK_PORT} " | head -1 || lsof -iTCP:${CHECK_PORT} -sTCP:LISTEN 2>/dev/null | head -2 || echo "proceso desconocido")
+        warn "Puerto $CHECK_PORT en uso: $CONFLICT_PROCESS"
+        PORTS_OK=false
+    fi
+done
+
+if [ "$PORTS_OK" = false ]; then
+    if [ -z "$CUSTOM_PORT" ]; then
+        warn "Puertos en conflicto detectados."
+        warn "Opciones:"
+        warn "  1. Liberar los puertos ocupados"
+        warn "  2. Usar: ./setup.sh --port 8080"
+        warn "  3. Usar: ./setup.sh --port auto"
+        echo ""
+        warn "Continuando de todas formas... (nginx puede fallar si el puerto $HTTP_PORT esta ocupado)"
+    fi
+fi
+
+log "Puertos: HTTP=$HTTP_PORT | Frontend=$FRONTEND_PORT | Backend=$BACKEND_PORT | Executor=$EXECUTOR_PORT"
+
+# ----------------------------------------------------------
+# 3. Crear .env si no existe
 # ----------------------------------------------------------
 info "Configurando variables de entorno..."
 
@@ -66,20 +176,18 @@ else
     fi
     cp .env.example .env
 
-    # Generar secrets automaticamente
+    # Generar secrets
     DB_PASS=$(openssl rand -hex 16 2>/dev/null || head -c 32 /dev/urandom | base64 | tr -dc 'a-zA-Z0-9' | head -c 32)
     REDIS_PASS=$(openssl rand -hex 16 2>/dev/null || head -c 32 /dev/urandom | base64 | tr -dc 'a-zA-Z0-9' | head -c 32)
     JWT_SEC=$(openssl rand -hex 32 2>/dev/null || head -c 64 /dev/urandom | base64 | tr -dc 'a-zA-Z0-9' | head -c 64)
     JWT_REF=$(openssl rand -hex 32 2>/dev/null || head -c 64 /dev/urandom | base64 | tr -dc 'a-zA-Z0-9' | head -c 64)
     EXEC_SEC=$(openssl rand -hex 16 2>/dev/null || head -c 32 /dev/urandom | base64 | tr -dc 'a-zA-Z0-9' | head -c 32)
 
-    # Reemplazar valores por defecto con secrets generados
     sed -i "s|DB_PASSWORD=changeme123|DB_PASSWORD=${DB_PASS}|g" .env
     sed -i "s|REDIS_PASSWORD=redispass123|REDIS_PASSWORD=${REDIS_PASS}|g" .env
     sed -i "s|JWT_SECRET=your-super-secret-jwt-key-change-in-production-minimum-32-characters|JWT_SECRET=${JWT_SEC}|g" .env
     sed -i "s|JWT_REFRESH_SECRET=your-super-secret-refresh-key-change-in-production-minimum-32-characters|JWT_REFRESH_SECRET=${JWT_REF}|g" .env
 
-    # Agregar EXECUTOR_SECRET si no existe
     if ! grep -q "EXECUTOR_SECRET" .env; then
         echo "" >> .env
         echo "# ===== EXECUTOR SECRET =====" >> .env
@@ -89,8 +197,24 @@ else
     log ".env creado con secrets generados automaticamente"
 fi
 
+# Aplicar puerto HTTP al .env (siempre, incluso si .env ya existia)
+if [ "$HTTP_PORT" != "80" ]; then
+    if grep -q "^NGINX_HTTP_PORT=" .env; then
+        sed -i "s|^NGINX_HTTP_PORT=.*|NGINX_HTTP_PORT=${HTTP_PORT}|g" .env
+    else
+        echo "NGINX_HTTP_PORT=${HTTP_PORT}" >> .env
+    fi
+
+    # Actualizar CORS y FRONTEND_URL si el puerto no es 80
+    if grep -q "^CORS_ORIGIN=" .env; then
+        sed -i "s|^CORS_ORIGIN=.*|CORS_ORIGIN=http://localhost:${HTTP_PORT},http://localhost:${FRONTEND_PORT},http://localhost|g" .env
+    fi
+
+    log "Puerto HTTP configurado: $HTTP_PORT"
+fi
+
 # ----------------------------------------------------------
-# 3. Construir imagen sandbox
+# 4. Construir imagen sandbox
 # ----------------------------------------------------------
 info "Construyendo imagen sandbox para ejecucion de codigo..."
 
@@ -102,16 +226,16 @@ else
 fi
 
 # ----------------------------------------------------------
-# 4. Levantar servicios
+# 5. Levantar servicios
 # ----------------------------------------------------------
 info "Levantando servicios con Docker Compose..."
 
-$COMPOSE up -d --build
+NGINX_HTTP_PORT=$HTTP_PORT $COMPOSE up -d --build
 
 log "Servicios levantados"
 
 # ----------------------------------------------------------
-# 5. Esperar health checks
+# 6. Esperar health checks
 # ----------------------------------------------------------
 info "Esperando a que los servicios esten saludables..."
 
@@ -120,11 +244,8 @@ WAITED=0
 INTERVAL=5
 
 while [ $WAITED -lt $MAX_WAIT ]; do
-    # Verificar postgres
     PG_OK=$(docker inspect --format='{{.State.Health.Status}}' ciber-postgres 2>/dev/null || echo "missing")
-    # Verificar redis
     RD_OK=$(docker inspect --format='{{.State.Health.Status}}' ciber-redis 2>/dev/null || echo "missing")
-    # Verificar backend
     BE_OK=$(docker inspect --format='{{.State.Health.Status}}' ciber-backend 2>/dev/null || echo "missing")
 
     if [ "$PG_OK" = "healthy" ] && [ "$RD_OK" = "healthy" ] && [ "$BE_OK" = "healthy" ]; then
@@ -136,6 +257,7 @@ while [ $WAITED -lt $MAX_WAIT ]; do
     sleep $INTERVAL
     WAITED=$((WAITED + INTERVAL))
 done
+echo ""
 
 if [ $WAITED -ge $MAX_WAIT ]; then
     warn "Timeout esperando servicios. Estado actual:"
@@ -144,55 +266,66 @@ if [ $WAITED -ge $MAX_WAIT ]; then
 fi
 
 # ----------------------------------------------------------
-# 6. Inicializar base de datos
+# 7. Inicializar base de datos
 # ----------------------------------------------------------
 info "Ejecutando migraciones de base de datos..."
 
 $COMPOSE exec -T backend python -m alembic upgrade head 2>/dev/null && log "Migraciones aplicadas" || warn "Migraciones ya aplicadas o no hay nuevas"
 
 # ----------------------------------------------------------
-# 7. Seed de datos base
+# 8. Seed de datos base
 # ----------------------------------------------------------
 info "Ejecutando seed de datos base..."
 
-# Generar password para admin
 ADMIN_PASS="Admin$(openssl rand -hex 4 2>/dev/null || echo '1234')!"
 
 $COMPOSE exec -T -e ADMIN_SEED_PASSWORD="$ADMIN_PASS" backend python -m app.scripts.seed_base 2>/dev/null && log "Seed completado" || warn "Seed ya ejecutado previamente"
 
 # ----------------------------------------------------------
-# 8. Verificacion final
+# 9. Verificacion final
 # ----------------------------------------------------------
 info "Verificando servicios..."
 
 echo ""
-HEALTH_BE=$(curl -sf http://localhost:4000/health 2>/dev/null | grep -o '"ok"' || echo "FAIL")
-HEALTH_EX=$(curl -sf http://localhost:5000/health 2>/dev/null | grep -o '"ok"' || echo "FAIL")
-HEALTH_FE=$(curl -sf http://localhost:3000 2>/dev/null | head -1 | grep -o "DOCTYPE" || echo "FAIL")
-HEALTH_NX=$(curl -sf http://localhost/api/health 2>/dev/null | grep -o '"ok"' || echo "FAIL")
+HEALTH_BE=$(curl -sf http://localhost:${BACKEND_PORT}/health 2>/dev/null | grep -o '"ok"' || echo "FAIL")
+HEALTH_EX=$(curl -sf http://localhost:${EXECUTOR_PORT}/health 2>/dev/null | grep -o '"ok"' || echo "FAIL")
+HEALTH_FE=$(curl -sf http://localhost:${FRONTEND_PORT} 2>/dev/null | head -1 | grep -o "DOCTYPE" || echo "FAIL")
+HEALTH_NX=$(curl -sf http://localhost:${HTTP_PORT}/api/health 2>/dev/null | grep -o '"ok"' || echo "FAIL")
 
-echo "  Backend  (port 4000): $([ "$HEALTH_BE" != "FAIL" ] && echo -e "${GREEN}OK${NC}" || echo -e "${RED}FAIL${NC}")"
-echo "  Executor (port 5000): $([ "$HEALTH_EX" != "FAIL" ] && echo -e "${GREEN}OK${NC}" || echo -e "${RED}FAIL${NC}")"
-echo "  Frontend (port 3000): $([ "$HEALTH_FE" != "FAIL" ] && echo -e "${GREEN}OK${NC}" || echo -e "${RED}FAIL${NC}")"
-echo "  Nginx    (port 80):   $([ "$HEALTH_NX" != "FAIL" ] && echo -e "${GREEN}OK${NC}" || echo -e "${RED}FAIL${NC}")"
+echo "  Backend  (port ${BACKEND_PORT}): $([ "$HEALTH_BE" != "FAIL" ] && echo -e "${GREEN}OK${NC}" || echo -e "${RED}FAIL${NC}")"
+echo "  Executor (port ${EXECUTOR_PORT}): $([ "$HEALTH_EX" != "FAIL" ] && echo -e "${GREEN}OK${NC}" || echo -e "${RED}FAIL${NC}")"
+echo "  Frontend (port ${FRONTEND_PORT}): $([ "$HEALTH_FE" != "FAIL" ] && echo -e "${GREEN}OK${NC}" || echo -e "${RED}FAIL${NC}")"
+echo "  Nginx    (port ${HTTP_PORT}):   $([ "$HEALTH_NX" != "FAIL" ] && echo -e "${GREEN}OK${NC}" || echo -e "${RED}FAIL${NC}")"
 
 # ----------------------------------------------------------
-# 9. Mostrar resultado
+# 10. Mostrar resultado
 # ----------------------------------------------------------
+if [ "$HTTP_PORT" = "80" ]; then
+    PLATFORM_URL="http://localhost"
+else
+    PLATFORM_URL="http://localhost:${HTTP_PORT}"
+fi
+
 echo ""
 echo "========================================"
 echo -e "  ${GREEN}Plataforma desplegada exitosamente${NC}"
 echo "========================================"
 echo ""
-echo "  URL:    http://localhost"
+echo "  URL:    ${PLATFORM_URL}"
 echo "  Admin:  admin@ciber.local"
 echo "  Pass:   $ADMIN_PASS"
 echo ""
+echo "  Puertos:"
+echo "    Nginx (entry point): ${HTTP_PORT}"
+echo "    Frontend:            ${FRONTEND_PORT}"
+echo "    Backend API:         ${BACKEND_PORT}"
+echo "    Executor:            ${EXECUTOR_PORT}"
+echo ""
 echo "  Comandos utiles:"
-echo "    Ver logs:      $COMPOSE logs -f"
-echo "    Parar:         $COMPOSE down"
-echo "    Reiniciar:     $COMPOSE restart"
-echo "    Estado:        $COMPOSE ps"
-echo "    Shell DB:      $COMPOSE exec postgres psql -U ciber_admin -d ciber_platform"
+echo "    Ver logs:       $COMPOSE logs -f"
+echo "    Parar:          $COMPOSE down"
+echo "    Reiniciar:      $COMPOSE restart"
+echo "    Estado:         $COMPOSE ps"
+echo "    Shell DB:       $COMPOSE exec postgres psql -U ciber_admin -d ciber_platform"
 echo "    Importar curso: $COMPOSE exec backend python -m app.scripts.import_course --content-dir /content/contenidos/NOMBRE_CURSO --publish --force"
 echo ""
