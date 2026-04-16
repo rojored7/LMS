@@ -142,38 +142,40 @@ export const ModuleSidebar: React.FC<ModuleSidebarProps> = ({
                 {isExpanded && (
                   <div className="bg-white">
                     {/* Lessons */}
-                    {[...module.lessons].sort((a, b) => a.order - b.order).map((lesson) => {
-                      const isActive = currentLessonId === lesson.id;
-                      return (
-                        <button
-                          key={lesson.id}
-                          onClick={() => onLessonClick(lesson.id)}
-                          className={`w-full px-4 py-2 flex items-center space-x-3 hover:bg-gray-50 transition-colors ${
-                            isActive ? 'bg-blue-50 border-l-4 border-blue-600' : ''
-                          }`}
-                        >
-                          <BookOpenIcon
-                            className={`h-4 w-4 flex-shrink-0 ${isActive ? 'text-blue-600' : 'text-gray-400'}`}
-                          />
-                          <span
-                            className={`text-sm text-left flex-1 ${isActive ? 'text-blue-600 font-medium' : 'text-gray-700'}`}
+                    {[...module.lessons]
+                      .sort((a, b) => a.order - b.order)
+                      .map((lesson) => {
+                        const isActive = currentLessonId === lesson.id;
+                        return (
+                          <button
+                            key={lesson.id}
+                            onClick={() => onLessonClick(lesson.id)}
+                            className={`w-full px-4 py-2 flex items-center space-x-3 hover:bg-gray-50 transition-colors ${
+                              isActive ? 'bg-blue-50 border-l-4 border-blue-600' : ''
+                            }`}
                           >
-                            {lesson.title}
-                          </span>
-                          <div className="flex items-center space-x-2 flex-shrink-0">
-                            <span className="text-xs text-gray-400">
-                              {lesson.estimatedTime} min
+                            <BookOpenIcon
+                              className={`h-4 w-4 flex-shrink-0 ${isActive ? 'text-blue-600' : 'text-gray-400'}`}
+                            />
+                            <span
+                              className={`text-sm text-left flex-1 ${isActive ? 'text-blue-600 font-medium' : 'text-gray-700'}`}
+                            >
+                              {lesson.title}
                             </span>
-                            {lesson.isCompleted && (
-                              <CheckCircleIcon
-                                className="h-4 w-4 text-green-500"
-                                title="Completado"
-                              />
-                            )}
-                          </div>
-                        </button>
-                      );
-                    })}
+                            <div className="flex items-center space-x-2 flex-shrink-0">
+                              <span className="text-xs text-gray-400">
+                                {lesson.estimatedTime} min
+                              </span>
+                              {lesson.isCompleted && (
+                                <CheckCircleIcon
+                                  className="h-4 w-4 text-green-500"
+                                  title="Completado"
+                                />
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })}
 
                     {/* Quizzes */}
                     {module.quizzes.map((quiz) => {
