@@ -1,0 +1,198 @@
+#!/usr/bin/env bash
+set -e
+
+# ============================================================
+# setup.sh - Despliegue automatizado de la plataforma LMS
+# Uso: chmod +x setup.sh && ./setup.sh
+# Requisitos: Docker >= 20.10, Docker Compose >= 2.0
+# ============================================================
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
+NC='\033[0m'
+
+log()   { echo -e "${GREEN}[OK]${NC} $1"; }
+warn()  { echo -e "${YELLOW}[!!]${NC} $1"; }
+error() { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
+info()  { echo -e "${CYAN}[>>]${NC} $1"; }
+
+echo ""
+echo "========================================"
+echo "  Plataforma LMS - Setup Automatizado"
+echo "========================================"
+echo ""
+
+# ----------------------------------------------------------
+# 1. Verificar dependencias
+# ----------------------------------------------------------
+info "Verificando dependencias..."
+
+if ! command -v docker &>/dev/null; then
+    error "Docker no esta instalado. Instala Docker desde https://docs.docker.com/get-docker/"
+fi
+
+if ! docker compose version &>/dev/null && ! docker-compose --version &>/dev/null; then
+    error "Docker Compose no esta instalado. Instala Docker Compose v2+"
+fi
+
+# Detectar comando de compose
+if docker compose version &>/dev/null; then
+    COMPOSE="docker compose"
+else
+    COMPOSE="docker-compose"
+fi
+
+DOCKER_VERSION=$(docker --version | grep -oP '\d+\.\d+' | head -1)
+log "Docker: $DOCKER_VERSION"
+log "Compose: $($COMPOSE version --short 2>/dev/null || echo 'OK')"
+
+# Verificar que Docker daemon esta corriendo
+if ! docker info &>/dev/null; then
+    error "Docker daemon no esta corriendo. Inicia Docker Desktop o el servicio dockerd."
+fi
+
+# ----------------------------------------------------------
+# 2. Crear .env si no existe
+# ----------------------------------------------------------
+info "Configurando variables de entorno..."
+
+if [ -f .env ]; then
+    warn ".env ya existe. Se usara el existente."
+else
+    if [ ! -f .env.example ]; then
+        error "No se encontro .env.example. Asegurate de estar en el directorio plataforma/"
+    fi
+    cp .env.example .env
+
+    # Generar secrets automaticamente
+    DB_PASS=$(openssl rand -hex 16 2>/dev/null || head -c 32 /dev/urandom | base64 | tr -dc 'a-zA-Z0-9' | head -c 32)
+    REDIS_PASS=$(openssl rand -hex 16 2>/dev/null || head -c 32 /dev/urandom | base64 | tr -dc 'a-zA-Z0-9' | head -c 32)
+    JWT_SEC=$(openssl rand -hex 32 2>/dev/null || head -c 64 /dev/urandom | base64 | tr -dc 'a-zA-Z0-9' | head -c 64)
+    JWT_REF=$(openssl rand -hex 32 2>/dev/null || head -c 64 /dev/urandom | base64 | tr -dc 'a-zA-Z0-9' | head -c 64)
+    EXEC_SEC=$(openssl rand -hex 16 2>/dev/null || head -c 32 /dev/urandom | base64 | tr -dc 'a-zA-Z0-9' | head -c 32)
+
+    # Reemplazar valores por defecto con secrets generados
+    sed -i "s|DB_PASSWORD=changeme123|DB_PASSWORD=${DB_PASS}|g" .env
+    sed -i "s|REDIS_PASSWORD=redispass123|REDIS_PASSWORD=${REDIS_PASS}|g" .env
+    sed -i "s|JWT_SECRET=your-super-secret-jwt-key-change-in-production-minimum-32-characters|JWT_SECRET=${JWT_SEC}|g" .env
+    sed -i "s|JWT_REFRESH_SECRET=your-super-secret-refresh-key-change-in-production-minimum-32-characters|JWT_REFRESH_SECRET=${JWT_REF}|g" .env
+
+    # Agregar EXECUTOR_SECRET si no existe
+    if ! grep -q "EXECUTOR_SECRET" .env; then
+        echo "" >> .env
+        echo "# ===== EXECUTOR SECRET =====" >> .env
+        echo "EXECUTOR_SECRET=${EXEC_SEC}" >> .env
+    fi
+
+    log ".env creado con secrets generados automaticamente"
+fi
+
+# ----------------------------------------------------------
+# 3. Construir imagen sandbox
+# ----------------------------------------------------------
+info "Construyendo imagen sandbox para ejecucion de codigo..."
+
+if docker image inspect ciber-sandbox:latest &>/dev/null; then
+    warn "Imagen ciber-sandbox:latest ya existe. Saltando build."
+else
+    docker build -f executor/Dockerfile.sandbox -t ciber-sandbox:latest ./executor
+    log "Imagen ciber-sandbox:latest construida"
+fi
+
+# ----------------------------------------------------------
+# 4. Levantar servicios
+# ----------------------------------------------------------
+info "Levantando servicios con Docker Compose..."
+
+$COMPOSE up -d --build
+
+log "Servicios levantados"
+
+# ----------------------------------------------------------
+# 5. Esperar health checks
+# ----------------------------------------------------------
+info "Esperando a que los servicios esten saludables..."
+
+MAX_WAIT=120
+WAITED=0
+INTERVAL=5
+
+while [ $WAITED -lt $MAX_WAIT ]; do
+    # Verificar postgres
+    PG_OK=$(docker inspect --format='{{.State.Health.Status}}' ciber-postgres 2>/dev/null || echo "missing")
+    # Verificar redis
+    RD_OK=$(docker inspect --format='{{.State.Health.Status}}' ciber-redis 2>/dev/null || echo "missing")
+    # Verificar backend
+    BE_OK=$(docker inspect --format='{{.State.Health.Status}}' ciber-backend 2>/dev/null || echo "missing")
+
+    if [ "$PG_OK" = "healthy" ] && [ "$RD_OK" = "healthy" ] && [ "$BE_OK" = "healthy" ]; then
+        log "Todos los servicios saludables"
+        break
+    fi
+
+    echo -n "."
+    sleep $INTERVAL
+    WAITED=$((WAITED + INTERVAL))
+done
+
+if [ $WAITED -ge $MAX_WAIT ]; then
+    warn "Timeout esperando servicios. Estado actual:"
+    $COMPOSE ps
+    warn "Revisa los logs con: $COMPOSE logs"
+fi
+
+# ----------------------------------------------------------
+# 6. Inicializar base de datos
+# ----------------------------------------------------------
+info "Ejecutando migraciones de base de datos..."
+
+$COMPOSE exec -T backend python -m alembic upgrade head 2>/dev/null && log "Migraciones aplicadas" || warn "Migraciones ya aplicadas o no hay nuevas"
+
+# ----------------------------------------------------------
+# 7. Seed de datos base
+# ----------------------------------------------------------
+info "Ejecutando seed de datos base..."
+
+# Generar password para admin
+ADMIN_PASS="Admin$(openssl rand -hex 4 2>/dev/null || echo '1234')!"
+
+$COMPOSE exec -T -e ADMIN_SEED_PASSWORD="$ADMIN_PASS" backend python -m app.scripts.seed_base 2>/dev/null && log "Seed completado" || warn "Seed ya ejecutado previamente"
+
+# ----------------------------------------------------------
+# 8. Verificacion final
+# ----------------------------------------------------------
+info "Verificando servicios..."
+
+echo ""
+HEALTH_BE=$(curl -sf http://localhost:4000/health 2>/dev/null | grep -o '"ok"' || echo "FAIL")
+HEALTH_EX=$(curl -sf http://localhost:5000/health 2>/dev/null | grep -o '"ok"' || echo "FAIL")
+HEALTH_FE=$(curl -sf http://localhost:3000 2>/dev/null | head -1 | grep -o "DOCTYPE" || echo "FAIL")
+HEALTH_NX=$(curl -sf http://localhost/api/health 2>/dev/null | grep -o '"ok"' || echo "FAIL")
+
+echo "  Backend  (port 4000): $([ "$HEALTH_BE" != "FAIL" ] && echo -e "${GREEN}OK${NC}" || echo -e "${RED}FAIL${NC}")"
+echo "  Executor (port 5000): $([ "$HEALTH_EX" != "FAIL" ] && echo -e "${GREEN}OK${NC}" || echo -e "${RED}FAIL${NC}")"
+echo "  Frontend (port 3000): $([ "$HEALTH_FE" != "FAIL" ] && echo -e "${GREEN}OK${NC}" || echo -e "${RED}FAIL${NC}")"
+echo "  Nginx    (port 80):   $([ "$HEALTH_NX" != "FAIL" ] && echo -e "${GREEN}OK${NC}" || echo -e "${RED}FAIL${NC}")"
+
+# ----------------------------------------------------------
+# 9. Mostrar resultado
+# ----------------------------------------------------------
+echo ""
+echo "========================================"
+echo -e "  ${GREEN}Plataforma desplegada exitosamente${NC}"
+echo "========================================"
+echo ""
+echo "  URL:    http://localhost"
+echo "  Admin:  admin@ciber.local"
+echo "  Pass:   $ADMIN_PASS"
+echo ""
+echo "  Comandos utiles:"
+echo "    Ver logs:      $COMPOSE logs -f"
+echo "    Parar:         $COMPOSE down"
+echo "    Reiniciar:     $COMPOSE restart"
+echo "    Estado:        $COMPOSE ps"
+echo "    Shell DB:      $COMPOSE exec postgres psql -U ciber_admin -d ciber_platform"
+echo "    Importar curso: $COMPOSE exec backend python -m app.scripts.import_course --content-dir /content/contenidos/NOMBRE_CURSO --publish --force"
+echo ""
