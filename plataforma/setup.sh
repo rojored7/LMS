@@ -289,7 +289,24 @@ fi
 # ----------------------------------------------------------
 info "Ejecutando migraciones de base de datos..."
 
-$COMPOSE exec -T backend python -m alembic upgrade head 2>/dev/null && log "Migraciones aplicadas" || warn "Migraciones ya aplicadas o no hay nuevas"
+$COMPOSE exec -T backend python -m alembic upgrade head 2>/dev/null && log "Migraciones aplicadas" || {
+    warn "Alembic sin migraciones. Creando tablas directamente..."
+    $COMPOSE exec -T backend python -c "
+from app.database import _engine, Base
+from app.models.user import *
+from app.models.course import *
+from app.models.progress import *
+from app.models.assessment import *
+from app.models.gamification import *
+from app.models.content import *
+import asyncio
+async def create():
+    async with _engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    print('OK')
+asyncio.run(create())
+" 2>/dev/null && log "Tablas creadas directamente" || warn "Error creando tablas"
+}
 
 # ----------------------------------------------------------
 # 8. Seed de datos base
