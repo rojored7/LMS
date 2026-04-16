@@ -33,7 +33,7 @@ export default defineConfig({
         secure: false,
       },
     },
-    allowedHosts: 'all',
+    allowedHosts: true,
   },
   build: {
     outDir: 'dist',
