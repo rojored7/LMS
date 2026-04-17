@@ -19,6 +19,19 @@ export const Profile: React.FC = () => {
   const { user, refreshUser } = useAuth();
   const toast = useToast();
 
+  const [userBadges, setUserBadges] = useState<any[]>([]);
+  const [showImportForm, setShowImportForm] = useState(false);
+  const [importForm, setImportForm] = useState({
+    name: '',
+    source: '',
+    level: '',
+    durationHours: '',
+    startDate: '',
+    endDate: '',
+    description: '',
+  });
+  const [importLoading, setImportLoading] = useState(false);
+
   const [pointsData, setPointsData] = useState<{
     total: number;
     history: Array<{
@@ -44,6 +57,55 @@ export const Profile: React.FC = () => {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    api
+      .get(`/badges/user/${user.id}`)
+      .then((res: any) => {
+        if (!cancelled) setUserBadges((res?.data ?? res) || []);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
+  const handleImportBadge = async () => {
+    if (!importForm.name || !importForm.source) return;
+    setImportLoading(true);
+    try {
+      await api.post('/badges/import-external', {
+        name: importForm.name,
+        source: importForm.source,
+        level: importForm.level || null,
+        durationHours: importForm.durationHours ? parseInt(importForm.durationHours) : null,
+        startDate: importForm.startDate || null,
+        endDate: importForm.endDate || null,
+        description: importForm.description || null,
+      });
+      toast.success('Badge importado exitosamente');
+      setShowImportForm(false);
+      setImportForm({
+        name: '',
+        source: '',
+        level: '',
+        durationHours: '',
+        startDate: '',
+        endDate: '',
+        description: '',
+      });
+      if (user) {
+        const res: any = await api.get(`/badges/user/${user.id}`);
+        setUserBadges((res?.data ?? res) || []);
+      }
+    } catch (err: any) {
+      toast.error(err?.error?.message || 'Error al importar badge');
+    } finally {
+      setImportLoading(false);
+    }
+  };
 
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -284,6 +346,162 @@ export const Profile: React.FC = () => {
                     </div>
                   ) : (
                     <p className="text-sm text-gray-500">Completa cursos para acumular puntos</p>
+                  )}
+                </CardBody>
+              </Card>
+
+              {/* Badges Section */}
+              <Card className="mt-6">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-gray-900">Insignias</h3>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowImportForm(!showImportForm)}
+                    >
+                      {showImportForm ? 'Cancelar' : 'Importar Badge Externo'}
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardBody>
+                  {/* Import Form */}
+                  {showImportForm && (
+                    <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                      <h4 className="text-sm font-semibold text-gray-800 mb-3">
+                        Importar certificacion externa
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <Input
+                          label="Nombre *"
+                          name="name"
+                          value={importForm.name}
+                          onChange={(e) =>
+                            setImportForm((prev) => ({ ...prev, name: e.target.value }))
+                          }
+                          required
+                        />
+                        <Input
+                          label="Origen/Plataforma *"
+                          name="source"
+                          value={importForm.source}
+                          onChange={(e) =>
+                            setImportForm((prev) => ({ ...prev, source: e.target.value }))
+                          }
+                          placeholder="ej: Coursera, HackTheBox"
+                          required
+                        />
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Nivel
+                          </label>
+                          <select
+                            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                            value={importForm.level}
+                            onChange={(e) =>
+                              setImportForm((prev) => ({ ...prev, level: e.target.value }))
+                            }
+                          >
+                            <option value="">Seleccionar...</option>
+                            <option value="BEGINNER">Principiante</option>
+                            <option value="INTERMEDIATE">Intermedio</option>
+                            <option value="ADVANCED">Avanzado</option>
+                            <option value="EXPERT">Experto</option>
+                          </select>
+                        </div>
+                        <Input
+                          label="Horas"
+                          name="durationHours"
+                          type="number"
+                          value={importForm.durationHours}
+                          onChange={(e) =>
+                            setImportForm((prev) => ({ ...prev, durationHours: e.target.value }))
+                          }
+                        />
+                        <Input
+                          label="Fecha inicio"
+                          name="startDate"
+                          type="date"
+                          value={importForm.startDate}
+                          onChange={(e) =>
+                            setImportForm((prev) => ({ ...prev, startDate: e.target.value }))
+                          }
+                        />
+                        <Input
+                          label="Fecha fin"
+                          name="endDate"
+                          type="date"
+                          value={importForm.endDate}
+                          onChange={(e) =>
+                            setImportForm((prev) => ({ ...prev, endDate: e.target.value }))
+                          }
+                        />
+                      </div>
+                      <div className="mt-3">
+                        <Input
+                          label="Descripcion"
+                          name="description"
+                          value={importForm.description}
+                          onChange={(e) =>
+                            setImportForm((prev) => ({ ...prev, description: e.target.value }))
+                          }
+                        />
+                      </div>
+                      <div className="mt-3 flex justify-end">
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={handleImportBadge}
+                          isLoading={importLoading}
+                          disabled={!importForm.name || !importForm.source}
+                        >
+                          Importar
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Badges Grid */}
+                  {userBadges.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {userBadges.map((ub: any) => (
+                        <div
+                          key={ub.id}
+                          className="flex items-start gap-3 p-3 bg-white border border-gray-200 rounded-lg"
+                        >
+                          <div
+                            className={`p-2 rounded-lg ${ub.badge?.isExternal ? 'bg-blue-50' : 'bg-green-50'}`}
+                          >
+                            <svg
+                              className={`w-6 h-6 ${ub.badge?.isExternal ? 'text-blue-500' : 'text-green-500'}`}
+                              fill="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                            </svg>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-gray-900 truncate">
+                              {ub.badge?.name || 'Badge'}
+                            </p>
+                            {ub.badge?.level && (
+                              <p className="text-xs text-gray-500">{ub.badge.level}</p>
+                            )}
+                            {ub.badge?.source && ub.badge.source !== 'platform' && (
+                              <p className="text-xs text-blue-600">{ub.badge.source}</p>
+                            )}
+                            {ub.badge?.durationHours && (
+                              <p className="text-xs text-gray-400">{ub.badge.durationHours}h</p>
+                            )}
+                            <p className="text-xs text-gray-400 mt-1">{formatDate(ub.earnedAt)}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500">
+                      Completa cursos o importa certificaciones para obtener insignias
+                    </p>
                   )}
                 </CardBody>
               </Card>

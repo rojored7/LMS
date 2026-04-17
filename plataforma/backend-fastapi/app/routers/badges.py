@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.middleware.auth import get_current_user, require_admin
 from app.models.user import User
-from app.schemas.user import BadgeCreate, BadgeResponse, UserBadgeResponse
+from app.schemas.user import BadgeCreate, BadgeResponse, ExternalBadgeImport, UserBadgeResponse
 from app.services.badge_service import BadgeService
 
 router = APIRouter(prefix="/api/badges", tags=["badges"])
@@ -40,6 +40,26 @@ async def get_user_badges(user_id: str, current_user: User = Depends(get_current
     service = BadgeService(db)
     badges = await service.get_user_badges(user_id)
     return {"success": True, "data": [UserBadgeResponse.model_validate(b).model_dump() for b in badges]}
+
+
+@router.post("/import-external")
+async def import_external_badge(
+    data: ExternalBadgeImport,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    service = BadgeService(db)
+    user_badge = await service.import_external_badge(
+        user_id=current_user.id,
+        name=data.name,
+        source=data.source,
+        level=data.level,
+        start_date=data.start_date,
+        end_date=data.end_date,
+        duration_hours=data.duration_hours,
+        description=data.description,
+    )
+    return {"success": True, "data": UserBadgeResponse.model_validate(user_badge).model_dump()}
 
 
 @router.get("/{badge_id}")

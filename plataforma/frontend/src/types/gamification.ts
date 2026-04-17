@@ -8,17 +8,28 @@ export interface Badge {
   slug: string;
   description: string;
   icon?: string;
+  iconUrl?: string;
   color?: string;
-  xp_reward: number;
-  created_at?: string;
+  xpReward: number;
+  courseId?: string;
+  level?: string;
+  durationHours?: number;
+  source?: string;
+  isExternal?: boolean;
+  category?: string;
+  requirement?: string;
+  createdAt?: string;
 }
 
 export interface UserBadge {
   id: string;
-  user_id: string;
-  badge_id: string;
+  userId: string;
+  badgeId: string;
   badge?: Badge;
-  awarded_at: string;
+  earnedAt: string;
+  enrolledAt?: string;
+  completedAt?: string;
+  courseId?: string;
 }
 
 export interface XPLevel {
@@ -31,13 +42,13 @@ export interface XPLevel {
 
 export interface Notification {
   id: string;
-  user_id: string;
+  userId: string;
   type: NotificationType;
   title: string;
   message: string;
   read: boolean;
   data?: Record<string, unknown>;
-  created_at: string;
+  createdAt: string;
 }
 
 export enum NotificationType {

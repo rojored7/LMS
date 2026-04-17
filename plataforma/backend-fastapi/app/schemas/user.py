@@ -117,8 +117,16 @@ class BadgeResponse(CamelModel):
     slug: str
     description: str
     icon: str | None = None
+    icon_url: str | None = None
     color: str | None = None
     xp_reward: int = 0
+    course_id: str | None = None
+    level: str | None = None
+    duration_hours: int | None = None
+    source: str = "platform"
+    is_external: bool = False
+    category: str | None = None
+    requirement: str | None = None
 
 
 class UserBadgeResponse(CamelModel):
@@ -126,6 +134,20 @@ class UserBadgeResponse(CamelModel):
     user_id: str
     badge_id: str
     earned_at: datetime
+    enrolled_at: datetime | None = None
+    completed_at: datetime | None = None
+    course_id: str | None = None
+    badge: BadgeResponse | None = None
+
+
+class ExternalBadgeImport(CamelModel):
+    name: str
+    source: str
+    level: str | None = None
+    start_date: datetime | None = None
+    end_date: datetime | None = None
+    duration_hours: int | None = None
+    description: str | None = None
 
 
 class NotificationResponse(CamelModel):

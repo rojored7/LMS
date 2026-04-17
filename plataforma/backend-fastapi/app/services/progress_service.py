@@ -259,6 +259,11 @@ class ProgressService:
                         user = await self.db.get(User, enrollment.user_id)
                         if user:
                             user.xp = (user.xp or 0) + course.score
+                            from app.services.badge_service import BadgeService
+                            badge_svc = BadgeService(self.db)
+                            await badge_svc.award_course_completion_badge(
+                                user_id=user.id, course=course, enrollment=enrollment,
+                            )
             await self.db.flush()
 
     async def get_detailed_progress(self, user_id: str, skip: int = 0, limit: int = 50) -> list[dict]:
