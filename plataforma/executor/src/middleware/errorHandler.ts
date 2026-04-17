@@ -73,8 +73,8 @@ export const errorHandler = (
   err: Error | AppError | ZodError,
   req: Request,
   res: Response,
-  next: NextFunction
-) => {
+  _next: NextFunction
+): void => {
   // Log all errors
   logger.error('Error occurred', {
     error: err.message,

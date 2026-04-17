@@ -7,7 +7,7 @@ import { logger } from '../utils/logger';
  * Creates middleware that validates request body against a Zod schema
  */
 export const validateRequest = (schema: ZodSchema) => {
-  return (req: Request, res: Response, next: NextFunction) => {
+  return (req: Request, res: Response, next: NextFunction): void => {
     try {
       // Validate request body
       const validatedData = schema.parse(req.body);
@@ -58,7 +58,7 @@ export const validateRequest = (schema: ZodSchema) => {
  * Ensures request payload is not too large
  */
 export const limitRequestSize = (maxSizeBytes: number) => {
-  return (req: Request, res: Response, next: NextFunction) => {
+  return (req: Request, res: Response, next: NextFunction): void => {
     const contentLength = parseInt(req.headers['content-length'] || '0', 10);
 
     if (contentLength > maxSizeBytes) {
