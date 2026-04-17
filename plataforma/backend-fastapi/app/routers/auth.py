@@ -25,7 +25,7 @@ settings = get_settings()
 
 
 def _set_cookies(response: Response, tokens: dict) -> None:
-    secure = settings.is_production
+    secure = settings.is_production and settings.FRONTEND_URL.startswith("https")
     response.set_cookie(
         key="access_token",
         value=tokens["access_token"],
