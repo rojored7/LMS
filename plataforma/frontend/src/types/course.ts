@@ -38,6 +38,7 @@ export interface Course {
   level: CourseLevel;
   status: CourseStatus;
   duration: number; // in minutes
+  score: number; // 1-10 difficulty score
   price: number;
   instructorId: string;
   instructorName?: string;
@@ -189,6 +190,7 @@ export interface EnrollmentWithCourse {
     description: string;
     level: CourseLevel;
     duration: number;
+    score: number;
     thumbnail: string | null;
     isPublished: boolean;
     tags: string[];

@@ -15,6 +15,7 @@ import CourseCard from '../components/courses/CourseCard';
 import CourseActionMenu from '../components/courses/CourseActionMenu';
 import useCourseManagement from '../hooks/useCourseManagement';
 import { useUiStore } from '../store/uiStore';
+import DifficultyScore from '../components/common/DifficultyScore';
 
 const CourseListPage: React.FC = () => {
   const navigate = useNavigate();
@@ -140,6 +141,15 @@ const CourseListPage: React.FC = () => {
         ),
         sortable: true,
         width: '90px',
+      },
+      {
+        key: 'score',
+        header: 'Dif.',
+        accessor: (course) => (
+          <DifficultyScore score={course.score ?? 1} size="sm" />
+        ),
+        sortable: true,
+        width: '100px',
       },
       {
         key: 'duration',

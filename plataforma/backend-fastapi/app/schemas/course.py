@@ -47,6 +47,7 @@ class CourseResponse(CamelModel):
     author: str
     version: str
     price: float
+    score: int = 1
     created_at: datetime
     updated_at: datetime
     module_count: int = 0
@@ -68,6 +69,7 @@ class CourseListResponse(CamelModel):
     is_published: bool
     author: str
     price: float
+    score: int = 1
 
 
 class LessonSummary(CamelModel):

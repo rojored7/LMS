@@ -9,6 +9,7 @@ import structlog
 from app.middleware.error_handler import ConflictError, NotFoundError
 from app.models.course import Course, CourseLevel, Module, Lesson
 from app.models.progress import Enrollment
+from app.utils.course_scoring import calculate_course_score
 
 logger = structlog.get_logger()
 
@@ -42,7 +43,8 @@ class CourseService:
         existing = await self.db.execute(select(Course).where(Course.slug == slug))
         if existing.scalar_one_or_none():
             raise ConflictError(f"Ya existe un curso con slug '{slug}'")
-        course = Course(slug=slug, title=title, description=description, duration=duration, level=CourseLevel(level), author=author, tags=tags, thumbnail=thumbnail, price=price, author_id=author_id)
+        resolved_level = CourseLevel(level)
+        course = Course(slug=slug, title=title, description=description, duration=duration, level=resolved_level, author=author, tags=tags, thumbnail=thumbnail, price=price, author_id=author_id, score=calculate_course_score(resolved_level, duration))
         self.db.add(course)
         await self.db.flush()
         await self.db.refresh(course)
@@ -59,6 +61,8 @@ class CourseService:
                 if key == "level":
                     value = CourseLevel(value)
                 setattr(course, key, value)
+        if "level" in kwargs or "duration" in kwargs:
+            course.score = calculate_course_score(course.level, course.duration)
         await self.db.flush()
         await self.db.refresh(course)
         return course

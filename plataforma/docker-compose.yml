@@ -58,7 +58,7 @@ services:
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
       JWT_EXPIRES_IN_MINUTES: ${JWT_EXPIRES_IN_MINUTES:-15}
       JWT_REFRESH_EXPIRES_IN_DAYS: ${JWT_REFRESH_EXPIRES_IN_DAYS:-7}
-      CORS_ORIGINS: ${CORS_ORIGINS:-'["http://localhost:3000","http://localhost"]'}
+      CORS_ORIGINS: ${CORS_ORIGINS:-["http://localhost:3000","http://localhost"]}
       EXECUTOR_SERVICE_URL: http://executor:5000
       EXECUTOR_SECRET: ${EXECUTOR_SECRET:?EXECUTOR_SECRET requerido en .env}
       SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}

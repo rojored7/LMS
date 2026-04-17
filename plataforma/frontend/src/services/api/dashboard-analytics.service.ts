@@ -20,6 +20,7 @@ export interface EnrollmentTrend {
 export interface CourseStat {
   courseId: string;
   courseTitle: string;
+  score: number;
   enrollmentCount: number;
   averageProgress: number;
   completedCount: number;

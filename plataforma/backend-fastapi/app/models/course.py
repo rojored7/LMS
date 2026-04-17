@@ -41,6 +41,7 @@ class Course(Base):
     author_id: Mapped[str | None] = mapped_column(String(32), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     version: Mapped[str] = mapped_column(String(20), default="1.0", nullable=False)
     price: Mapped[float] = mapped_column(Numeric(10, 2), default=0.0, nullable=False)
+    score: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)

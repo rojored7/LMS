@@ -12,6 +12,7 @@ import { Loader } from '../components/common/Loader';
 import { useCourses } from '../hooks/useCourses';
 import { formatDuration, formatCurrency } from '../utils/formatters';
 import { ROUTES, COURSE_LEVEL_LABELS, COURSE_LEVEL_COLORS } from '../utils/constants';
+import DifficultyScore from '../components/common/DifficultyScore';
 
 export const CourseCatalog: React.FC = () => {
   const navigate = useNavigate();
@@ -155,11 +156,14 @@ export const CourseCatalog: React.FC = () => {
                     </span>
                   </div>
 
-                  {/* Level and Price */}
+                  {/* Level, Score and Price */}
                   <div className="flex items-center justify-between">
-                    <Badge className={COURSE_LEVEL_COLORS[course.level]} size="sm">
-                      {COURSE_LEVEL_LABELS[course.level]}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge className={COURSE_LEVEL_COLORS[course.level]} size="sm">
+                        {COURSE_LEVEL_LABELS[course.level]}
+                      </Badge>
+                      {course.score != null && <DifficultyScore score={course.score} size="sm" />}
+                    </div>
                     <span className="text-lg font-bold text-[#FF5100]">
                       {course.price === 0 ? 'Gratis' : formatCurrency(course.price)}
                     </span>

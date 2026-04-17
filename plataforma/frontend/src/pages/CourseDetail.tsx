@@ -11,6 +11,7 @@ import { Loader } from '../components/common/Loader';
 import { useCourse, useCourseModules, useEnrollCourse } from '../hooks/useCourses';
 import { useAuth } from '../hooks/useAuth';
 import { formatDuration, formatCurrency, formatDate } from '../utils/formatters';
+import DifficultyScore from '../components/common/DifficultyScore';
 import { ROUTES, COURSE_LEVEL_LABELS, COURSE_LEVEL_COLORS } from '../utils/constants';
 import { UserRole } from '../types';
 
@@ -239,6 +240,13 @@ export const CourseDetail: React.FC = () => {
                   <p className="text-sm font-medium text-gray-700 mb-1">Nivel</p>
                   <p className="text-sm text-gray-600">{COURSE_LEVEL_LABELS[course.level]}</p>
                 </div>
+
+                {course.score != null && (
+                  <div>
+                    <p className="text-sm font-medium text-gray-700 mb-1">Dificultad</p>
+                    <DifficultyScore score={course.score} size="md" showLabel />
+                  </div>
+                )}
 
                 <div>
                   <p className="text-sm font-medium text-gray-700 mb-1">Duración</p>

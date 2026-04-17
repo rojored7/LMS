@@ -10,6 +10,7 @@ from app.middleware.error_handler import ConflictError, NotFoundError
 from app.models.assessment import Lab, LabSubmission, Quiz, QuizAttempt
 from app.models.course import Course, Lesson, Module
 from app.models.progress import Enrollment, UserProgress
+from app.models.user import User
 
 logger = structlog.get_logger()
 
@@ -250,7 +251,14 @@ class ProgressService:
             enrollment.progress = progress
             enrollment.last_accessed_at = datetime.now(timezone.utc)
             if progress >= 100:
+                first_completion = enrollment.completed_at is None
                 enrollment.completed_at = datetime.now(timezone.utc)
+                if first_completion:
+                    course = await self.db.get(Course, enrollment.course_id)
+                    if course:
+                        user = await self.db.get(User, enrollment.user_id)
+                        if user:
+                            user.xp = (user.xp or 0) + course.score
             await self.db.flush()
 
     async def get_detailed_progress(self, user_id: str, skip: int = 0, limit: int = 50) -> list[dict]:

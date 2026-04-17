@@ -9,6 +9,7 @@ import {
   EllipsisVerticalIcon,
 } from '@heroicons/react/24/outline';
 import StatusBadge from './StatusBadge';
+import DifficultyScore from '../common/DifficultyScore';
 
 interface CourseCardProps {
   course: any;
@@ -159,6 +160,7 @@ const CourseCard: React.FC<CourseCardProps> = ({
           {course.level}
         </span>
         <StatusBadge isPublished={course.isPublished} />
+        {course.score != null && <DifficultyScore score={course.score} size="sm" />}
         <span className="text-xs text-gray-500 dark:text-gray-400">{Math.round(course.duration / 60)}h</span>
         <span className="text-xs text-gray-500 dark:text-gray-400">
           {course.moduleCount || 0} modulos

@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import type { CourseStat } from '../../services/api/dashboard-analytics.service';
+import DifficultyScore from '../common/DifficultyScore';
 
 interface TopCoursesTableProps {
   data: CourseStat[];
@@ -37,6 +38,7 @@ export default function TopCoursesTable({ data, isLoading }: TopCoursesTableProp
               <tr className="text-left text-white/40 text-xs uppercase border-b border-white/10">
                 <th className="pb-3 font-medium">#</th>
                 <th className="pb-3 font-medium">Curso</th>
+                <th className="pb-3 font-medium">Dif.</th>
                 <th className="pb-3 font-medium text-right">Inscritos</th>
                 <th className="pb-3 font-medium">Progreso</th>
                 <th className="pb-3 font-medium text-right">Completado</th>
@@ -53,7 +55,12 @@ export default function TopCoursesTable({ data, isLoading }: TopCoursesTableProp
                   <td className="py-3 text-white font-medium text-sm max-w-[200px] truncate">
                     {course.courseTitle}
                   </td>
-                  <td className="py-3 text-white/70 text-sm text-right">{course.enrollmentCount}</td>
+                  <td className="py-3">
+                    <DifficultyScore score={course.score ?? 1} size="sm" />
+                  </td>
+                  <td className="py-3 text-white/70 text-sm text-right">
+                    {course.enrollmentCount}
+                  </td>
                   <td className="py-3">
                     <div className="flex items-center gap-2">
                       <div className="w-16 h-1.5 bg-white/10 rounded-full overflow-hidden">
@@ -65,7 +72,9 @@ export default function TopCoursesTable({ data, isLoading }: TopCoursesTableProp
                       <span className="text-white/50 text-xs">{course.averageProgress}%</span>
                     </div>
                   </td>
-                  <td className="py-3 text-white/70 text-sm text-right">{course.completionRate}%</td>
+                  <td className="py-3 text-white/70 text-sm text-right">
+                    {course.completionRate}%
+                  </td>
                 </tr>
               ))}
             </tbody>

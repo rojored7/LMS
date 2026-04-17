@@ -6,7 +6,7 @@ from app.database import get_db
 from app.middleware.auth import get_current_user
 from app.middleware.error_handler import NotFoundError
 from app.models.course import Course
-from app.models.progress import UserProgress
+from app.models.progress import Enrollment, UserProgress
 from app.models.user import User
 from app.schemas.common import ApiResponse
 from app.services.progress_service import ProgressService
@@ -70,3 +70,32 @@ async def get_study_hours(
     )).scalar() or 0
     hours = round(total_seconds / 3600, 1)
     return ApiResponse(success=True, data={"totalSeconds": total_seconds, "hours": hours}).model_dump()
+
+
+@router.get("/points")
+async def get_points_history(
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(Enrollment, Course)
+        .join(Course, Enrollment.course_id == Course.id)
+        .where(
+            Enrollment.user_id == user.id,
+            Enrollment.completed_at.isnot(None),
+        )
+        .order_by(Enrollment.completed_at.desc())
+    )
+    history = [
+        {
+            "courseId": enrollment.course_id,
+            "courseTitle": course.title,
+            "score": course.score,
+            "completedAt": enrollment.completed_at.isoformat() if enrollment.completed_at else None,
+        }
+        for enrollment, course in result.all()
+    ]
+    return ApiResponse(
+        success=True,
+        data={"total": user.xp or 0, "history": history},
+    ).model_dump()

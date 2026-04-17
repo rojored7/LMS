@@ -155,6 +155,17 @@ export function formatNumber(value: number): string {
 }
 
 /**
+ * Get a human-readable label for a course difficulty score (1-10).
+ */
+export function getScoreLabel(score: number): string {
+  if (score <= 2) return 'Basico';
+  if (score <= 4) return 'Facil';
+  if (score <= 6) return 'Intermedio';
+  if (score <= 8) return 'Dificil';
+  return 'Experto';
+}
+
+/**
  * Get initials from a name
  * @param name - Full name
  * @returns Initials (e.g., "John Doe" -> "JD")

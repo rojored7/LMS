@@ -78,7 +78,7 @@ class AnalyticsService:
         )
         result = await self.db.execute(
             select(
-                Course.id, Course.title,
+                Course.id, Course.title, Course.score,
                 enroll_count_q.label("enroll_count"),
                 avg_progress_q.label("avg_progress"),
                 completed_q.label("completed"),
@@ -86,11 +86,12 @@ class AnalyticsService:
             .where(Course.is_published.is_(True))
         )
         stats = []
-        for cid, title, enroll_count, avg_progress, completed in result.all():
+        for cid, title, score, enroll_count, avg_progress, completed in result.all():
             ec = enroll_count or 0
             stats.append({
                 "courseId": cid,
                 "courseTitle": title,
+                "score": score or 1,
                 "enrollmentCount": ec,
                 "averageProgress": round(float(avg_progress or 0), 2),
                 "completedCount": completed or 0,
