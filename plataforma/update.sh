@@ -100,18 +100,22 @@ BACKUP_DIR="database/backups"
 mkdir -p "$BACKUP_DIR"
 
 BACKUP_FILE="${BACKUP_DIR}/backup_$(date +%Y%m%d_%H%M%S).sql"
-$COMPOSE exec -T postgres pg_dump -U "${DB_USER:-ciber_admin}" "${DB_NAME:-ciber_platform}" > "$BACKUP_FILE" 2>/dev/null
 
-if [ -s "$BACKUP_FILE" ]; then
-    BACKUP_SIZE=$(du -h "$BACKUP_FILE" | cut -f1)
-    log "Backup creado: $BACKUP_FILE ($BACKUP_SIZE)"
-
-    # Mantener solo los ultimos 5 backups
-    ls -t "$BACKUP_DIR"/backup_*.sql 2>/dev/null | tail -n +6 | xargs -r rm -f
+if $COMPOSE exec -T postgres pg_dump -U "${DB_USER:-ciber_admin}" "${DB_NAME:-ciber_platform}" > "$BACKUP_FILE" 2>/tmp/pg_dump_err; then
+    if [ -s "$BACKUP_FILE" ] && head -5 "$BACKUP_FILE" | grep -q "PostgreSQL database dump"; then
+        BACKUP_SIZE=$(du -h "$BACKUP_FILE" | cut -f1)
+        log "Backup creado: $BACKUP_FILE ($BACKUP_SIZE)"
+    else
+        rm -f "$BACKUP_FILE"
+        warn "Backup vacio o invalido (DB sin datos?)"
+    fi
 else
-    rm -f "$BACKUP_FILE"
-    warn "Backup vacio (DB sin datos o servicio no disponible)"
+    rm -f "$BACKUP_FILE" /tmp/pg_dump_err
+    warn "pg_dump fallo (servicio no disponible?)"
 fi
+
+# Mantener solo los ultimos 5 backups
+ls -t "$BACKUP_DIR"/backup_*.sql 2>/dev/null | tail -n +6 | xargs -r rm -f
 
 # ----------------------------------------------------------
 # 3. Reset DB (solo si --reset-db)
@@ -131,9 +135,8 @@ if [ "$RESET_DB" = true ]; then
     fi
 
     info "Reseteando base de datos..."
-    $COMPOSE down 2>/dev/null
-    docker volume rm plataforma_postgres_data plataforma_redis_data 2>/dev/null || true
-    log "Volumenes de datos eliminados"
+    $COMPOSE down -v 2>/dev/null
+    log "Servicios detenidos y volumenes eliminados"
 
     info "Reconstruyendo servicios..."
     $COMPOSE up -d --build
@@ -164,8 +167,12 @@ asyncio.run(create())
         $COMPOSE exec -T backend python -m alembic stamp head 2>/dev/null
     }
 
-    ADMIN_PASS="Admin$(openssl rand -hex 4 2>/dev/null || echo '1234')!"
+    ADMIN_PASS="Admin$(openssl rand -hex 4 2>/dev/null || echo 'Sec9x7!')!"
     $COMPOSE exec -T -e ADMIN_SEED_PASSWORD="$ADMIN_PASS" backend python -m app.scripts.seed_base 2>/dev/null && log "Seed completado"
+
+    echo "admin@ciber.local:$ADMIN_PASS" > .admin-credentials
+    chmod 600 .admin-credentials
+    log "Credenciales guardadas en .admin-credentials"
 
     echo ""
     echo -e "${GREEN}DB reseteada.${NC} Admin: admin@ciber.local / $ADMIN_PASS"

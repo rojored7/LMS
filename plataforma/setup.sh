@@ -342,9 +342,13 @@ asyncio.run(create())
 # ----------------------------------------------------------
 info "Ejecutando seed de datos base..."
 
-ADMIN_PASS="Admin$(openssl rand -hex 4 2>/dev/null || echo '1234')!"
+ADMIN_PASS="Admin$(openssl rand -hex 4 2>/dev/null || echo 'Sec9x7!')!"
 
 $COMPOSE exec -T -e ADMIN_SEED_PASSWORD="$ADMIN_PASS" backend python -m app.scripts.seed_base 2>/dev/null && log "Seed completado" || warn "Seed ya ejecutado previamente"
+
+echo "admin@ciber.local:$ADMIN_PASS" > .admin-credentials
+chmod 600 .admin-credentials
+log "Credenciales guardadas en .admin-credentials"
 
 # ----------------------------------------------------------
 # 9. Verificacion final

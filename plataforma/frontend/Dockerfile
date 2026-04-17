@@ -34,13 +34,14 @@ CMD ["npm", "start"]
 FROM base AS build
 
 # Variables de entorno para build
-ARG REACT_APP_API_URL
-ARG REACT_APP_EXECUTOR_URL
-ARG REACT_APP_ENV
+ARG VITE_API_URL
+ARG VITE_EXECUTOR_URL
+ARG VITE_ENV
 
-ENV REACT_APP_API_URL=${REACT_APP_API_URL:-/api}
-ENV REACT_APP_EXECUTOR_URL=${REACT_APP_EXECUTOR_URL:-/executor}
-ENV REACT_APP_ENV=${REACT_APP_ENV:-production}
+ENV VITE_API_URL=${VITE_API_URL:-/api}
+ENV VITE_EXECUTOR_URL=${VITE_EXECUTOR_URL:-/executor}
+ENV VITE_ENV=${VITE_ENV:-production}
+ENV NODE_ENV=production
 
 # Copiar dependencias
 COPY --from=dependencies /app/node_modules ./node_modules

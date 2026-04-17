@@ -68,14 +68,6 @@ app.add_middleware(SlowAPIMiddleware)
 
 register_exception_handlers(app)
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "Accept", "X-Requested-With"],
-)
-
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next) -> Response:
@@ -86,19 +78,28 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
         if settings.is_production:
             response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        connect_src = "'self'" if settings.is_production else "'self' ws: wss:"
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
             "script-src 'self'; "
             "style-src 'self' 'unsafe-inline'; "
             "img-src 'self' data: https:; "
             "font-src 'self'; "
-            "connect-src 'self'; "
+            f"connect-src {connect_src}; "
             "frame-ancestors 'none'"
         )
         return response
 
 
 app.add_middleware(SecurityHeadersMiddleware)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.CORS_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "Accept", "X-Requested-With"],
+)
 
 from app.routers import (
     admin,

@@ -33,6 +33,7 @@ def _set_cookies(response: Response, tokens: dict) -> None:
         secure=secure,
         samesite="lax",
         max_age=tokens["expires_in"],
+        path="/api",
     )
     response.set_cookie(
         key="refresh_token",
@@ -46,7 +47,7 @@ def _set_cookies(response: Response, tokens: dict) -> None:
 
 
 def _clear_cookies(response: Response) -> None:
-    response.delete_cookie("access_token")
+    response.delete_cookie("access_token", path="/api")
     response.delete_cookie("refresh_token", path="/api/auth/refresh")
 
 

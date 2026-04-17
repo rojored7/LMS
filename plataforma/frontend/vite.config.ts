@@ -33,11 +33,11 @@ export default defineConfig({
         secure: false,
       },
     },
-    allowedHosts: true,
+    allowedHosts: ['localhost', '127.0.0.1', '.local'],
   },
   build: {
     outDir: 'dist',
-    sourcemap: true,
+    sourcemap: process.env.NODE_ENV !== 'production',
     rollupOptions: {
       output: {
         manualChunks: {
