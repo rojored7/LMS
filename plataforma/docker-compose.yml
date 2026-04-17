@@ -146,7 +146,6 @@ services:
       - /app/node_modules
     networks:
       - ciber-network
-    command: npm start
     restart: unless-stopped
     stdin_open: true
     tty: true
