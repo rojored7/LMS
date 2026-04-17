@@ -20,7 +20,9 @@ export class AppError extends Error {
 /**
  * Zod validation error handler
  */
-export const handleZodError = (error: ZodError): {
+export const handleZodError = (
+  error: ZodError
+): {
   statusCode: number;
   message: string;
   errors: any[];
@@ -40,7 +42,9 @@ export const handleZodError = (error: ZodError): {
 /**
  * Docker error handler
  */
-export const handleDockerError = (error: any): {
+export const handleDockerError = (
+  error: any
+): {
   statusCode: number;
   message: string;
 } => {
@@ -74,7 +78,7 @@ export const errorHandler = (
   req: Request,
   res: Response,
   _next: NextFunction
-): void => {
+): void | Response => {
   // Log all errors
   logger.error('Error occurred', {
     error: err.message,
@@ -113,9 +117,7 @@ export const errorHandler = (
 
   // Default error
   const statusCode = 500;
-  const message = process.env.NODE_ENV === 'production'
-    ? 'Internal server error'
-    : err.message;
+  const message = process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message;
 
   res.status(statusCode).json({
     success: false,
