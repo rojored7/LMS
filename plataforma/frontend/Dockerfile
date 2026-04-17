@@ -58,7 +58,7 @@ FROM nginx:1.25-alpine AS production
 COPY nginx.production.conf /etc/nginx/conf.d/default.conf
 
 # Copiar build de React
-COPY --from=build /app/build /usr/share/nginx/html
+COPY --from=build /app/dist /usr/share/nginx/html
 
 # Copiar script de inicio que inyecta variables de entorno
 COPY docker-entrypoint.sh /docker-entrypoint.sh
