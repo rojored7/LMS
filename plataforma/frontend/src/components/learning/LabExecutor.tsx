@@ -24,8 +24,7 @@ export const LabExecutor: React.FC<LabExecutorProps> = ({ lab }) => {
   const { data: healthData } = useExecutorHealth();
 
   const executorAvailable = healthData?.executorAvailable ?? true;
-  const showManualComplete =
-    !executorAvailable || (results?.executorError === true);
+  const hasPassedAlready = results?.passed === true && !results?.executorError;
 
   const handleCodeChange = (value: string | undefined) => {
     setCode(value || '');
@@ -238,7 +237,7 @@ export const LabExecutor: React.FC<LabExecutorProps> = ({ lab }) => {
           </button>
 
           {/* Manual Complete Button */}
-          {showManualComplete && (
+          {!hasPassedAlready && (
             <div className="space-y-2">
               <button
                 onClick={handleManualComplete}
@@ -258,7 +257,7 @@ export const LabExecutor: React.FC<LabExecutorProps> = ({ lab }) => {
                 )}
               </button>
               <p className="text-xs text-gray-500 text-center">
-                Si entiendes el concepto pero el ejecutor no funciona, marca como completado
+                Si ya entiendes el concepto, puedes marcarlo como completado
               </p>
             </div>
           )}

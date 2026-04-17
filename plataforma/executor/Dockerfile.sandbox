@@ -13,6 +13,28 @@ RUN apk add --no-cache \
     curl \
     ca-certificates
 
+# Install Python packages required by course labs
+RUN pip3 install --no-cache-dir --break-system-packages \
+    joserfc \
+    PyJWT \
+    cryptography \
+    httpx \
+    requests \
+    pycryptodome \
+    "python-jose[cryptography]" \
+    flask \
+    fastapi \
+    uvicorn \
+    passlib \
+    bcrypt \
+    argon2-cffi \
+    paramiko \
+    ecdsa \
+    authlib \
+    python-multipart \
+    jinja2 \
+    itsdangerous
+
 # Create non-root user for sandbox execution
 RUN addgroup -g 1000 sandbox && \
     adduser -D -u 1000 -G sandbox sandbox
