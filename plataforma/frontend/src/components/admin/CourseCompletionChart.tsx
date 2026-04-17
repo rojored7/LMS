@@ -60,7 +60,7 @@ export default function CourseCompletionChart({ data, isLoading }: CourseComplet
                 borderRadius: '8px',
                 color: '#fff',
               }}
-              formatter={(value: number) => [`${value}%`, 'Completado']}
+              formatter={(value) => [`${value}%`, 'Completado']}
               labelFormatter={(label, payload) => payload?.[0]?.payload?.fullName || label}
             />
             <Bar dataKey="completionRate" radius={[0, 4, 4, 0]} barSize={20}>

@@ -3,7 +3,7 @@
  * Displays enrollment trends over time using Recharts
  */
 
-import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 interface EnrollmentChartProps {
   data?: Array<{
