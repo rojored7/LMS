@@ -25,6 +25,8 @@ export interface LabSubmissionResult {
   exitCode?: number;
   executionTime?: number;
   error?: string;
+  executorError?: boolean;
+  manual?: boolean;
 }
 
 export interface LabSubmissionSummary {
@@ -62,8 +64,26 @@ export const getLabSubmissions = async (labId: string): Promise<LabSubmissionSum
   return (response as any).data || response;
 };
 
+/**
+ * Check executor service health
+ */
+export const checkExecutorHealth = async (): Promise<{ executorAvailable: boolean }> => {
+  const response = await api.get('/labs/executor/health');
+  return (response as any).data || response;
+};
+
+/**
+ * Mark lab as completed manually
+ */
+export const completeLabManual = async (labId: string): Promise<LabSubmissionResult> => {
+  const response = await api.post(`/labs/${labId}/complete`);
+  return (response as any).data || response;
+};
+
 export default {
   getLab,
   submitLab,
   getLabSubmissions,
+  checkExecutorHealth,
+  completeLabManual,
 };

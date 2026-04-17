@@ -5,10 +5,10 @@
 
 import { useState } from 'react';
 import { Lab, LabSubmissionResult } from '../../services/api/lab.service';
-import { useSubmitLab } from '../../hooks/useLabs';
+import { useSubmitLab, useExecutorHealth, useCompleteLabManual } from '../../hooks/useLabs';
 import { CodeEditor } from './CodeEditor';
 import { MarkdownRenderer } from './MarkdownRenderer';
-import { BeakerIcon, PlayIcon } from '@heroicons/react/24/outline';
+import { BeakerIcon, PlayIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
 
 interface LabExecutorProps {
   lab: Lab;
@@ -20,6 +20,12 @@ export const LabExecutor: React.FC<LabExecutorProps> = ({ lab }) => {
   const [results, setResults] = useState<LabSubmissionResult | null>(null);
 
   const submitLab = useSubmitLab();
+  const completeManual = useCompleteLabManual();
+  const { data: healthData } = useExecutorHealth();
+
+  const executorAvailable = healthData?.executorAvailable ?? true;
+  const showManualComplete =
+    !executorAvailable || (results?.executorError === true);
 
   const handleCodeChange = (value: string | undefined) => {
     setCode(value || '');
@@ -39,6 +45,12 @@ export const LabExecutor: React.FC<LabExecutorProps> = ({ lab }) => {
       setResults({ passed: false, error: msg });
       setShowResults(true);
     }
+  };
+
+  const handleManualComplete = async () => {
+    await completeManual.mutateAsync({ labId: lab.id });
+    setResults({ passed: true, manual: true, stdout: 'Marcado como completado manualmente' });
+    setShowResults(true);
   };
 
   const handleReset = () => {
@@ -62,11 +74,30 @@ export const LabExecutor: React.FC<LabExecutorProps> = ({ lab }) => {
                 <span className="px-3 py-1 bg-white/20 rounded-full font-medium">
                   {lab.language}
                 </span>
+                <span className="flex items-center gap-1.5">
+                  <span
+                    className={`inline-block w-2 h-2 rounded-full ${
+                      executorAvailable ? 'bg-green-300' : 'bg-red-400'
+                    }`}
+                  />
+                  <span className="text-xs opacity-80">
+                    {executorAvailable ? 'Ejecutor disponible' : 'Ejecutor no disponible'}
+                  </span>
+                </span>
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Executor unavailable banner */}
+      {!executorAvailable && (
+        <div className="bg-amber-50 border-b border-amber-200 px-6 py-3">
+          <p className="text-sm text-amber-800">
+            El servicio de ejecucion no esta disponible. Puedes marcar el laboratorio como completado manualmente.
+          </p>
+        </div>
+      )}
 
       {/* Lab Description (Markdown) */}
       {lab.description && (
@@ -112,33 +143,57 @@ export const LabExecutor: React.FC<LabExecutorProps> = ({ lab }) => {
           {showResults && results && (
             <div
               className={`rounded-lg border p-4 ${
-                results.passed ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
+                results.executorError
+                  ? 'bg-amber-50 border-amber-200'
+                  : results.passed
+                    ? 'bg-green-50 border-green-200'
+                    : 'bg-red-50 border-red-200'
               }`}
             >
               <h3
                 className={`text-lg font-semibold mb-2 ${
-                  results.passed ? 'text-green-900' : 'text-red-900'
+                  results.executorError
+                    ? 'text-amber-900'
+                    : results.passed
+                      ? 'text-green-900'
+                      : 'text-red-900'
                 }`}
               >
-                {results.passed ? 'Laboratorio Completado' : 'Resultado'}
+                {results.executorError
+                  ? 'Ejecutor No Disponible'
+                  : results.passed
+                    ? 'Laboratorio Completado'
+                    : 'Resultado'}
               </h3>
-              {results.stdout && (
-                <div className="mb-2">
-                  <span className="text-sm font-medium text-gray-700">Salida:</span>
-                  <pre className="mt-1 bg-gray-900 text-green-400 p-2 rounded font-mono text-xs overflow-x-auto whitespace-pre-wrap">
-                    {results.stdout}
-                  </pre>
-                </div>
+
+              {results.executorError ? (
+                <p className="text-sm text-amber-800">
+                  {results.error || 'No se pudo conectar al servicio de ejecucion.'}
+                  {' '}Intenta mas tarde o usa el boton "Marcar como completado".
+                </p>
+              ) : (
+                <>
+                  {results.stdout && (
+                    <div className="mb-2">
+                      <span className="text-sm font-medium text-gray-700">Salida:</span>
+                      <pre className="mt-1 bg-gray-900 text-green-400 p-2 rounded font-mono text-xs overflow-x-auto whitespace-pre-wrap">
+                        {results.stdout}
+                      </pre>
+                    </div>
+                  )}
+                  {results.stderr && (
+                    <div className="mb-2">
+                      <span className="text-sm font-medium text-red-700">Errores:</span>
+                      <pre className="mt-1 bg-gray-900 text-red-400 p-2 rounded font-mono text-xs overflow-x-auto whitespace-pre-wrap">
+                        {results.stderr}
+                      </pre>
+                    </div>
+                  )}
+                  {results.error && !results.executorError && (
+                    <p className="text-sm text-red-700">{results.error}</p>
+                  )}
+                </>
               )}
-              {results.stderr && (
-                <div className="mb-2">
-                  <span className="text-sm font-medium text-red-700">Errores:</span>
-                  <pre className="mt-1 bg-gray-900 text-red-400 p-2 rounded font-mono text-xs overflow-x-auto whitespace-pre-wrap">
-                    {results.stderr}
-                  </pre>
-                </div>
-              )}
-              {results.error && <p className="text-sm text-red-700">{results.error}</p>}
             </div>
           )}
         </div>
@@ -181,6 +236,32 @@ export const LabExecutor: React.FC<LabExecutorProps> = ({ lab }) => {
               </>
             )}
           </button>
+
+          {/* Manual Complete Button */}
+          {showManualComplete && (
+            <div className="space-y-2">
+              <button
+                onClick={handleManualComplete}
+                disabled={completeManual.isPending}
+                className="w-full flex items-center justify-center space-x-2 px-6 py-3 border-2 border-blue-500 text-blue-600 rounded-lg hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {completeManual.isPending ? (
+                  <>
+                    <span className="animate-spin rounded-full h-5 w-5 border-2 border-blue-500 border-t-transparent" />
+                    <span>Marcando...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircleIcon className="h-5 w-5" />
+                    <span>Marcar como completado</span>
+                  </>
+                )}
+              </button>
+              <p className="text-xs text-gray-500 text-center">
+                Si entiendes el concepto pero el ejecutor no funciona, marca como completado
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>

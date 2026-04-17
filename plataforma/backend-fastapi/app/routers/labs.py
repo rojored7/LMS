@@ -23,6 +23,16 @@ from app.utils.enrollment_check import verify_enrollment_or_staff
 router = APIRouter(prefix="/api/labs", tags=["labs"])
 
 
+# --- Health & manual-complete endpoints BEFORE /{lab_id} routes ---
+
+
+@router.get("/executor/health")
+async def executor_health():
+    from app.services.executor_client import executor_client
+    healthy = await executor_client.health_check()
+    return ApiResponse(success=True, data={"executorAvailable": healthy}).model_dump()
+
+
 @router.get("/module/{module_id}")
 async def list_labs(
     module_id: str,
@@ -123,7 +133,17 @@ async def submit_lab(
         test_code=test_code,
     )
 
-    # Executor wraps results: { success, result: { passed, stdout, stderr, exitCode, executionTime } }
+    # Infrastructure error: executor is down - do NOT create a submission
+    if exec_result.get("executor_error"):
+        return ApiResponse(
+            success=False,
+            data={
+                "executorError": True,
+                "error": exec_result.get("error", "Executor no disponible"),
+            },
+        ).model_dump()
+
+    # Executor ran the code - parse results
     result_data = exec_result.get("result", exec_result)
     passed = result_data.get("passed", False)
     stdout = result_data.get("stdout", "")
@@ -153,6 +173,39 @@ async def submit_lab(
             "exitCode": submission.exit_code,
             "executionTime": submission.execution_time,
         },
+    ).model_dump()
+
+
+@router.post("/{lab_id}/complete")
+async def complete_lab_manual(
+    lab_id: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    lab_service = LabService(db)
+    lab = await lab_service.get_by_id(lab_id)
+    mod = (await db.execute(select(Module).where(Module.id == lab.module_id))).scalar_one_or_none()
+    if mod:
+        await verify_enrollment_or_staff(db, user.id, mod.course_id, user.role)
+
+    existing = await lab_service.get_submissions(lab_id, user_id=user.id)
+    if any(s.passed for s in existing):
+        return ApiResponse(success=True, data={"passed": True, "manual": True, "message": "Lab ya completado"}).model_dump()
+
+    submission = await lab_service.submit(
+        lab_id=lab_id,
+        user_id=user.id,
+        code="# Completado manualmente",
+        language=lab.language,
+        passed=True,
+        stdout="Marcado como completado manualmente",
+        stderr="",
+        exit_code=0,
+        execution_time=0,
+    )
+    return ApiResponse(
+        success=True,
+        data={"submissionId": submission.id, "passed": True, "manual": True},
     ).model_dump()
 
 

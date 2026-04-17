@@ -4,7 +4,13 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getLab, submitLab, getLabSubmissions } from '../services/api/lab.service';
+import {
+  getLab,
+  submitLab,
+  getLabSubmissions,
+  checkExecutorHealth,
+  completeLabManual,
+} from '../services/api/lab.service';
 import { useToast } from './useToast';
 
 /**
@@ -30,6 +36,18 @@ export const useLabSubmissions = (labId: string | undefined) => {
 };
 
 /**
+ * Hook to check executor service health
+ */
+export const useExecutorHealth = () => {
+  return useQuery({
+    queryKey: ['executorHealth'],
+    queryFn: () => checkExecutorHealth(),
+    refetchInterval: 30000,
+    staleTime: 15000,
+  });
+};
+
+/**
  * Hook to submit a lab solution
  */
 export const useSubmitLab = () => {
@@ -44,7 +62,12 @@ export const useSubmitLab = () => {
       queryClient.invalidateQueries({ queryKey: ['modules'] });
       queryClient.invalidateQueries({ queryKey: ['courseProgress'] });
 
-      if (data.passed) {
+      if (data.executorError) {
+        showToast(
+          'El ejecutor no esta disponible. Intenta mas tarde o marca como completado.',
+          'error',
+        );
+      } else if (data.passed) {
         showToast('Laboratorio completado exitosamente', 'success');
       } else {
         showToast('Codigo ejecutado. Revisa los resultados.', 'warning');
@@ -52,6 +75,28 @@ export const useSubmitLab = () => {
     },
     onError: (error: any) => {
       showToast(error.response?.data?.message || 'Error al enviar codigo', 'error');
+    },
+  });
+};
+
+/**
+ * Hook to manually mark a lab as completed
+ */
+export const useCompleteLabManual = () => {
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
+
+  return useMutation({
+    mutationFn: ({ labId }: { labId: string }) => completeLabManual(labId),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['lab', variables.labId] });
+      queryClient.invalidateQueries({ queryKey: ['labSubmissions', variables.labId] });
+      queryClient.invalidateQueries({ queryKey: ['modules'] });
+      queryClient.invalidateQueries({ queryKey: ['courseProgress'] });
+      showToast('Laboratorio marcado como completado', 'success');
+    },
+    onError: () => {
+      showToast('Error al marcar como completado', 'error');
     },
   });
 };
