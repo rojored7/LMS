@@ -1,5 +1,6 @@
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { Link } from 'react-router-dom';
 import type { RecentActivity } from '../../services/api/dashboard-analytics.service';
 
 interface RecentActivityFeedProps {
@@ -52,9 +53,16 @@ export default function RecentActivityFeed({ data, isLoading }: RecentActivityFe
                 </div>
                 <div className="flex-1 pb-4">
                   <p className="text-white text-sm">
-                    <span className="font-medium">{item.userName}</span>{' '}
+                    <Link
+                      to={`/admin/users?search=${encodeURIComponent(item.userName)}`}
+                      className="font-medium hover:text-[#00A6FF] hover:underline transition-colors"
+                    >
+                      {item.userName}
+                    </Link>{' '}
                     <span className="text-white/50">{actionText}</span>{' '}
-                    <span className="text-[#00A6FF]">{item.courseTitle}</span>
+                    <span className="text-[#FF5100] hover:underline cursor-pointer transition-colors">
+                      {item.courseTitle}
+                    </span>
                   </p>
                   <p className="text-white/30 text-xs mt-0.5">{timeAgo}</p>
                 </div>

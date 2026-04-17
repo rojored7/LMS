@@ -1,4 +1,5 @@
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+import { useNavigate } from 'react-router-dom';
 import type { UserDistribution } from '../../services/api/dashboard-analytics.service';
 
 interface UserDistributionChartProps {
@@ -19,6 +20,7 @@ const ROLE_LABELS: Record<string, string> = {
 };
 
 export default function UserDistributionChart({ data, isLoading }: UserDistributionChartProps) {
+  const navigate = useNavigate();
   if (isLoading) {
     return (
       <div className="bg-[#0F2035] rounded-xl border border-white/10 p-6 animate-pulse">
@@ -54,6 +56,10 @@ export default function UserDistributionChart({ data, isLoading }: UserDistribut
                 outerRadius={100}
                 paddingAngle={3}
                 dataKey="value"
+                cursor="pointer"
+                onClick={(entry) => {
+                  if (entry?.role) navigate(`/admin/users?role=${entry.role}`);
+                }}
               >
                 {chartData.map((entry) => (
                   <Cell key={entry.role} fill={ROLE_COLORS[entry.role] || '#666'} />

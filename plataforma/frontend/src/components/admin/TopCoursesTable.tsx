@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import type { CourseStat } from '../../services/api/dashboard-analytics.service';
 
 interface TopCoursesTableProps {
@@ -6,6 +7,7 @@ interface TopCoursesTableProps {
 }
 
 export default function TopCoursesTable({ data, isLoading }: TopCoursesTableProps) {
+  const navigate = useNavigate();
   if (isLoading) {
     return (
       <div className="bg-[#0F2035] rounded-xl border border-white/10 p-6 animate-pulse">
@@ -42,7 +44,11 @@ export default function TopCoursesTable({ data, isLoading }: TopCoursesTableProp
             </thead>
             <tbody>
               {sorted.map((course, i) => (
-                <tr key={course.courseId} className="border-b border-white/5 hover:bg-white/5">
+                <tr
+                  key={course.courseId}
+                  onClick={() => navigate(`/admin/courses/${course.courseId}/edit`)}
+                  className="border-b border-white/5 hover:bg-white/5 cursor-pointer transition-colors"
+                >
                   <td className="py-3 text-white/40 text-sm">{i + 1}</td>
                   <td className="py-3 text-white font-medium text-sm max-w-[200px] truncate">
                     {course.courseTitle}

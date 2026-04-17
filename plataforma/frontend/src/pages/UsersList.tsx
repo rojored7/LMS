@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Users, UserPlus, Search, Filter } from 'lucide-react';
 import { Button } from '../components/common/Button';
 import { useToast } from '../hooks/useToast';
@@ -14,10 +14,11 @@ import { ROLE_LABELS } from '../utils/constants';
 
 export const UsersList: React.FC = () => {
   const toast = useToast();
+  const [searchParams] = useSearchParams();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [roleFilter, setRoleFilter] = useState<string>('ALL');
+  const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
+  const [roleFilter, setRoleFilter] = useState<string>(searchParams.get('role') || 'ALL');
 
   useEffect(() => {
     loadUsers();
@@ -27,7 +28,8 @@ export const UsersList: React.FC = () => {
     try {
       setLoading(true);
       const response = await userService.getUsers({ page: 1, limit: 100 });
-      setUsers(response.data?.users || []);
+      const userData = (response as any)?.data || response;
+      setUsers(Array.isArray(userData) ? userData : userData?.users || []);
     } catch (err: any) {
       toast.error('Error al cargar usuarios');
     } finally {
@@ -48,10 +50,10 @@ export const UsersList: React.FC = () => {
   };
 
   const filteredUsers = users.filter((user) => {
+    const term = searchTerm.toLowerCase();
     const matchesSearch =
-      user.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase());
+      (user.name || '').toLowerCase().includes(term) ||
+      (user.email || '').toLowerCase().includes(term);
 
     const matchesRole = roleFilter === 'ALL' || user.role === roleFilter;
 
@@ -145,12 +147,11 @@ export const UsersList: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold">
-                          {user.firstName[0]}
-                          {user.lastName[0]}
+                          {(user.name || user.email || '?')[0].toUpperCase()}
                         </div>
                         <div className="ml-4">
                           <div className="text-sm font-medium text-gray-900 dark:text-white">
-                            {user.firstName} {user.lastName}
+                            {user.name || user.email}
                           </div>
                         </div>
                       </div>

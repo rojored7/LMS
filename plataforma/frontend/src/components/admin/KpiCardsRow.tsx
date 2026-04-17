@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Users, BookOpen, GraduationCap, Award, FileCheck, TrendingUp, TrendingDown } from 'lucide-react';
 import type { PlatformStats, ComparativeStats } from '../../services/api/dashboard-analytics.service';
 
@@ -15,9 +17,37 @@ interface KpiCardProps {
   icon: React.ReactNode;
   accentColor: string;
   isLoading: boolean;
+  onClick?: () => void;
+  delay?: number;
 }
 
-function KpiCard({ label, value, subtitle, changePercent, icon, accentColor, isLoading }: KpiCardProps) {
+function AnimatedNumber({ target, duration = 600 }: { target: number; duration?: number }) {
+  const [current, setCurrent] = useState(0);
+
+  useEffect(() => {
+    if (target === 0) { setCurrent(0); return; }
+    const start = performance.now();
+    const step = (now: number) => {
+      const elapsed = now - start;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setCurrent(Math.round(eased * target));
+      if (progress < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }, [target, duration]);
+
+  return <>{current}</>;
+}
+
+function KpiCard({ label, value, subtitle, changePercent, icon, accentColor, isLoading, onClick, delay = 0 }: KpiCardProps) {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setVisible(true), delay);
+    return () => clearTimeout(timer);
+  }, [delay]);
+
   if (isLoading) {
     return (
       <div className="bg-[#0F2035] rounded-xl border border-white/10 p-5 animate-pulse">
@@ -29,9 +59,28 @@ function KpiCard({ label, value, subtitle, changePercent, icon, accentColor, isL
   }
 
   const isPositive = changePercent !== undefined && changePercent >= 0;
+  const numericValue = typeof value === 'number' ? value : null;
 
   return (
-    <div className="bg-[#0F2035] rounded-xl border border-white/10 overflow-hidden">
+    <div
+      onClick={onClick}
+      className={`bg-[#0F2035] rounded-xl border border-white/10 overflow-hidden cursor-pointer
+        transition-all duration-300 ease-out
+        hover:scale-[1.03] hover:border-opacity-50
+        ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
+      style={{
+        borderColor: visible ? undefined : 'transparent',
+        transitionProperty: 'transform, box-shadow, border-color, opacity',
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.boxShadow = `0 0 20px ${accentColor}30, 0 4px 20px rgba(0,0,0,0.3)`;
+        e.currentTarget.style.borderColor = `${accentColor}50`;
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.boxShadow = '';
+        e.currentTarget.style.borderColor = '';
+      }}
+    >
       <div className="h-1" style={{ backgroundColor: accentColor }} />
       <div className="p-5">
         <div className="flex items-center justify-between mb-3">
@@ -40,7 +89,9 @@ function KpiCard({ label, value, subtitle, changePercent, icon, accentColor, isL
             {icon}
           </div>
         </div>
-        <p className="text-3xl font-bold text-white">{value}</p>
+        <p className="text-3xl font-bold text-white">
+          {numericValue !== null ? <AnimatedNumber target={numericValue} /> : value}
+        </p>
         <div className="flex items-center gap-2 mt-2">
           {changePercent !== undefined && (
             <span className={`flex items-center gap-1 text-xs font-medium ${isPositive ? 'text-emerald-400' : 'text-red-400'}`}>
@@ -56,6 +107,8 @@ function KpiCard({ label, value, subtitle, changePercent, icon, accentColor, isL
 }
 
 export default function KpiCardsRow({ stats, comparative, isLoading }: KpiCardsRowProps) {
+  const navigate = useNavigate();
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
       <KpiCard
@@ -66,6 +119,8 @@ export default function KpiCardsRow({ stats, comparative, isLoading }: KpiCardsR
         icon={<Users className="w-5 h-5" style={{ color: '#00A6FF' }} />}
         accentColor="#00A6FF"
         isLoading={isLoading}
+        onClick={() => navigate('/admin/users')}
+        delay={0}
       />
       <KpiCard
         label="Cursos Activos"
@@ -73,6 +128,8 @@ export default function KpiCardsRow({ stats, comparative, isLoading }: KpiCardsR
         icon={<BookOpen className="w-5 h-5" style={{ color: '#FF5100' }} />}
         accentColor="#FF5100"
         isLoading={isLoading}
+        onClick={() => navigate('/admin/courses')}
+        delay={80}
       />
       <KpiCard
         label="Inscripciones"
@@ -82,6 +139,8 @@ export default function KpiCardsRow({ stats, comparative, isLoading }: KpiCardsR
         icon={<GraduationCap className="w-5 h-5" style={{ color: '#166EB6' }} />}
         accentColor="#166EB6"
         isLoading={isLoading}
+        onClick={() => navigate('/admin/users')}
+        delay={160}
       />
       <KpiCard
         label="Tasa Completado"
@@ -91,6 +150,8 @@ export default function KpiCardsRow({ stats, comparative, isLoading }: KpiCardsR
         icon={<Award className="w-5 h-5" style={{ color: '#10B981' }} />}
         accentColor="#10B981"
         isLoading={isLoading}
+        onClick={() => navigate('/admin/users')}
+        delay={240}
       />
       <KpiCard
         label="Certificados"
@@ -98,6 +159,8 @@ export default function KpiCardsRow({ stats, comparative, isLoading }: KpiCardsR
         icon={<FileCheck className="w-5 h-5" style={{ color: '#8B5CF6' }} />}
         accentColor="#8B5CF6"
         isLoading={isLoading}
+        onClick={() => navigate('/admin/users')}
+        delay={320}
       />
     </div>
   );
