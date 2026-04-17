@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     PORT: int = 4000
     HOST: str = "0.0.0.0"
     FRONTEND_URL: str = "http://localhost:3000"
-    CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost", "*"]
+    CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost"]
 
     DATABASE_URL: str
     REDIS_URL: str = "redis://localhost:6379/0"

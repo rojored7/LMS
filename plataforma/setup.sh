@@ -61,19 +61,30 @@ find_free_port() {
 # Parsear argumentos
 # ----------------------------------------------------------
 CUSTOM_PORT=""
+PRODUCTION_MODE=false
 while [[ $# -gt 0 ]]; do
     case $1 in
         --port)
             CUSTOM_PORT="$2"
             shift 2
             ;;
+        --production|--prod)
+            PRODUCTION_MODE=true
+            shift
+            ;;
         --help|-h)
             echo "Uso: ./setup.sh [opciones]"
             echo ""
             echo "Opciones:"
-            echo "  --port PUERTO   Puerto HTTP para Nginx (default: 80)"
-            echo "  --port auto     Detectar automaticamente puerto libre"
-            echo "  --help          Mostrar esta ayuda"
+            echo "  --port PUERTO     Puerto HTTP para Nginx (default: 80)"
+            echo "  --port auto       Detectar automaticamente puerto libre"
+            echo "  --production      Modo produccion (build optimizado, sin source code expuesto)"
+            echo "  --help            Mostrar esta ayuda"
+            echo ""
+            echo "Ejemplos:"
+            echo "  ./setup.sh                      # Desarrollo local"
+            echo "  ./setup.sh --production         # Produccion (puerto 80)"
+            echo "  ./setup.sh --production --port 8080  # Produccion en puerto 8080"
             exit 0
             ;;
         *)
@@ -230,6 +241,24 @@ if [ "$HTTPS_PORT" != "443" ]; then
         echo "NGINX_HTTPS_PORT=${HTTPS_PORT}" >> .env
     fi
     log "Puerto HTTPS configurado: $HTTPS_PORT"
+fi
+
+# Aplicar modo produccion si se solicito
+if [ "$PRODUCTION_MODE" = true ]; then
+    info "Configurando modo PRODUCCION..."
+    if grep -q "^NODE_ENV=" .env; then
+        sed -i "s|^NODE_ENV=.*|NODE_ENV=production|g" .env
+    else
+        echo "NODE_ENV=production" >> .env
+    fi
+    if grep -q "^APP_ENV=" .env; then
+        sed -i "s|^APP_ENV=.*|APP_ENV=production|g" .env
+    else
+        echo "APP_ENV=production" >> .env
+    fi
+    log "Modo produccion activado (frontend build optimizado, sin source code expuesto)"
+else
+    info "Modo DESARROLLO (hot reload, source maps, Vite dev server)"
 fi
 
 # ----------------------------------------------------------

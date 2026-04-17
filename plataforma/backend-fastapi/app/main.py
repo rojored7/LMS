@@ -92,7 +92,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "style-src 'self' 'unsafe-inline'; "
             "img-src 'self' data: https:; "
             "font-src 'self'; "
-            "connect-src 'self' http://localhost:* https://localhost:*; "
+            "connect-src 'self'; "
             "frame-ancestors 'none'"
         )
         return response
