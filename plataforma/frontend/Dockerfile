@@ -64,12 +64,12 @@ COPY --from=build /app/dist /usr/share/nginx/html
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 
-# Exponer puerto
-EXPOSE 80
+# Exponer puerto (3000 para compatibilidad con docker-compose y nginx upstream)
+EXPOSE 3000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost/ || exit 1
+    CMD wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 1
 
 # Comando de inicio
 ENTRYPOINT ["/docker-entrypoint.sh"]
