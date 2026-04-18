@@ -2,7 +2,7 @@
  * Student Dashboard page
  */
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardBody, CardHeader } from '../components/common/Card';
 import { Badge } from '../components/common/Badge';
@@ -17,10 +17,6 @@ export const Dashboard: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { data: enrolledCourses, isLoading, error, refetch } = useEnrolledCourses();
-
-  useEffect(() => {
-    refetch();
-  }, [refetch]);
 
   if (isLoading) {
     return <Loader fullScreen text="Cargando dashboard..." />;
@@ -38,7 +34,10 @@ export const Dashboard: React.FC = () => {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <Card className="cursor-pointer hover:scale-[1.02] hover:shadow-lg transition-all" onClick={() => navigate(ROUTES.COURSES)}>
+        <Card
+          className="cursor-pointer hover:scale-[1.02] hover:shadow-lg transition-all"
+          onClick={() => navigate(ROUTES.COURSES)}
+        >
           <CardBody>
             <div className="flex items-center gap-4">
               <div className="p-3 bg-blue-50 rounded-lg">
@@ -64,7 +63,10 @@ export const Dashboard: React.FC = () => {
           </CardBody>
         </Card>
 
-        <Card className="cursor-pointer hover:scale-[1.02] hover:shadow-lg transition-all" onClick={() => navigate(ROUTES.PROFILE)}>
+        <Card
+          className="cursor-pointer hover:scale-[1.02] hover:shadow-lg transition-all"
+          onClick={() => navigate(ROUTES.PROFILE)}
+        >
           <CardBody>
             <div className="flex items-center gap-4">
               <div className="p-3 bg-orange-50 rounded-lg">
@@ -92,7 +94,10 @@ export const Dashboard: React.FC = () => {
           </CardBody>
         </Card>
 
-        <Card className="cursor-pointer hover:scale-[1.02] hover:shadow-lg transition-all" onClick={() => navigate(ROUTES.PROFILE)}>
+        <Card
+          className="cursor-pointer hover:scale-[1.02] hover:shadow-lg transition-all"
+          onClick={() => navigate(ROUTES.PROFILE)}
+        >
           <CardBody>
             <div className="flex items-center gap-4">
               <div className="p-3 bg-blue-50 rounded-lg">
@@ -118,7 +123,10 @@ export const Dashboard: React.FC = () => {
           </CardBody>
         </Card>
 
-        <Card className="cursor-pointer hover:scale-[1.02] hover:shadow-lg transition-all" onClick={() => navigate(ROUTES.PROFILE)}>
+        <Card
+          className="cursor-pointer hover:scale-[1.02] hover:shadow-lg transition-all"
+          onClick={() => navigate(ROUTES.PROFILE)}
+        >
           <CardBody>
             <div className="flex items-center gap-4">
               <div className="p-3 bg-purple-50 rounded-lg">

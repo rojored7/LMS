@@ -21,8 +21,6 @@ RUN pip3 install --no-cache-dir --break-system-packages \
     joserfc \
     PyJWT \
     cryptography \
-    httpx \
-    requests \
     pycryptodome \
     "python-jose[cryptography]" \
     passlib \

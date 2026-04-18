@@ -88,16 +88,17 @@ async def update_user_badge(
         raise HTTPException(status_code=403, detail="No autorizado")
 
     badge = ub.badge
-    if badge and badge.is_external:
-        badge.name = data.name
-        badge.level = data.level
-        badge.duration_hours = data.duration_hours
-        badge.source = data.source
-        badge.description = data.description or badge.description
+    if not (badge and badge.is_external):
+        raise HTTPException(status_code=400, detail="Solo se pueden editar badges externos")
+
+    badge.name = data.name
+    badge.level = data.level
+    badge.duration_hours = data.duration_hours
+    badge.source = data.source
+    badge.description = data.description or badge.description
     ub.enrolled_at = data.start_date
     ub.completed_at = data.end_date
     await db.flush()
-    await db.commit()
 
     result = await db.execute(select(UserBadge).options(_sl(UserBadge.badge)).where(UserBadge.id == user_badge_id))
     ub = result.scalar_one()
@@ -110,27 +111,37 @@ async def delete_user_badge(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    result = await db.execute(select(UserBadge).where(UserBadge.id == user_badge_id))
+    from sqlalchemy.orm import selectinload as _sl
+    result = await db.execute(select(UserBadge).options(_sl(UserBadge.badge)).where(UserBadge.id == user_badge_id))
     ub = result.scalar_one_or_none()
     if ub is None:
         raise HTTPException(status_code=404, detail="UserBadge no encontrado")
     if ub.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="No autorizado")
 
-    # Remove certificate file if exists
+    # Deduct XP if badge awarded XP
+    if ub.badge and ub.badge.xp_reward and ub.badge.xp_reward > 0:
+        from app.models.user import User as UserModel
+        user = await db.get(UserModel, ub.user_id)
+        if user:
+            user.xp = max(0, (user.xp or 0) - ub.badge.xp_reward)
+
+    # Remove certificate file with path traversal protection
     if ub.certificate_url:
-        filepath = os.path.join(os.environ.get("UPLOADS_DIR", "/app/uploads"), ub.certificate_url.replace("/api/uploads/", ""))
-        if os.path.exists(filepath):
+        uploads_base = os.path.realpath(os.environ.get("UPLOADS_DIR", "/app/uploads"))
+        filepath = os.path.realpath(os.path.join(uploads_base, ub.certificate_url.replace("/api/uploads/", "")))
+        if filepath.startswith(uploads_base + os.sep) and os.path.exists(filepath):
             os.remove(filepath)
 
     await db.delete(ub)
     await db.flush()
-    await db.commit()
     return {"success": True, "data": {"message": "Badge eliminado"}}
 
 
 @router.post("/user-badge/{user_badge_id}/certificate")
+@limiter.limit("10/hour")
 async def upload_certificate(
+    request: Request,
     user_badge_id: str,
     file: UploadFile,
     current_user: User = Depends(get_current_user),
@@ -162,7 +173,6 @@ async def upload_certificate(
 
     ub.certificate_url = f"/api/uploads/certificates/{filename}"
     await db.flush()
-    await db.commit()
 
     return {"success": True, "data": {"certificateUrl": ub.certificate_url}}
 
