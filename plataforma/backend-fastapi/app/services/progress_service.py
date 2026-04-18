@@ -1,7 +1,7 @@
 import json
 from datetime import datetime, timezone
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update as sa_update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 import structlog
@@ -251,9 +251,17 @@ class ProgressService:
             enrollment.progress = progress
             enrollment.last_accessed_at = datetime.now(timezone.utc)
             if progress >= 100:
-                first_completion = enrollment.completed_at is None
-                enrollment.completed_at = datetime.now(timezone.utc)
-                if first_completion:
+                # Atomic UPDATE: only the first request to set completed_at wins
+                rows = await self.db.execute(
+                    sa_update(Enrollment)
+                    .where(Enrollment.id == enrollment.id, Enrollment.completed_at.is_(None))
+                    .values(completed_at=datetime.now(timezone.utc))
+                )
+                if rows.rowcount == 0:
+                    # Already completed by another request - just update timestamp
+                    enrollment.completed_at = enrollment.completed_at or datetime.now(timezone.utc)
+                else:
+                    await self.db.refresh(enrollment)
                     course = await self.db.get(Course, enrollment.course_id)
                     if course:
                         user = await self.db.get(User, enrollment.user_id)

@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.middleware.auth import get_current_user, require_admin
+from app.middleware.rate_limit import limiter
 from app.models.user import User
 from app.schemas.user import BadgeCreate, BadgeResponse, ExternalBadgeImport, UserBadgeResponse
 from app.services.badge_service import BadgeService
@@ -43,7 +44,9 @@ async def get_user_badges(user_id: str, current_user: User = Depends(get_current
 
 
 @router.post("/import-external")
+@limiter.limit("10/hour")
 async def import_external_badge(
+    request: Request,
     data: ExternalBadgeImport,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),

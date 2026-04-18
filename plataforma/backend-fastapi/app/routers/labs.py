@@ -27,7 +27,9 @@ router = APIRouter(prefix="/api/labs", tags=["labs"])
 
 
 @router.get("/executor/health")
-async def executor_health():
+async def executor_health(
+    _user: User = Depends(get_current_user),
+):
     from app.services.executor_client import executor_client
     healthy = await executor_client.health_check()
     return ApiResponse(success=True, data={"executorAvailable": healthy}).model_dump()
@@ -177,7 +179,9 @@ async def submit_lab(
 
 
 @router.post("/{lab_id}/complete")
+@limiter.limit("5/minute")
 async def complete_lab_manual(
+    request: Request,
     lab_id: str,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),

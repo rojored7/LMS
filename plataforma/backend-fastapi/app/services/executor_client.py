@@ -72,13 +72,13 @@ class ExecutorClient:
                     "stderr": "Timeout",
                 }
             except httpx.HTTPStatusError as e:
-                logger.error("executor_http_error", status=e.response.status_code)
+                logger.error("executor_http_error", status=e.response.status_code, detail=str(e))
                 return {
                     "success": False,
                     "executor_error": True,
                     "error": f"Error del ejecutor: {e.response.status_code}",
                     "stdout": "",
-                    "stderr": str(e),
+                    "stderr": "",
                 }
             except (httpx.ConnectError, httpx.ConnectTimeout) as e:
                 last_error = e
@@ -101,7 +101,7 @@ class ExecutorClient:
             "executor_error": True,
             "error": "Error de conexion con el ejecutor",
             "stdout": "",
-            "stderr": str(last_error),
+            "stderr": "",
         }
 
     async def health_check(self) -> bool:

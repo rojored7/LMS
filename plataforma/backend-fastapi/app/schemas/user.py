@@ -141,13 +141,13 @@ class UserBadgeResponse(CamelModel):
 
 
 class ExternalBadgeImport(CamelModel):
-    name: str
-    source: str
-    level: str | None = None
+    name: str = Field(min_length=1, max_length=255)
+    source: str = Field(min_length=1, max_length=100)
+    level: Literal["BEGINNER", "INTERMEDIATE", "ADVANCED", "EXPERT"] | None = None
     start_date: datetime | None = None
     end_date: datetime | None = None
-    duration_hours: int | None = None
-    description: str | None = None
+    duration_hours: int | None = Field(default=None, ge=0, le=10000)
+    description: str | None = Field(default=None, max_length=1000)
 
 
 class NotificationResponse(CamelModel):

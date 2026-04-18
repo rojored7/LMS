@@ -1,7 +1,7 @@
 import enum
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, DateTime, Index, Integer, JSON, String, Text
+from sqlalchemy import Boolean, DateTime, Index, Integer, JSON, String, Text, UniqueConstraint
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -57,6 +57,10 @@ class UserBadge(Base):
 
     user: Mapped["User"] = relationship(back_populates="user_badges")
     badge: Mapped[Badge] = relationship(back_populates="user_badges")
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "badge_id", name="uq_user_badge"),
+    )
 
 
 class Certificate(Base):

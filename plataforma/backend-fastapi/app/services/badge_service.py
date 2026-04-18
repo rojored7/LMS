@@ -1,4 +1,5 @@
 import re
+import unicodedata
 from datetime import datetime, timezone
 
 from sqlalchemy import select
@@ -13,6 +14,7 @@ logger = structlog.get_logger()
 
 
 def _slugify(text: str) -> str:
+    text = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii")
     text = text.lower().strip()
     text = re.sub(r"[^\w\s-]", "", text)
     return re.sub(r"[\s_]+", "-", text)[:100]

@@ -14,6 +14,9 @@ RUN apk add --no-cache \
     ca-certificates
 
 # Install Python packages required by course labs
+# SECURITY: Only crypto/JWT libs. No web frameworks (flask/fastapi/uvicorn),
+# no SSH clients (paramiko), no template engines (jinja2).
+# Network is disabled at container level (--network none).
 RUN pip3 install --no-cache-dir --break-system-packages \
     joserfc \
     PyJWT \
@@ -22,18 +25,11 @@ RUN pip3 install --no-cache-dir --break-system-packages \
     requests \
     pycryptodome \
     "python-jose[cryptography]" \
-    flask \
-    fastapi \
-    uvicorn \
     passlib \
     bcrypt \
     argon2-cffi \
-    paramiko \
     ecdsa \
-    authlib \
-    python-multipart \
-    jinja2 \
-    itsdangerous
+    authlib
 
 # Create non-root user for sandbox execution
 RUN addgroup -g 1000 sandbox && \
