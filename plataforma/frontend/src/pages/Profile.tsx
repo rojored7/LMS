@@ -34,6 +34,7 @@ export const Profile: React.FC = () => {
     description: '',
   });
   const [importLoading, setImportLoading] = useState(false);
+  const [certificateFile, setCertificateFile] = useState<File | null>(null);
 
   const [pointsData, setPointsData] = useState<{
     total: number;
@@ -79,7 +80,7 @@ export const Profile: React.FC = () => {
     if (!importForm.name || !importForm.source) return;
     setImportLoading(true);
     try {
-      await api.post('/badges/import-external', {
+      const importRes: any = await api.post('/badges/import-external', {
         name: importForm.name,
         source: importForm.source,
         level: importForm.level || null,
@@ -88,8 +89,20 @@ export const Profile: React.FC = () => {
         endDate: importForm.endDate || null,
         description: importForm.description || null,
       });
+      const userBadgeId = (importRes?.data ?? importRes)?.id;
+
+      // Upload certificate file if provided
+      if (certificateFile && userBadgeId) {
+        const formData = new FormData();
+        formData.append('file', certificateFile);
+        await api.post(`/badges/user-badge/${userBadgeId}/certificate`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+      }
+
       toast.success('Badge importado exitosamente');
       setShowImportForm(false);
+      setCertificateFile(null);
       setImportForm({
         name: '',
         source: '',
@@ -332,7 +345,12 @@ export const Profile: React.FC = () => {
                             key={item.courseId}
                             className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0"
                           >
-                            <button onClick={() => navigate(`/courses/${item.courseId}`)} className="text-sm text-gray-900 hover:text-blue-600 hover:underline text-left transition-colors">{item.courseTitle}</button>
+                            <button
+                              onClick={() => navigate(`/courses/${item.courseId}`)}
+                              className="text-sm text-gray-900 hover:text-blue-600 hover:underline text-left transition-colors"
+                            >
+                              {item.courseTitle}
+                            </button>
                             <div className="flex items-center gap-3">
                               <span className="text-sm font-semibold text-purple-600">
                                 +{item.score} XP
@@ -450,6 +468,15 @@ export const Profile: React.FC = () => {
                           }
                         />
                       </div>
+                      <div className="mt-3">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Certificado (PDF/imagen)</label>
+                        <input
+                          type="file"
+                          accept=".pdf,.png,.jpg,.jpeg"
+                          onChange={(e) => setCertificateFile(e.target.files?.[0] || null)}
+                          className="w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                        />
+                      </div>
                       <div className="mt-3 flex justify-end">
                         <Button
                           variant="primary"
@@ -470,39 +497,108 @@ export const Profile: React.FC = () => {
                       {userBadges.map((ub: any) => (
                         <div key={ub.id}>
                           <div
-                            onClick={() => setSelectedBadge(selectedBadge?.id === ub.id ? null : ub)}
+                            onClick={() =>
+                              setSelectedBadge(selectedBadge?.id === ub.id ? null : ub)
+                            }
                             className="flex items-start gap-3 p-3 bg-white border border-gray-200 rounded-lg cursor-pointer hover:border-blue-300 hover:shadow-md transition-all"
                           >
-                            <div className={`p-2 rounded-lg ${ub.badge?.isExternal ? 'bg-blue-50' : 'bg-green-50'}`}>
-                              <svg className={`w-6 h-6 ${ub.badge?.isExternal ? 'text-blue-500' : 'text-green-500'}`} fill="currentColor" viewBox="0 0 24 24">
+                            <div
+                              className={`p-2 rounded-lg ${ub.badge?.isExternal ? 'bg-blue-50' : 'bg-green-50'}`}
+                            >
+                              <svg
+                                className={`w-6 h-6 ${ub.badge?.isExternal ? 'text-blue-500' : 'text-green-500'}`}
+                                fill="currentColor"
+                                viewBox="0 0 24 24"
+                              >
                                 <path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
                               </svg>
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-semibold text-gray-900 truncate">{ub.badge?.name || 'Badge'}</p>
-                              {ub.badge?.level && <p className="text-xs text-gray-500">{ub.badge.level}</p>}
+                              <p className="text-sm font-semibold text-gray-900 truncate">
+                                {ub.badge?.name || 'Badge'}
+                              </p>
+                              {ub.badge?.level && (
+                                <p className="text-xs text-gray-500">{ub.badge.level}</p>
+                              )}
                               {ub.badge?.source && ub.badge.source !== 'platform' && (
                                 <p className="text-xs text-blue-600">{ub.badge.source}</p>
                               )}
-                              <p className="text-xs text-gray-400 mt-1">{formatDate(ub.earnedAt)}</p>
+                              <p className="text-xs text-gray-400 mt-1">
+                                {formatDate(ub.earnedAt)}
+                              </p>
                             </div>
                           </div>
                           {selectedBadge?.id === ub.id && (
                             <div className="mt-2 p-4 bg-gray-50 rounded-lg border border-gray-200 text-sm space-y-2">
                               <p className="font-semibold text-gray-900">{ub.badge?.name}</p>
-                              {ub.badge?.description && <p className="text-gray-600">{ub.badge.description}</p>}
-                              <div className="grid grid-cols-2 gap-2 text-xs">
-                                {ub.badge?.level && <div><span className="text-gray-500">Nivel:</span> <span className="font-medium">{ub.badge.level}</span></div>}
-                                {ub.badge?.durationHours && <div><span className="text-gray-500">Duracion:</span> <span className="font-medium">{ub.badge.durationHours}h</span></div>}
-                                {ub.badge?.source && <div><span className="text-gray-500">Fuente:</span> <span className="font-medium">{ub.badge.source}</span></div>}
-                                {ub.badge?.category && <div><span className="text-gray-500">Tipo:</span> <span className="font-medium">{ub.badge.category === 'course_completion' ? 'Curso completado' : ub.badge.category === 'external' ? 'Externo' : 'Logro'}</span></div>}
-                                <div><span className="text-gray-500">Obtenido:</span> <span className="font-medium">{formatDate(ub.earnedAt)}</span></div>
-                                {ub.enrolledAt && <div><span className="text-gray-500">Inicio:</span> <span className="font-medium">{formatDate(ub.enrolledAt)}</span></div>}
-                                {ub.completedAt && <div><span className="text-gray-500">Fin:</span> <span className="font-medium">{formatDate(ub.completedAt)}</span></div>}
-                              </div>
-                              {ub.badge?.courseId && (
-                                <button onClick={() => navigate(`/courses/${ub.badge.courseId}`)} className="text-blue-600 hover:underline text-xs font-medium">Ir al curso</button>
+                              {ub.badge?.description && (
+                                <p className="text-gray-600">{ub.badge.description}</p>
                               )}
+                              <div className="grid grid-cols-2 gap-2 text-xs">
+                                {ub.badge?.level && (
+                                  <div>
+                                    <span className="text-gray-500">Nivel:</span>{' '}
+                                    <span className="font-medium">{ub.badge.level}</span>
+                                  </div>
+                                )}
+                                {ub.badge?.durationHours && (
+                                  <div>
+                                    <span className="text-gray-500">Duracion:</span>{' '}
+                                    <span className="font-medium">{ub.badge.durationHours}h</span>
+                                  </div>
+                                )}
+                                {ub.badge?.source && (
+                                  <div>
+                                    <span className="text-gray-500">Fuente:</span>{' '}
+                                    <span className="font-medium">{ub.badge.source}</span>
+                                  </div>
+                                )}
+                                {ub.badge?.category && (
+                                  <div>
+                                    <span className="text-gray-500">Tipo:</span>{' '}
+                                    <span className="font-medium">
+                                      {ub.badge.category === 'course_completion'
+                                        ? 'Curso completado'
+                                        : ub.badge.category === 'external'
+                                          ? 'Externo'
+                                          : 'Logro'}
+                                    </span>
+                                  </div>
+                                )}
+                                <div>
+                                  <span className="text-gray-500">Obtenido:</span>{' '}
+                                  <span className="font-medium">{formatDate(ub.earnedAt)}</span>
+                                </div>
+                                {ub.enrolledAt && (
+                                  <div>
+                                    <span className="text-gray-500">Inicio:</span>{' '}
+                                    <span className="font-medium">{formatDate(ub.enrolledAt)}</span>
+                                  </div>
+                                )}
+                                {ub.completedAt && (
+                                  <div>
+                                    <span className="text-gray-500">Fin:</span>{' '}
+                                    <span className="font-medium">
+                                      {formatDate(ub.completedAt)}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-3 flex-wrap">
+                                {ub.badge?.xpReward > 0 && (
+                                  <span className="text-xs font-semibold text-purple-600">+{ub.badge.xpReward} XP</span>
+                                )}
+                                {ub.certificateUrl && (
+                                  <a href={`${window.location.origin}${ub.certificateUrl}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-xs font-medium">
+                                    Ver certificado
+                                  </a>
+                                )}
+                                {ub.badge?.courseId && (
+                                  <button onClick={() => navigate(`/courses/${ub.badge.courseId}`)} className="text-blue-600 hover:underline text-xs font-medium">
+                                    Ir al curso
+                                  </button>
+                                )}
+                              </div>
                             </div>
                           )}
                         </div>

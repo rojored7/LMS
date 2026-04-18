@@ -54,6 +54,7 @@ class UserBadge(Base):
     enrolled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     course_id: Mapped[str | None] = mapped_column(String(32), ForeignKey("courses.id", ondelete="SET NULL"), nullable=True)
+    certificate_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
     user: Mapped["User"] = relationship(back_populates="user_badges")
     badge: Mapped[Badge] = relationship(back_populates="user_badges")

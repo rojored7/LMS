@@ -1,8 +1,10 @@
+import os
 import structlog
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
@@ -120,6 +122,11 @@ from app.routers import (
     training_profiles,
     users,
 )
+
+# Static files for uploads (certificates, etc.)
+_uploads_dir = os.environ.get("UPLOADS_DIR", "/app/uploads")
+os.makedirs(os.path.join(_uploads_dir, "certificates"), exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=_uploads_dir), name="uploads")
 
 app.include_router(auth.router)
 app.include_router(users.router)

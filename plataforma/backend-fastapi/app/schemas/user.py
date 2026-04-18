@@ -137,6 +137,7 @@ class UserBadgeResponse(CamelModel):
     enrolled_at: datetime | None = None
     completed_at: datetime | None = None
     course_id: str | None = None
+    certificate_url: str | None = None
     badge: BadgeResponse | None = None
 
 

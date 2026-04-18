@@ -1,12 +1,19 @@
-from fastapi import APIRouter, Depends, Request
+import os
+
+from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.middleware.auth import get_current_user, require_admin
 from app.middleware.rate_limit import limiter
+from app.models.gamification import UserBadge
 from app.models.user import User
 from app.schemas.user import BadgeCreate, BadgeResponse, ExternalBadgeImport, UserBadgeResponse
 from app.services.badge_service import BadgeService
+
+_ALLOWED_EXTENSIONS = {".pdf", ".png", ".jpg", ".jpeg"}
+_MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 
 router = APIRouter(prefix="/api/badges", tags=["badges"])
 
@@ -63,6 +70,44 @@ async def import_external_badge(
         description=data.description,
     )
     return {"success": True, "data": UserBadgeResponse.model_validate(user_badge).model_dump()}
+
+
+@router.post("/user-badge/{user_badge_id}/certificate")
+async def upload_certificate(
+    user_badge_id: str,
+    file: UploadFile,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    result = await db.execute(select(UserBadge).where(UserBadge.id == user_badge_id))
+    ub = result.scalar_one_or_none()
+    if ub is None:
+        raise HTTPException(status_code=404, detail="UserBadge no encontrado")
+    if ub.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="No autorizado")
+
+    ext = os.path.splitext(file.filename or "")[1].lower()
+    if ext not in _ALLOWED_EXTENSIONS:
+        raise HTTPException(status_code=400, detail=f"Extension no permitida. Permitidas: {_ALLOWED_EXTENSIONS}")
+
+    content = await file.read()
+    if len(content) > _MAX_FILE_SIZE:
+        raise HTTPException(status_code=400, detail="Archivo excede 10MB")
+
+    uploads_dir = os.environ.get("UPLOADS_DIR", "/app/uploads")
+    cert_dir = os.path.join(uploads_dir, "certificates")
+    os.makedirs(cert_dir, exist_ok=True)
+    filename = f"{user_badge_id}{ext}"
+    filepath = os.path.join(cert_dir, filename)
+
+    with open(filepath, "wb") as f:
+        f.write(content)
+
+    ub.certificate_url = f"/uploads/certificates/{filename}"
+    await db.flush()
+    await db.commit()
+
+    return {"success": True, "data": {"certificateUrl": ub.certificate_url}}
 
 
 @router.get("/{badge_id}")

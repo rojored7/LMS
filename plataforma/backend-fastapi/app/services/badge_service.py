@@ -9,6 +9,8 @@ import structlog
 
 from app.middleware.error_handler import ConflictError, NotFoundError
 from app.models.gamification import Badge, Notification, NotificationType, UserBadge
+from app.models.user import User
+from app.utils.course_scoring import calculate_course_score
 
 logger = structlog.get_logger()
 
@@ -139,6 +141,16 @@ class BadgeService:
         badge = result.scalar_one_or_none()
 
         if badge is None:
+            # Calculate XP from level + duration using same formula as courses
+            xp_score = 0
+            duration_min = (duration_hours or 0) * 60
+            if level and duration_hours:
+                xp_score = calculate_course_score(level, duration_min)
+            elif level:
+                xp_score = calculate_course_score(level, 0)
+            elif duration_hours:
+                xp_score = calculate_course_score("BEGINNER", duration_min)
+
             badge = Badge(
                 name=name,
                 slug=slug,
@@ -149,7 +161,7 @@ class BadgeService:
                 is_external=True,
                 category="external",
                 requirement=f"Certificacion en {source}",
-                xp_reward=0,
+                xp_reward=xp_score,
             )
             self.db.add(badge)
             await self.db.flush()
@@ -172,6 +184,13 @@ class BadgeService:
             completed_at=end_date,
         )
         self.db.add(ub)
+
+        # Award XP to user
+        if badge.xp_reward and badge.xp_reward > 0:
+            user = await self.db.get(User, user_id)
+            if user:
+                user.xp = (user.xp or 0) + badge.xp_reward
+
         await self.db.flush()
 
         # Eager load badge for response
