@@ -6,6 +6,7 @@ import instructorService, { GradebookEntry } from '../services/api/instructor.se
 const InstructorGradebook: React.FC = () => {
   const { courseId } = useParams<{ courseId: string }>();
   const [entries, setEntries] = useState<GradebookEntry[]>([]);
+  const [expandedEntry, setExpandedEntry] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const { addToast } = useUiStore();
 
@@ -62,7 +63,8 @@ const InstructorGradebook: React.FC = () => {
               </thead>
               <tbody>
                 {entries.map((entry) => (
-                  <tr key={entry.userId} className="border-b border-white/5 hover:bg-white/5">
+                  <React.Fragment key={entry.userId}>
+                  <tr onClick={() => setExpandedEntry(expandedEntry === entry.userId ? null : entry.userId)} className="border-b border-white/5 hover:bg-white/5 cursor-pointer transition-colors">
                     <td className="px-4 py-3">
                       <div>
                         <p className="text-white font-medium">{entry.name}</p>
@@ -90,6 +92,21 @@ const InstructorGradebook: React.FC = () => {
                         : 'En progreso'}
                     </td>
                   </tr>
+                  {expandedEntry === entry.userId && (
+                    <tr>
+                      <td colSpan={5} className="px-4 py-3 bg-white/5">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                          <div><span className="text-white/40">Estudiante:</span> <span className="text-white font-medium">{entry.name}</span></div>
+                          <div><span className="text-white/40">Progreso:</span> <span className="text-[#00A6FF] font-medium">{Math.round(entry.progress)}%</span></div>
+                          <div><span className="text-white/40">Promedio Quizzes:</span> <span className="text-white/70">{entry.quizAvgScore !== null ? `${entry.quizAvgScore}%` : 'Sin datos'}</span></div>
+                          <div><span className="text-white/40">Modulos:</span> <span className="text-white/70">{entry.modulesCompleted} completados</span></div>
+                          <div><span className="text-white/40">Estado:</span> <span className={entry.completedAt ? 'text-green-400' : 'text-yellow-400'}>{entry.completedAt ? 'Completado' : 'En progreso'}</span></div>
+                          {entry.completedAt && <div><span className="text-white/40">Fecha:</span> <span className="text-white/70">{new Date(entry.completedAt).toLocaleDateString('es')}</span></div>}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                  </React.Fragment>
                 ))}
               </tbody>
             </table>

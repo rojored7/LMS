@@ -6,6 +6,7 @@ import instructorService, { CourseStudent } from '../services/api/instructor.ser
 const InstructorStudents: React.FC = () => {
   const { courseId } = useParams<{ courseId: string }>();
   const [students, setStudents] = useState<CourseStudent[]>([]);
+  const [expandedStudent, setExpandedStudent] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const { addToast } = useUiStore();
 
@@ -62,7 +63,8 @@ const InstructorStudents: React.FC = () => {
               </thead>
               <tbody>
                 {students.map((student) => (
-                  <tr key={student.userId} className="border-b border-white/5 hover:bg-white/5">
+                  <React.Fragment key={student.userId}>
+                  <tr onClick={() => setExpandedStudent(expandedStudent === student.userId ? null : student.userId)} className="border-b border-white/5 hover:bg-white/5 cursor-pointer transition-colors">
                     <td className="px-4 py-3 text-white font-medium">{student.name}</td>
                     <td className="px-4 py-3 text-white/70">{student.email}</td>
                     <td className="px-4 py-3 text-white/70">
@@ -89,6 +91,19 @@ const InstructorStudents: React.FC = () => {
                         : 'Sin actividad'}
                     </td>
                   </tr>
+                  {expandedStudent === student.userId && (
+                    <tr>
+                      <td colSpan={5} className="px-4 py-3 bg-white/5">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                          <div><span className="text-white/40">Nombre:</span> <span className="text-white font-medium">{student.name}</span></div>
+                          <div><span className="text-white/40">Email:</span> <span className="text-white/70">{student.email}</span></div>
+                          <div><span className="text-white/40">Progreso:</span> <span className="text-[#00A6FF] font-medium">{Math.round(student.progress)}%</span></div>
+                          <div><span className="text-white/40">Inscrito:</span> <span className="text-white/70">{student.enrolledAt ? new Date(student.enrolledAt).toLocaleDateString('es') : '-'}</span></div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                  </React.Fragment>
                 ))}
               </tbody>
             </table>

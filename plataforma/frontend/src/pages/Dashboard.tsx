@@ -38,7 +38,7 @@ export const Dashboard: React.FC = () => {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <Card>
+        <Card className="cursor-pointer hover:scale-[1.02] hover:shadow-lg transition-all" onClick={() => navigate(ROUTES.COURSES)}>
           <CardBody>
             <div className="flex items-center gap-4">
               <div className="p-3 bg-blue-50 rounded-lg">
@@ -64,7 +64,7 @@ export const Dashboard: React.FC = () => {
           </CardBody>
         </Card>
 
-        <Card>
+        <Card className="cursor-pointer hover:scale-[1.02] hover:shadow-lg transition-all" onClick={() => navigate(ROUTES.PROFILE)}>
           <CardBody>
             <div className="flex items-center gap-4">
               <div className="p-3 bg-orange-50 rounded-lg">
@@ -92,7 +92,7 @@ export const Dashboard: React.FC = () => {
           </CardBody>
         </Card>
 
-        <Card>
+        <Card className="cursor-pointer hover:scale-[1.02] hover:shadow-lg transition-all" onClick={() => navigate(ROUTES.PROFILE)}>
           <CardBody>
             <div className="flex items-center gap-4">
               <div className="p-3 bg-blue-50 rounded-lg">
@@ -118,7 +118,7 @@ export const Dashboard: React.FC = () => {
           </CardBody>
         </Card>
 
-        <Card>
+        <Card className="cursor-pointer hover:scale-[1.02] hover:shadow-lg transition-all" onClick={() => navigate(ROUTES.PROFILE)}>
           <CardBody>
             <div className="flex items-center gap-4">
               <div className="p-3 bg-purple-50 rounded-lg">
