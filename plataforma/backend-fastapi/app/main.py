@@ -125,8 +125,12 @@ from app.routers import (
 
 # Static files for uploads (certificates, etc.)
 _uploads_dir = os.environ.get("UPLOADS_DIR", "/app/uploads")
-os.makedirs(os.path.join(_uploads_dir, "certificates"), exist_ok=True)
-app.mount("/api/uploads", StaticFiles(directory=_uploads_dir), name="uploads")
+try:
+    os.makedirs(os.path.join(_uploads_dir, "certificates"), exist_ok=True)
+except OSError:
+    pass  # Volume may already exist with different ownership
+if os.path.isdir(_uploads_dir):
+    app.mount("/api/uploads", StaticFiles(directory=_uploads_dir), name="uploads")
 
 app.include_router(auth.router)
 app.include_router(users.router)
