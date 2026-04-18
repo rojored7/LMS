@@ -469,7 +469,9 @@ export const Profile: React.FC = () => {
                         />
                       </div>
                       <div className="mt-3">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Certificado (PDF/imagen)</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Certificado (PDF/imagen)
+                        </label>
                         <input
                           type="file"
                           accept=".pdf,.png,.jpg,.jpeg"
@@ -586,16 +588,46 @@ export const Profile: React.FC = () => {
                               </div>
                               <div className="flex items-center gap-3 flex-wrap">
                                 {ub.badge?.xpReward > 0 && (
-                                  <span className="text-xs font-semibold text-purple-600">+{ub.badge.xpReward} XP</span>
+                                  <span className="text-xs font-semibold text-purple-600">
+                                    +{ub.badge.xpReward} XP
+                                  </span>
                                 )}
                                 {ub.certificateUrl && (
-                                  <a href={`${window.location.origin}${ub.certificateUrl}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-xs font-medium">
+                                  <a
+                                    href={`${window.location.origin}${ub.certificateUrl}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-blue-600 hover:underline text-xs font-medium"
+                                  >
                                     Ver certificado
                                   </a>
                                 )}
                                 {ub.badge?.courseId && (
-                                  <button onClick={() => navigate(`/courses/${ub.badge.courseId}`)} className="text-blue-600 hover:underline text-xs font-medium">
+                                  <button
+                                    onClick={() => navigate(`/courses/${ub.badge.courseId}`)}
+                                    className="text-blue-600 hover:underline text-xs font-medium"
+                                  >
                                     Ir al curso
+                                  </button>
+                                )}
+                                {ub.badge?.isExternal && (
+                                  <button
+                                    onClick={async (e) => {
+                                      e.stopPropagation();
+                                      if (!confirm('Eliminar este badge?')) return;
+                                      try {
+                                        await api.delete(`/badges/user-badge/${ub.id}`);
+                                        toast.success('Badge eliminado');
+                                        setSelectedBadge(null);
+                                        if (user) {
+                                          const res: any = await api.get(`/badges/user/${user.id}`);
+                                          setUserBadges((res?.data ?? res) || []);
+                                        }
+                                      } catch { toast.error('Error al eliminar'); }
+                                    }}
+                                    className="text-red-500 hover:underline text-xs font-medium"
+                                  >
+                                    Eliminar
                                   </button>
                                 )}
                               </div>

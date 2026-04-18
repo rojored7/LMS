@@ -72,6 +72,63 @@ async def import_external_badge(
     return {"success": True, "data": UserBadgeResponse.model_validate(user_badge).model_dump()}
 
 
+@router.put("/user-badge/{user_badge_id}")
+async def update_user_badge(
+    user_badge_id: str,
+    data: ExternalBadgeImport,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    from sqlalchemy.orm import selectinload as _sl
+    result = await db.execute(select(UserBadge).options(_sl(UserBadge.badge)).where(UserBadge.id == user_badge_id))
+    ub = result.scalar_one_or_none()
+    if ub is None:
+        raise HTTPException(status_code=404, detail="UserBadge no encontrado")
+    if ub.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="No autorizado")
+
+    badge = ub.badge
+    if badge and badge.is_external:
+        badge.name = data.name
+        badge.level = data.level
+        badge.duration_hours = data.duration_hours
+        badge.source = data.source
+        badge.description = data.description or badge.description
+    ub.enrolled_at = data.start_date
+    ub.completed_at = data.end_date
+    await db.flush()
+    await db.commit()
+
+    result = await db.execute(select(UserBadge).options(_sl(UserBadge.badge)).where(UserBadge.id == user_badge_id))
+    ub = result.scalar_one()
+    return {"success": True, "data": UserBadgeResponse.model_validate(ub).model_dump()}
+
+
+@router.delete("/user-badge/{user_badge_id}")
+async def delete_user_badge(
+    user_badge_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    result = await db.execute(select(UserBadge).where(UserBadge.id == user_badge_id))
+    ub = result.scalar_one_or_none()
+    if ub is None:
+        raise HTTPException(status_code=404, detail="UserBadge no encontrado")
+    if ub.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="No autorizado")
+
+    # Remove certificate file if exists
+    if ub.certificate_url:
+        filepath = os.path.join(os.environ.get("UPLOADS_DIR", "/app/uploads"), ub.certificate_url.replace("/api/uploads/", ""))
+        if os.path.exists(filepath):
+            os.remove(filepath)
+
+    await db.delete(ub)
+    await db.flush()
+    await db.commit()
+    return {"success": True, "data": {"message": "Badge eliminado"}}
+
+
 @router.post("/user-badge/{user_badge_id}/certificate")
 async def upload_certificate(
     user_badge_id: str,
@@ -103,7 +160,7 @@ async def upload_certificate(
     with open(filepath, "wb") as f:
         f.write(content)
 
-    ub.certificate_url = f"/uploads/certificates/{filename}"
+    ub.certificate_url = f"/api/uploads/certificates/{filename}"
     await db.flush()
     await db.commit()
 
