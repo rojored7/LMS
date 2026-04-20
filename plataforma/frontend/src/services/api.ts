@@ -52,8 +52,8 @@ api.interceptors.response.use(
         return api(originalRequest);
       } catch {
         refreshTokenPromise = null;
-        // Clear Zustand auth state to prevent login redirect loop
         localStorage.removeItem('auth-storage');
+        localStorage.setItem('session-expired', 'true');
         window.location.href = '/login';
         return Promise.reject(error);
       }

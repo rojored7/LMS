@@ -59,11 +59,29 @@ class AuthService:
         if not stored:
             raise AuthenticationError("Refresh token no encontrado")
 
-        if stored.expires_at < datetime.now(timezone.utc):
+        now = datetime.now(timezone.utc)
+
+        if stored.expires_at < now:
             await self.db.delete(stored)
             await self.db.flush()
             raise AuthenticationError("Refresh token expirado")
 
+        # Check absolute session limit (24h default)
+        max_session = timedelta(hours=settings.JWT_MAX_SESSION_HOURS)
+        if stored.session_started_at + max_session < now:
+            await self.db.delete(stored)
+            await self.db.flush()
+            raise AuthenticationError("Sesion expirada. Inicie sesion nuevamente")
+
+        # Check inactivity limit (60 min default)
+        max_inactivity = timedelta(minutes=settings.JWT_INACTIVITY_MINUTES)
+        if stored.last_activity_at + max_inactivity < now:
+            await self.db.delete(stored)
+            await self.db.flush()
+            raise AuthenticationError("Sesion expirada por inactividad")
+
+        # Preserve session_started_at, delete old token
+        session_started = stored.session_started_at
         await self.db.delete(stored)
 
         result = await self.db.execute(select(User).where(User.id == user_id))
@@ -71,7 +89,7 @@ class AuthService:
         if not user:
             raise AuthenticationError("Usuario no encontrado")
 
-        tokens = await self._generate_tokens(user)
+        tokens = await self._generate_tokens(user, session_started_at=session_started)
         return {"user": user, "tokens": tokens}
 
     async def logout(self, access_token: str, user_id: str) -> None:
@@ -137,10 +155,10 @@ class AuthService:
         await self.db.flush()
         logger.info("password_changed", user_id=user.id)
 
-    async def _generate_tokens(self, user: User) -> dict:
+    async def _generate_tokens(self, user: User, session_started_at: datetime | None = None) -> dict:
         access_token = self.token_service.create_access_token(user.id, user.email, user.role.value)
         refresh_token_value = self.token_service.create_refresh_token(user.id)
-        await self._store_refresh_token(user.id, refresh_token_value)
+        await self._store_refresh_token(user.id, refresh_token_value, session_started_at=session_started_at)
         return {
             "access_token": access_token,
             "refresh_token": refresh_token_value,
@@ -148,8 +166,27 @@ class AuthService:
             "expires_in": settings.JWT_EXPIRES_IN_MINUTES * 60,
         }
 
-    async def _store_refresh_token(self, user_id: str, token_value: str) -> None:
-        expires_at = datetime.now(timezone.utc) + timedelta(days=settings.JWT_REFRESH_EXPIRES_IN_DAYS)
-        rt = RefreshToken(user_id=user_id, token=token_value, expires_at=expires_at)
+    async def _store_refresh_token(self, user_id: str, token_value: str, session_started_at: datetime | None = None) -> None:
+        now = datetime.now(timezone.utc)
+        expires_at = now + timedelta(days=settings.JWT_REFRESH_EXPIRES_IN_DAYS)
+
+        # Enforce max concurrent sessions
+        result = await self.db.execute(
+            select(RefreshToken)
+            .where(RefreshToken.user_id == user_id)
+            .order_by(RefreshToken.created_at.asc())
+        )
+        existing = list(result.scalars().all())
+        if len(existing) >= settings.MAX_SESSIONS_PER_USER:
+            for old in existing[: len(existing) - settings.MAX_SESSIONS_PER_USER + 1]:
+                await self.db.delete(old)
+
+        rt = RefreshToken(
+            user_id=user_id,
+            token=token_value,
+            expires_at=expires_at,
+            session_started_at=session_started_at or now,
+            last_activity_at=now,
+        )
         self.db.add(rt)
         await self.db.flush()

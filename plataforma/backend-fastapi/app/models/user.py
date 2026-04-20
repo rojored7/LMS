@@ -66,6 +66,8 @@ class RefreshToken(Base):
     token: Mapped[str] = mapped_column(String(500), unique=True, nullable=False)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    session_started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    last_activity_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
     user: Mapped[User] = relationship(back_populates="refresh_tokens")
     __table_args__ = (Index("ix_refresh_tokens_user_id", "user_id"), Index("ix_refresh_tokens_token", "token"))
 

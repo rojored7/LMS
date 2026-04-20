@@ -36,6 +36,9 @@ class Settings(BaseSettings):
     JWT_REFRESH_SECRET: str
     JWT_EXPIRES_IN_MINUTES: int = 15
     JWT_REFRESH_EXPIRES_IN_DAYS: int = 7
+    JWT_MAX_SESSION_HOURS: int = 24
+    JWT_INACTIVITY_MINUTES: int = 60
+    MAX_SESSIONS_PER_USER: int = 5
 
     BCRYPT_ROUNDS: int = 12
     RATE_LIMIT_GLOBAL: str = "200/15minutes"

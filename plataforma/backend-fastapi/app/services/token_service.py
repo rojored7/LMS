@@ -46,10 +46,10 @@ class TokenService:
                 return None
             return payload
         except ExpiredSignatureError:
-            logger.debug("token_expired")
+            logger.warning("token_expired")
             return None
         except InvalidTokenError:
-            logger.debug("token_invalid")
+            logger.warning("token_invalid")
             return None
 
     def verify_refresh_token(self, token: str) -> dict | None:
@@ -59,10 +59,10 @@ class TokenService:
                 return None
             return payload
         except ExpiredSignatureError:
-            logger.debug("refresh_token_expired")
+            logger.warning("refresh_token_expired")
             return None
         except InvalidTokenError:
-            logger.debug("refresh_token_invalid")
+            logger.warning("refresh_token_invalid")
             return None
 
     async def blacklist_token(self, token: str, expires_in: int | None = None) -> None:
@@ -74,8 +74,8 @@ class TokenService:
             result = await self.redis.get(f"{BLACKLIST_PREFIX}{token}")
             return result is not None
         except Exception:
-            logger.warning("redis_unavailable_blacklist_check", token_prefix=token[:8])
-            return False
+            logger.error("redis_unavailable_denying_access", token_prefix=token[:8])
+            return True  # Fail closed: deny access if Redis is down
 
     async def invalidate_all_user_tokens(self, user_id: str) -> None:
         now = int(datetime.now(timezone.utc).timestamp())
@@ -89,5 +89,5 @@ class TokenService:
                 return False
             return iat < int(invalidated_at)
         except Exception:
-            logger.warning("redis_unavailable_invalidation_check", user_id=user_id)
-            return False
+            logger.error("redis_unavailable_denying_access", user_id=user_id)
+            return True  # Fail closed: assume invalidated if Redis is down

@@ -111,7 +111,8 @@ async def refresh_tokens(
         refresh_token_value = request.cookies.get("refresh_token")
 
     if not refresh_token_value:
-        return ApiResponse(success=False, error={"code": "UNAUTHORIZED", "message": "Refresh token requerido"}).model_dump()
+        from fastapi import HTTPException
+        raise HTTPException(status_code=401, detail="Refresh token requerido")
 
     service = AuthService(db, token_service)
     result = await service.refresh_tokens(refresh_token_value)
