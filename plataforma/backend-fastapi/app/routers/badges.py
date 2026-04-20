@@ -1,19 +1,28 @@
 import os
+import secrets
 
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import get_settings
 from app.database import get_db
 from app.middleware.auth import get_current_user, require_admin
 from app.middleware.rate_limit import limiter
 from app.models.gamification import UserBadge
 from app.models.user import User
+from app.schemas.common import ApiResponse
 from app.schemas.user import BadgeCreate, BadgeResponse, ExternalBadgeImport, UserBadgeResponse
 from app.services.badge_service import BadgeService
 
-_ALLOWED_EXTENSIONS = {".pdf", ".png", ".jpg", ".jpeg"}
-_MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+settings = get_settings()
+
+# Magic bytes for file type validation (not configurable - format specs)
+_MAGIC_BYTES: dict[bytes, str] = {
+    b"%PDF": "application/pdf",
+    b"\x89PNG": "image/png",
+    b"\xff\xd8\xff": "image/jpeg",
+}
 
 router = APIRouter(prefix="/api/badges", tags=["badges"])
 
@@ -22,21 +31,21 @@ router = APIRouter(prefix="/api/badges", tags=["badges"])
 async def list_badges(db: AsyncSession = Depends(get_db)) -> dict:
     service = BadgeService(db)
     badges = await service.get_all_badges()
-    return {"success": True, "data": [BadgeResponse.model_validate(b).model_dump() for b in badges]}
+    return ApiResponse(success=True, data=[BadgeResponse.model_validate(b).model_dump() for b in badges]).model_dump()
 
 
 @router.post("")
 async def create_badge(data: BadgeCreate, _user: User = Depends(require_admin), db: AsyncSession = Depends(get_db)) -> dict:
     service = BadgeService(db)
     badge = await service.create_badge(data.name, data.slug, data.description, data.icon, data.color, data.xp_reward)
-    return {"success": True, "data": BadgeResponse.model_validate(badge).model_dump()}
+    return ApiResponse(success=True, data=BadgeResponse.model_validate(badge).model_dump()).model_dump()
 
 
 @router.post("/{badge_id}/award/{user_id}")
 async def award_badge(badge_id: str, user_id: str, _user: User = Depends(require_admin), db: AsyncSession = Depends(get_db)) -> dict:
     service = BadgeService(db)
     user_badge = await service.award_badge(user_id, badge_id)
-    return {"success": True, "data": UserBadgeResponse.model_validate(user_badge).model_dump()}
+    return ApiResponse(success=True, data=UserBadgeResponse.model_validate(user_badge).model_dump()).model_dump()
 
 
 @router.get("/user/{user_id}")
@@ -47,7 +56,7 @@ async def get_user_badges(user_id: str, current_user: User = Depends(get_current
         raise AuthorizationError("No autorizado para ver badges de otro usuario")
     service = BadgeService(db)
     badges = await service.get_user_badges(user_id)
-    return {"success": True, "data": [UserBadgeResponse.model_validate(b).model_dump() for b in badges]}
+    return ApiResponse(success=True, data=[UserBadgeResponse.model_validate(b).model_dump() for b in badges]).model_dump()
 
 
 @router.post("/import-external")
@@ -69,7 +78,7 @@ async def import_external_badge(
         duration_hours=data.duration_hours,
         description=data.description,
     )
-    return {"success": True, "data": UserBadgeResponse.model_validate(user_badge).model_dump()}
+    return ApiResponse(success=True, data=UserBadgeResponse.model_validate(user_badge).model_dump()).model_dump()
 
 
 @router.put("/user-badge/{user_badge_id}")
@@ -102,7 +111,7 @@ async def update_user_badge(
 
     result = await db.execute(select(UserBadge).options(_sl(UserBadge.badge)).where(UserBadge.id == user_badge_id))
     ub = result.scalar_one()
-    return {"success": True, "data": UserBadgeResponse.model_validate(ub).model_dump()}
+    return ApiResponse(success=True, data=UserBadgeResponse.model_validate(ub).model_dump()).model_dump()
 
 
 @router.delete("/user-badge/{user_badge_id}")
@@ -135,7 +144,7 @@ async def delete_user_badge(
 
     await db.delete(ub)
     await db.flush()
-    return {"success": True, "data": {"message": "Badge eliminado"}}
+    return ApiResponse(success=True, data={"message": "Badge eliminado"}).model_dump()
 
 
 @router.post("/user-badge/{user_badge_id}/certificate")
@@ -154,36 +163,49 @@ async def upload_certificate(
     if ub.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="No autorizado")
 
+    allowed_exts = set(settings.ALLOWED_UPLOAD_EXTENSIONS.split(","))
     ext = os.path.splitext(file.filename or "")[1].lower()
-    if ext not in _ALLOWED_EXTENSIONS:
-        raise HTTPException(status_code=400, detail=f"Extension no permitida. Permitidas: {_ALLOWED_EXTENSIONS}")
+    if ext not in allowed_exts:
+        raise HTTPException(status_code=400, detail=f"Extension no permitida. Permitidas: {allowed_exts}")
 
     content = await file.read()
-    if len(content) > _MAX_FILE_SIZE:
-        raise HTTPException(status_code=400, detail="Archivo excede 10MB")
+    if len(content) > settings.MAX_FILE_SIZE:
+        raise HTTPException(status_code=400, detail=f"Archivo excede {settings.MAX_FILE_SIZE // (1024 * 1024)}MB")
 
-    uploads_dir = os.environ.get("UPLOADS_DIR", "/app/uploads")
+    # Validate magic bytes
+    allowed_mimes = set(settings.ALLOWED_UPLOAD_MIMES.split(","))
+    detected_mime = None
+    for magic, mime in _MAGIC_BYTES.items():
+        if content[:len(magic)] == magic:
+            detected_mime = mime
+            break
+    if detected_mime is None or detected_mime not in allowed_mimes:
+        raise HTTPException(status_code=400, detail="Tipo de archivo no permitido (contenido no coincide)")
+
+    # Safe filename generation
+    safe_name = secrets.token_hex(16) + ext
+    uploads_dir = settings.UPLOAD_DIR
     cert_dir = os.path.join(uploads_dir, "certificates")
     os.makedirs(cert_dir, exist_ok=True)
-    filename = f"{user_badge_id}{ext}"
-    filepath = os.path.join(cert_dir, filename)
+    filepath = os.path.realpath(os.path.join(cert_dir, safe_name))
+    if not filepath.startswith(os.path.realpath(cert_dir) + os.sep):
+        raise HTTPException(status_code=400, detail="Ruta invalida")
 
     with open(filepath, "wb") as f:
         f.write(content)
 
-    ub.certificate_url = f"/api/uploads/certificates/{filename}"
+    ub.certificate_url = f"/api/uploads/certificates/{safe_name}"
     await db.flush()
 
-    return {"success": True, "data": {"certificateUrl": ub.certificate_url}}
+    return ApiResponse(success=True, data={"certificateUrl": ub.certificate_url}).model_dump()
 
 
 @router.get("/{badge_id}")
 async def get_badge(badge_id: str, db: AsyncSession = Depends(get_db)) -> dict:
-    from sqlalchemy import select
     from app.models.gamification import Badge
     from app.middleware.error_handler import NotFoundError
     result = await db.execute(select(Badge).where(Badge.id == badge_id))
     badge = result.scalar_one_or_none()
     if badge is None:
         raise NotFoundError("Badge no encontrado")
-    return {"success": True, "data": BadgeResponse.model_validate(badge).model_dump()}
+    return ApiResponse(success=True, data=BadgeResponse.model_validate(badge).model_dump()).model_dump()

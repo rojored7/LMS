@@ -16,7 +16,13 @@ def get_engine():
         database_url = database_url.replace("postgresql://", "postgresql+asyncpg://")
     kwargs: dict = {"echo": False}
     if "sqlite" not in database_url:
-        kwargs.update(pool_size=10, max_overflow=20, pool_pre_ping=True)
+        kwargs.update(
+            pool_size=settings.DB_POOL_SIZE,
+            max_overflow=settings.DB_MAX_OVERFLOW,
+            pool_pre_ping=True,
+            pool_recycle=settings.DB_POOL_RECYCLE,
+            pool_timeout=settings.DB_POOL_TIMEOUT,
+        )
     return create_async_engine(database_url, **kwargs)
 
 

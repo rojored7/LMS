@@ -42,7 +42,12 @@ export const Login: React.FC = () => {
       localStorage.removeItem('session-expired');
       toast.warning('Tu sesion ha expirado. Inicia sesion nuevamente.');
     }
-  }, [toast]);
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('reason') === 'expired') {
+      toast.warning('Tu sesion ha expirado. Inicia sesion nuevamente.');
+      window.history.replaceState({}, '', '/login');
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Clear auth errors when component unmounts
   useEffect(() => {

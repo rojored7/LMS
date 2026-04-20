@@ -26,29 +26,32 @@ settings = get_settings()
 
 def _set_cookies(response: Response, tokens: dict) -> None:
     secure = settings.is_production and settings.FRONTEND_URL.startswith("https")
+    prefix = settings.COOKIE_PREFIX
+    samesite = settings.COOKIE_SAMESITE
     response.set_cookie(
-        key="access_token",
+        key=f"{prefix}access_token",
         value=tokens["access_token"],
         httponly=True,
         secure=secure,
-        samesite="lax",
+        samesite=samesite,
         max_age=tokens["expires_in"],
         path="/api",
     )
     response.set_cookie(
-        key="refresh_token",
+        key=f"{prefix}refresh_token",
         value=tokens["refresh_token"],
         httponly=True,
         secure=secure,
-        samesite="lax",
+        samesite=samesite,
         max_age=settings.JWT_REFRESH_EXPIRES_IN_DAYS * 86400,
         path="/api/auth/refresh",
     )
 
 
 def _clear_cookies(response: Response) -> None:
-    response.delete_cookie("access_token", path="/api")
-    response.delete_cookie("refresh_token", path="/api/auth/refresh")
+    prefix = settings.COOKIE_PREFIX
+    response.delete_cookie(f"{prefix}access_token", path="/api")
+    response.delete_cookie(f"{prefix}refresh_token", path="/api/auth/refresh")
 
 
 @router.post("/register")
@@ -108,7 +111,7 @@ async def refresh_tokens(
     if body and body.refresh_token:
         refresh_token_value = body.refresh_token
     else:
-        refresh_token_value = request.cookies.get("refresh_token")
+        refresh_token_value = request.cookies.get(f"{settings.COOKIE_PREFIX}refresh_token")
 
     if not refresh_token_value:
         from fastapi import HTTPException
@@ -135,7 +138,7 @@ async def logout(
     token_service: TokenService = Depends(get_token_service),
 ):
     auth_header = request.headers.get("Authorization", "")
-    access_token = auth_header.replace("Bearer ", "") if auth_header.startswith("Bearer ") else request.cookies.get("access_token", "")
+    access_token = auth_header.replace("Bearer ", "") if auth_header.startswith("Bearer ") else request.cookies.get(f"{settings.COOKIE_PREFIX}access_token", "")
     service = AuthService(db, token_service)
     await service.logout(access_token, user.id)
     _clear_cookies(response)
@@ -169,7 +172,9 @@ async def reset_password(
 
 
 @router.post("/change-password")
+@limiter.limit(settings.RATE_LIMIT_AUTH_CHANGE_PASSWORD)
 async def change_password(
+    request: Request,
     body: ChangePasswordRequest,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),

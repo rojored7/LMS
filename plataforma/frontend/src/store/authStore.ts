@@ -55,6 +55,7 @@ interface AuthState {
   clearError: () => void;
   setLoading: (isLoading: boolean) => void;
   refreshUser: () => Promise<void>;
+  hydrateUser: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -151,12 +152,23 @@ export const useAuthStore = create<AuthState>()(
           await get().logout();
         }
       },
+
+      hydrateUser: async () => {
+        const { isAuthenticated, user } = get();
+        if (isAuthenticated && !user) {
+          try {
+            const userData = await authService.getCurrentUser();
+            set({ user: mapUser(userData) });
+          } catch {
+            set({ isAuthenticated: false, user: null });
+          }
+        }
+      },
     }),
     {
       name: 'auth-storage',
       version: 2,
       partialize: (state) => ({
-        user: state.user,
         isAuthenticated: state.isAuthenticated,
       }),
     }

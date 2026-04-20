@@ -44,7 +44,7 @@ export const CourseLearning: React.FC = () => {
       modules.forEach((module) => {
         // Add lessons (sorted by order)
         [...module.lessons]
-          .sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
+          .sort((a, b) => (a.order || 0) - (b.order || 0))
           .forEach((lesson) => {
             contentList.push({ id: lesson.id, type: 'lesson' });
           });
@@ -118,14 +118,16 @@ export const CourseLearning: React.FC = () => {
     if (modules && modules.length > 0 && !contentId) {
       const firstModule = modules[0];
       if (firstModule.lessons.length > 0) {
-        handleLessonClick(firstModule.lessons[0].id);
+        setContentType('lesson');
+        setContentId(firstModule.lessons[0].id);
       } else if (firstModule.quizzes.length > 0) {
-        handleQuizClick(firstModule.quizzes[0].id);
+        setContentType('quiz');
+        setContentId(firstModule.quizzes[0].id);
       } else if (firstModule.labs.length > 0) {
-        handleLabClick(firstModule.labs[0].id);
+        setContentType('lab');
+        setContentId(firstModule.labs[0].id);
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modules, contentId]);
 
   const handleModuleClick = (moduleId: string) => {

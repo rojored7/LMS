@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.middleware.auth import get_current_user, require_instructor, verify_module_ownership
+from app.middleware.error_handler import NotFoundError
 from app.middleware.rate_limit import limiter
 from app.models.assessment import Lab
 from app.models.course import Module
@@ -87,8 +88,9 @@ async def update_lab(
     db: AsyncSession = Depends(get_db),
 ):
     lab_row = (await db.execute(select(Lab).where(Lab.id == lab_id))).scalar_one_or_none()
-    if lab_row:
-        await verify_module_ownership(lab_row.module_id, user, db)
+    if lab_row is None:
+        raise NotFoundError("Laboratorio no encontrado")
+    await verify_module_ownership(lab_row.module_id, user, db)
     service = LabService(db)
     lab = await service.update(lab_id, body.model_dump(exclude_unset=True))
     return ApiResponse(success=True, data=LabResponse.model_validate(lab).model_dump()).model_dump()
@@ -101,8 +103,9 @@ async def delete_lab(
     db: AsyncSession = Depends(get_db),
 ):
     lab_row = (await db.execute(select(Lab).where(Lab.id == lab_id))).scalar_one_or_none()
-    if lab_row:
-        await verify_module_ownership(lab_row.module_id, user, db)
+    if lab_row is None:
+        raise NotFoundError("Laboratorio no encontrado")
+    await verify_module_ownership(lab_row.module_id, user, db)
     service = LabService(db)
     await service.delete(lab_id)
     return ApiResponse(success=True, data={"message": "Laboratorio eliminado"}).model_dump()

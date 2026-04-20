@@ -2,6 +2,7 @@ from functools import lru_cache
 from typing import Literal
 
 from pydantic import field_validator, model_validator
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -29,6 +30,10 @@ class Settings(BaseSettings):
     CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost"]
 
     DATABASE_URL: str
+    DB_POOL_SIZE: int = 10
+    DB_MAX_OVERFLOW: int = 20
+    DB_POOL_RECYCLE: int = 3600
+    DB_POOL_TIMEOUT: int = 30
     REDIS_URL: str = "redis://localhost:6379/0"
     REDIS_TTL: int = 3600
 
@@ -45,9 +50,16 @@ class Settings(BaseSettings):
     RATE_LIMIT_AUTH_LOGIN: str = "10/15minutes"
     RATE_LIMIT_AUTH_REGISTER: str = "5/hour"
     RATE_LIMIT_AUTH_RESET: str = "3/hour"
+    RATE_LIMIT_AUTH_CHANGE_PASSWORD: str = "5/hour"
+    RATE_LIMIT_CERTIFICATE_GENERATE: str = "10/hour"
+    RATE_LIMIT_CERTIFICATE_GET: str = "30/minute"
 
     MAX_FILE_SIZE: int = 10 * 1024 * 1024
     UPLOAD_DIR: str = "./uploads"
+    ALLOWED_UPLOAD_EXTENSIONS: str = ".pdf,.png,.jpg,.jpeg"
+    ALLOWED_UPLOAD_MIMES: str = "application/pdf,image/png,image/jpeg"
+
+    MAX_PAGE_SIZE: int = 100
 
     EXECUTOR_SERVICE_URL: str = "http://localhost:5000"
     EXECUTOR_TIMEOUT: int = 30
@@ -61,6 +73,12 @@ class Settings(BaseSettings):
 
     CERTIFICATE_STORAGE_PATH: str = "./certificates"
     CERTIFICATE_BASE_URL: str = "http://localhost:4000/certificates"
+
+    COOKIE_PREFIX: str = ""
+    COOKIE_SAMESITE: str = "lax"
+
+    CSP_STYLE_SRC: str = "'self' 'unsafe-inline'"
+    CSP_SCRIPT_SRC: str = "'self'"
 
     LOG_LEVEL: Literal["debug", "info", "warning", "error", "critical"] = "info"
     LOG_DIR: str = "./logs"
@@ -86,6 +104,7 @@ class Settings(BaseSettings):
     @field_validator("BCRYPT_ROUNDS")
     @classmethod
     def validate_bcrypt_rounds(cls, v: int) -> int:
+        # 12-15: 12 para dev (~250ms), 15 para alta seguridad (~2s). >15 causa DoS por lentitud.
         if not 12 <= v <= 15:
             raise ValueError("BCRYPT_ROUNDS debe estar entre 12 y 15")
         return v
@@ -98,6 +117,14 @@ class Settings(BaseSettings):
                 import structlog
                 structlog.get_logger().warning("database_weak_password", message="DATABASE_URL contiene un valor debil.")
         return v
+
+    @model_validator(mode="after")
+    def validate_production_constraints(self):
+        if self.APP_ENV == "production":
+            for weak in KNOWN_WEAK_SECRETS:
+                if weak in self.DATABASE_URL.lower():
+                    raise ValueError("DATABASE_URL contiene password debil - no permitido en produccion")
+        return self
 
     @property
     def is_production(self) -> bool:

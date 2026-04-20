@@ -15,41 +15,35 @@ class AdminService:
         self.db = db
 
     async def get_dashboard_stats(self) -> dict:
-        total_users_result = await self.db.execute(select(func.count()).select_from(User))
-        total_users = total_users_result.scalar() or 0
+        # Single query with scalar subqueries instead of 7 sequential queries
+        total_users_sq = select(func.count()).select_from(User).correlate(None).scalar_subquery()
+        total_students_sq = select(func.count()).select_from(User).where(User.role == UserRole.STUDENT).correlate(None).scalar_subquery()
+        total_instructors_sq = select(func.count()).select_from(User).where(User.role == UserRole.INSTRUCTOR).correlate(None).scalar_subquery()
+        total_courses_sq = select(func.count()).select_from(Course).correlate(None).scalar_subquery()
+        published_courses_sq = select(func.count()).select_from(Course).where(Course.is_published.is_(True)).correlate(None).scalar_subquery()
+        total_enrollments_sq = select(func.count()).select_from(Enrollment).correlate(None).scalar_subquery()
+        total_certificates_sq = select(func.count()).select_from(Certificate).correlate(None).scalar_subquery()
 
-        students_result = await self.db.execute(
-            select(func.count()).select_from(User).where(User.role == UserRole.STUDENT)
+        result = await self.db.execute(
+            select(
+                total_users_sq.label("total_users"),
+                total_students_sq.label("total_students"),
+                total_instructors_sq.label("total_instructors"),
+                total_courses_sq.label("total_courses"),
+                published_courses_sq.label("published_courses"),
+                total_enrollments_sq.label("total_enrollments"),
+                total_certificates_sq.label("total_certificates"),
+            )
         )
-        total_students = students_result.scalar() or 0
-
-        instructors_result = await self.db.execute(
-            select(func.count()).select_from(User).where(User.role == UserRole.INSTRUCTOR)
-        )
-        total_instructors = instructors_result.scalar() or 0
-
-        total_courses_result = await self.db.execute(select(func.count()).select_from(Course))
-        total_courses = total_courses_result.scalar() or 0
-
-        published_courses_result = await self.db.execute(
-            select(func.count()).select_from(Course).where(Course.is_published.is_(True))
-        )
-        published_courses = published_courses_result.scalar() or 0
-
-        total_enrollments_result = await self.db.execute(select(func.count()).select_from(Enrollment))
-        total_enrollments = total_enrollments_result.scalar() or 0
-
-        total_certificates_result = await self.db.execute(select(func.count()).select_from(Certificate))
-        total_certificates = total_certificates_result.scalar() or 0
-
+        row = result.one()
         return {
-            "totalUsers": total_users,
-            "totalStudents": total_students,
-            "totalInstructors": total_instructors,
-            "totalCourses": total_courses,
-            "publishedCourses": published_courses,
-            "totalEnrollments": total_enrollments,
-            "totalCertificates": total_certificates,
+            "totalUsers": row.total_users or 0,
+            "totalStudents": row.total_students or 0,
+            "totalInstructors": row.total_instructors or 0,
+            "totalCourses": row.total_courses or 0,
+            "publishedCourses": row.published_courses or 0,
+            "totalEnrollments": row.total_enrollments or 0,
+            "totalCertificates": row.total_certificates or 0,
         }
 
     async def get_recent_enrollments(self, limit: int = 10) -> list[dict]:

@@ -54,7 +54,7 @@ api.interceptors.response.use(
         refreshTokenPromise = null;
         localStorage.removeItem('auth-storage');
         localStorage.setItem('session-expired', 'true');
-        window.location.href = '/login';
+        window.location.href = '/login?reason=expired';
         return Promise.reject(error);
       }
     }

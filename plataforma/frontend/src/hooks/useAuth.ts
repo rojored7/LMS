@@ -17,6 +17,7 @@ export function useAuth() {
     logout,
     clearError,
     refreshUser,
+    hydrateUser,
   } = useAuthStore();
 
   /**
@@ -64,6 +65,7 @@ export function useAuth() {
     logout,
     clearError,
     refreshUser,
+    hydrateUser,
     hasRole,
     hasAnyRole,
     isAdmin,

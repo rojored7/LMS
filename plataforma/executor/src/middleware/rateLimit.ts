@@ -80,11 +80,12 @@ export class RateLimiter {
 
         next();
       } catch (error) {
-        logger.error('Rate limit middleware error', {
+        logger.error('Rate limit middleware error - denying for safety', {
           error: error instanceof Error ? error.message : 'Unknown error',
         });
-        // On error, allow request to proceed but log it
-        next();
+        // Fail closed: deny request when rate limiter is unavailable
+        res.status(503).json({ success: false, error: 'Servicio temporalmente no disponible' });
+        return;
       }
     };
   }
@@ -134,14 +135,14 @@ export class RateLimiter {
         resetAt,
       };
     } catch (error) {
-      logger.error('Rate limit check error', {
+      logger.error('Rate limit check error - fail closed', {
         error: error instanceof Error ? error.message : 'Unknown error',
         userId,
       });
-      // On error, allow request
+      // Fail closed: deny request when Redis is unavailable
       return {
-        allowed: true,
-        current: 0,
+        allowed: false,
+        current: this.maxRequests,
         resetAt: now + this.windowMs,
       };
     }

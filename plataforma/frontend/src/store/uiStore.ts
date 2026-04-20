@@ -10,6 +10,7 @@ interface Toast {
   type: 'success' | 'error' | 'warning' | 'info';
   message: string;
   duration?: number;
+  timerId?: ReturnType<typeof setTimeout>;
 }
 
 interface Modal {
@@ -91,23 +92,25 @@ export const useUiStore = create<UiState>((set, get) => ({
 
   addToast: (toast) => {
     const id = `toast-${toastIdCounter++}`;
-    const newToast: Toast = { ...toast, id };
+    const duration = toast.duration || 5000;
+    const timerId = setTimeout(() => {
+      get().removeToast(id);
+    }, duration);
+    const newToast: Toast = { ...toast, id, timerId };
 
     set((state) => ({
       toasts: [...state.toasts, newToast],
     }));
-
-    // Auto remove toast after duration
-    const duration = toast.duration || 5000;
-    setTimeout(() => {
-      get().removeToast(id);
-    }, duration);
   },
 
   removeToast: (id) => {
-    set((state) => ({
-      toasts: state.toasts.filter((toast) => toast.id !== id),
-    }));
+    set((state) => {
+      const toastToRemove = state.toasts.find((t) => t.id === id);
+      if (toastToRemove?.timerId) {
+        clearTimeout(toastToRemove.timerId);
+      }
+      return { toasts: state.toasts.filter((t) => t.id !== id) };
+    });
   },
 
   clearToasts: () => {

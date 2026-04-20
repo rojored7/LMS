@@ -83,8 +83,8 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         connect_src = "'self'" if settings.is_production else "'self' ws: wss:"
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
-            "script-src 'self'; "
-            "style-src 'self' 'unsafe-inline'; "
+            f"script-src {settings.CSP_SCRIPT_SRC}; "
+            f"style-src {settings.CSP_STYLE_SRC}; "
             "img-src 'self' data: https:; "
             "font-src 'self'; "
             f"connect-src {connect_src}; "

@@ -151,6 +151,11 @@ class ErrorBoundary extends React.Component<
 }
 
 function App() {
+  const { hydrateUser } = useAuth();
+  React.useEffect(() => {
+    hydrateUser();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>

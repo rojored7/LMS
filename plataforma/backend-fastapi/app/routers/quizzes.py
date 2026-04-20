@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.middleware.auth import get_current_user, require_instructor, verify_module_ownership
+from app.middleware.error_handler import NotFoundError
 from app.models.assessment import Quiz, Question
 from app.models.course import Module
 from app.models.user import User
@@ -73,8 +74,9 @@ async def update_quiz(
     db: AsyncSession = Depends(get_db),
 ):
     quiz_row = (await db.execute(select(Quiz).where(Quiz.id == quiz_id))).scalar_one_or_none()
-    if quiz_row:
-        await verify_module_ownership(quiz_row.module_id, user, db)
+    if quiz_row is None:
+        raise NotFoundError("Quiz no encontrado")
+    await verify_module_ownership(quiz_row.module_id, user, db)
     service = QuizService(db)
     quiz = await service.update(quiz_id, body.model_dump(exclude_unset=True))
     return ApiResponse(success=True, data=QuizResponse.model_validate(quiz).model_dump()).model_dump()
@@ -87,8 +89,9 @@ async def delete_quiz(
     db: AsyncSession = Depends(get_db),
 ):
     quiz_row = (await db.execute(select(Quiz).where(Quiz.id == quiz_id))).scalar_one_or_none()
-    if quiz_row:
-        await verify_module_ownership(quiz_row.module_id, user, db)
+    if quiz_row is None:
+        raise NotFoundError("Quiz no encontrado")
+    await verify_module_ownership(quiz_row.module_id, user, db)
     service = QuizService(db)
     await service.delete(quiz_id)
     return ApiResponse(success=True, data={"message": "Quiz eliminado"}).model_dump()
@@ -118,8 +121,9 @@ async def add_question(
     db: AsyncSession = Depends(get_db),
 ):
     quiz_row = (await db.execute(select(Quiz).where(Quiz.id == quiz_id))).scalar_one_or_none()
-    if quiz_row:
-        await verify_module_ownership(quiz_row.module_id, user, db)
+    if quiz_row is None:
+        raise NotFoundError("Quiz no encontrado")
+    await verify_module_ownership(quiz_row.module_id, user, db)
     service = QuizService(db)
     question = await service.add_question(quiz_id, body.model_dump())
     return ApiResponse(success=True, data={"id": question.id, "text": question.text}).model_dump()
@@ -133,10 +137,12 @@ async def update_question(
     db: AsyncSession = Depends(get_db),
 ):
     q = (await db.execute(select(Question).where(Question.id == question_id))).scalar_one_or_none()
-    if q:
-        quiz_row = (await db.execute(select(Quiz).where(Quiz.id == q.quiz_id))).scalar_one_or_none()
-        if quiz_row:
-            await verify_module_ownership(quiz_row.module_id, user, db)
+    if q is None:
+        raise NotFoundError("Pregunta no encontrada")
+    quiz_row = (await db.execute(select(Quiz).where(Quiz.id == q.quiz_id))).scalar_one_or_none()
+    if quiz_row is None:
+        raise NotFoundError("Quiz no encontrado")
+    await verify_module_ownership(quiz_row.module_id, user, db)
     service = QuizService(db)
     question = await service.update_question(question_id, body.model_dump(exclude_unset=True))
     return ApiResponse(success=True, data={"id": question.id, "text": question.text}).model_dump()
@@ -149,10 +155,12 @@ async def delete_question(
     db: AsyncSession = Depends(get_db),
 ):
     q = (await db.execute(select(Question).where(Question.id == question_id))).scalar_one_or_none()
-    if q:
-        quiz_row = (await db.execute(select(Quiz).where(Quiz.id == q.quiz_id))).scalar_one_or_none()
-        if quiz_row:
-            await verify_module_ownership(quiz_row.module_id, user, db)
+    if q is None:
+        raise NotFoundError("Pregunta no encontrada")
+    quiz_row = (await db.execute(select(Quiz).where(Quiz.id == q.quiz_id))).scalar_one_or_none()
+    if quiz_row is None:
+        raise NotFoundError("Quiz no encontrado")
+    await verify_module_ownership(quiz_row.module_id, user, db)
     service = QuizService(db)
     await service.delete_question(question_id)
     return ApiResponse(success=True, data={"message": "Pregunta eliminada"}).model_dump()

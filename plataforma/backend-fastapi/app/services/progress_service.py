@@ -1,4 +1,4 @@
-import json
+from collections import defaultdict
 from datetime import datetime, timezone
 
 from sqlalchemy import func, select, update as sa_update
@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 import structlog
 
-from app.middleware.error_handler import ConflictError, NotFoundError
+from app.middleware.error_handler import NotFoundError
 from app.models.assessment import Lab, LabSubmission, Quiz, QuizAttempt
 from app.models.course import Course, Lesson, Module
 from app.models.progress import Enrollment, UserProgress
@@ -40,53 +40,6 @@ class ProgressService:
         await self.db.refresh(progress)
         await self.recalculate_course_progress(user_id, lesson.module_id)
         return progress
-
-    async def submit_quiz_attempt(self, user_id: str, quiz_id: str, answers: dict) -> QuizAttempt:
-        result = await self.db.execute(select(Quiz).where(Quiz.id == quiz_id))
-        quiz = result.scalar_one_or_none()
-        if quiz is None:
-            raise NotFoundError("Quiz no encontrado")
-        count_result = await self.db.execute(select(func.count()).select_from(QuizAttempt).where(QuizAttempt.user_id == user_id, QuizAttempt.quiz_id == quiz_id))
-        if (count_result.scalar() or 0) >= quiz.attempts:
-            raise ConflictError(f"Limite de intentos alcanzado ({quiz.attempts})")
-        from app.models.assessment import Question
-        from app.services.scoring import calculate_quiz_score
-        q_result = await self.db.execute(
-            select(Question).where(Question.quiz_id == quiz_id).order_by(Question.order)
-        )
-        questions = list(q_result.scalars().all())
-        correct, total = calculate_quiz_score(questions, answers) if questions else (0, 0)
-        score = round((correct / total) * 100) if total > 0 else 0
-        passed = score >= quiz.passing_score
-        attempt = QuizAttempt(user_id=user_id, quiz_id=quiz_id, answers=answers, score=score, passed=passed, completed_at=datetime.now(timezone.utc))
-        self.db.add(attempt)
-        await self.db.flush()
-        await self.db.refresh(attempt)
-        if passed:
-            await self.recalculate_course_progress(user_id, quiz.module_id)
-        return attempt
-
-    async def submit_lab(self, user_id: str, lab_id: str, code: str, language: str, passed: bool | None = None, stdout: str = "", stderr: str = "", exit_code: int = 0, execution_time: int = 0) -> LabSubmission:
-        result = await self.db.execute(select(Lab).where(Lab.id == lab_id))
-        lab = result.scalar_one_or_none()
-        if lab is None:
-            raise NotFoundError("Lab no encontrado")
-        if passed is None:
-            from app.services.executor_client import executor_client
-            test_code = json.dumps(lab.tests) if isinstance(lab.tests, dict) else None
-            exec_result = await executor_client.execute_code(code=code, language=language, test_code=test_code)
-            passed = exec_result["passed"]
-            stdout = exec_result["stdout"]
-            stderr = exec_result["stderr"]
-            exit_code = exec_result["exitCode"]
-            execution_time = exec_result["executionTime"]
-        submission = LabSubmission(user_id=user_id, lab_id=lab_id, code=code, language=language, passed=passed, stdout=stdout, stderr=stderr, exit_code=exit_code, execution_time=execution_time)
-        self.db.add(submission)
-        await self.db.flush()
-        await self.db.refresh(submission)
-        if passed:
-            await self.recalculate_course_progress(user_id, lab.module_id)
-        return submission
 
     async def get_course_progress(self, user_id: str, course_id: str) -> int:
         result = await self.db.execute(select(Enrollment.progress).where(Enrollment.user_id == user_id, Enrollment.course_id == course_id))
@@ -281,15 +234,77 @@ class ProgressService:
             .offset(skip).limit(limit)
         )
         enrollments = list(result.scalars().all())
+        if not enrollments:
+            return []
+
+        course_ids = [e.course_id for e in enrollments]
+
+        # Batch: all modules for all enrolled courses
+        mods_result = await self.db.execute(
+            select(Module).where(Module.course_id.in_(course_ids)).order_by(Module.order)
+        )
+        all_modules = list(mods_result.scalars().all())
+        modules_by_course: dict[str, list] = defaultdict(list)
+        all_module_ids: list[str] = []
+        for m in all_modules:
+            modules_by_course[m.course_id].append(m)
+            all_module_ids.append(m.id)
+
+        if not all_module_ids:
+            return [
+                {
+                    "courseId": e.course_id,
+                    "courseTitle": e.course.title if e.course else "",
+                    "progress": e.progress or 0,
+                    "enrolledAt": e.enrolled_at.isoformat() if e.enrolled_at else None,
+                    "modules": [],
+                }
+                for e in enrollments
+            ]
+
+        # Batch totals: lessons, quizzes, labs per module
+        lt = await self.db.execute(select(Lesson.module_id, func.count().label("cnt")).where(Lesson.module_id.in_(all_module_ids)).group_by(Lesson.module_id))
+        lt_map = {r.module_id: r.cnt for r in lt}
+        qt = await self.db.execute(select(Quiz.module_id, func.count().label("cnt")).where(Quiz.module_id.in_(all_module_ids)).group_by(Quiz.module_id))
+        qt_map = {r.module_id: r.cnt for r in qt}
+        lbt = await self.db.execute(select(Lab.module_id, func.count().label("cnt")).where(Lab.module_id.in_(all_module_ids)).group_by(Lab.module_id))
+        lbt_map = {r.module_id: r.cnt for r in lbt}
+
+        # Batch completed: lessons, quizzes, labs per module for this user
+        lc = await self.db.execute(select(UserProgress.module_id, func.count().label("cnt")).where(UserProgress.user_id == user_id, UserProgress.module_id.in_(all_module_ids), UserProgress.lesson_id.isnot(None), UserProgress.completed == True).group_by(UserProgress.module_id))  # noqa: E712
+        lc_map = {r.module_id: r.cnt for r in lc}
+        qp = await self.db.execute(select(Quiz.module_id, func.count(func.distinct(QuizAttempt.quiz_id)).label("cnt")).join(QuizAttempt, QuizAttempt.quiz_id == Quiz.id).where(Quiz.module_id.in_(all_module_ids), QuizAttempt.user_id == user_id, QuizAttempt.passed == True).group_by(Quiz.module_id))  # noqa: E712
+        qp_map = {r.module_id: r.cnt for r in qp}
+        lbp = await self.db.execute(select(Lab.module_id, func.count(func.distinct(LabSubmission.lab_id)).label("cnt")).join(LabSubmission, LabSubmission.lab_id == Lab.id).where(Lab.module_id.in_(all_module_ids), LabSubmission.user_id == user_id, LabSubmission.passed == True).group_by(Lab.module_id))  # noqa: E712
+        lbp_map = {r.module_id: r.cnt for r in lbp}
+
+        # Assemble per-course
         data = []
         for e in enrollments:
-            course_progress = await self.get_detailed_course_progress(user_id, e.course_id)
+            mods = modules_by_course.get(e.course_id, [])
+            module_progress = []
+            for mod in mods:
+                l_total = lt_map.get(mod.id, 0)
+                l_done = lc_map.get(mod.id, 0)
+                q_total = qt_map.get(mod.id, 0)
+                q_done = qp_map.get(mod.id, 0)
+                lb_total = lbt_map.get(mod.id, 0)
+                lb_done = lbp_map.get(mod.id, 0)
+                item_total = l_total + q_total + lb_total
+                item_done = l_done + q_done + lb_done
+                pct = min(100, round((item_done / item_total) * 100)) if item_total > 0 else 0
+                module_progress.append({
+                    "moduleId": mod.id, "moduleTitle": mod.title, "progress": pct,
+                    "lessons": {"total": l_total, "completed": l_done},
+                    "quizzes": {"total": q_total, "passed": q_done},
+                    "labs": {"total": lb_total, "passed": lb_done},
+                })
             data.append({
                 "courseId": e.course_id,
                 "courseTitle": e.course.title if e.course else "",
                 "progress": e.progress or 0,
                 "enrolledAt": e.enrolled_at.isoformat() if e.enrolled_at else None,
-                "modules": course_progress.get("modules", []),
+                "modules": module_progress,
             })
         return data
 
@@ -302,10 +317,7 @@ class ProgressService:
             progress = UserProgress(user_id=user_id, module_id=module_id, progress=0, last_access=datetime.now(timezone.utc))
             self.db.add(progress)
             await self.db.flush()
-            result = await self.db.execute(
-                select(UserProgress).where(UserProgress.id == progress.id)
-            )
-            progress = result.scalar_one()
+            await self.db.refresh(progress)
         return progress
 
     async def get_module_progress(self, user_id: str, module_id: str) -> dict:
@@ -326,3 +338,4 @@ class ProgressService:
 
     async def update_project_status(self, user_id: str, module_id: str, status: str) -> None:
         await self.recalculate_course_progress(user_id, module_id)
+

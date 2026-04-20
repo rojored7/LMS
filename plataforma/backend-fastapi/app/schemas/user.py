@@ -28,17 +28,6 @@ class UserProfileUpdate(BaseModel):
     locale: str | None = Field(default=None, pattern=r'^[a-z]{2}(-[A-Z]{2})?$', max_length=10)
 
 
-class ChangePasswordRequest(BaseModel):
-    current_password: str
-    new_password: str
-
-    @field_validator("new_password")
-    @classmethod
-    def validate_password(cls, v: str) -> str:
-        from app.utils.validators import validate_password_strength
-        return validate_password_strength(v)
-
-
 class BadgeCreate(BaseModel):
     name: str
     slug: str

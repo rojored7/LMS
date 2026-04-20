@@ -61,4 +61,5 @@ class UserProgress(Base):
         Index("ix_user_progress_user_id", "user_id"),
         Index("ix_user_progress_module_id", "module_id"),
         Index("ix_user_progress_user_module_lesson", "user_id", "module_id", "lesson_id"),
+        UniqueConstraint("user_id", "module_id", "lesson_id", name="uq_user_progress_user_module_lesson"),
     )

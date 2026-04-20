@@ -18,6 +18,7 @@ class ExecutorClient:
     _client: httpx.AsyncClient | None = None
     _health_cache: bool | None = None
     _health_cache_ts: float = 0.0
+    _health_lock: asyncio.Lock | None = None
 
     def __init__(self) -> None:
         self.base_url = settings.EXECUTOR_SERVICE_URL
@@ -105,6 +106,9 @@ class ExecutorClient:
         }
 
     async def health_check(self) -> bool:
+        if ExecutorClient._health_lock is None:
+            ExecutorClient._health_lock = asyncio.Lock()
+
         now = time.monotonic()
         if (
             self._health_cache is not None
@@ -112,16 +116,25 @@ class ExecutorClient:
         ):
             return self._health_cache
 
-        try:
-            client = self._get_client(5)
-            response = await client.get(f"{self.base_url}/health")
-            healthy = response.status_code == 200
-        except Exception:
-            healthy = False
+        async with ExecutorClient._health_lock:
+            # Double-check after acquiring lock
+            now = time.monotonic()
+            if (
+                self._health_cache is not None
+                and now - self._health_cache_ts < _HEALTH_CACHE_TTL
+            ):
+                return self._health_cache
 
-        ExecutorClient._health_cache = healthy
-        ExecutorClient._health_cache_ts = now
-        return healthy
+            try:
+                client = self._get_client(5)
+                response = await client.get(f"{self.base_url}/health")
+                healthy = response.status_code == 200
+            except Exception:
+                healthy = False
+
+            ExecutorClient._health_cache = healthy
+            ExecutorClient._health_cache_ts = now
+            return healthy
 
 
 executor_client = ExecutorClient()

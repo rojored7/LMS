@@ -22,7 +22,7 @@ def _extract_token(request: Request) -> str | None:
     auth_header = request.headers.get("Authorization")
     if auth_header and auth_header.startswith("Bearer "):
         return auth_header[7:]
-    token = request.cookies.get("access_token")
+    token = request.cookies.get(f"{settings.COOKIE_PREFIX}access_token")
     if token:
         return token
     return None
