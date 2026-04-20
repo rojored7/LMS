@@ -13,19 +13,28 @@ import {
   ChartBarIcon,
 } from '@heroicons/react/24/outline';
 
+interface ModuleProgressInfo {
+  moduleId: string;
+  progress: number;
+  lessons?: { total: number; completed: number };
+  quizzes?: { total: number; passed: number };
+  labs?: { total: number; passed: number };
+}
+
 interface ModuleOverviewProps {
   module: Module;
+  moduleProgress?: ModuleProgressInfo;
   onContentClick: (contentId: string, type: 'lesson' | 'quiz' | 'lab') => void;
 }
 
-export const ModuleOverview = ({ module, onContentClick }: ModuleOverviewProps) => {
-  // Calculate content statistics
-  const totalLessons = module.lessons.length;
-  const completedLessons = module.lessons.filter((l) => l.isCompleted).length;
-  const totalQuizzes = module.quizzes.length;
-  const passedQuizzes = module.quizzes.filter((q) => q.isPassed).length;
-  const totalLabs = module.labs.length;
-  const passedLabs = module.labs.filter((l) => l.isPassed).length;
+export const ModuleOverview = ({ module, moduleProgress, onContentClick }: ModuleOverviewProps) => {
+  // Use progress data from API (accurate) or fallback to module flags (may be stale)
+  const totalLessons = moduleProgress?.lessons?.total ?? module.lessons.length;
+  const completedLessons = moduleProgress?.lessons?.completed ?? module.lessons.filter((l) => l.isCompleted).length;
+  const totalQuizzes = moduleProgress?.quizzes?.total ?? module.quizzes.length;
+  const passedQuizzes = moduleProgress?.quizzes?.passed ?? module.quizzes.filter((q) => q.isPassed).length;
+  const totalLabs = moduleProgress?.labs?.total ?? module.labs.length;
+  const passedLabs = moduleProgress?.labs?.passed ?? module.labs.filter((l) => l.isPassed).length;
 
   const totalItems = totalLessons + totalQuizzes + totalLabs;
   const completedItems = completedLessons + passedQuizzes + passedLabs;
@@ -64,7 +73,7 @@ export const ModuleOverview = ({ module, onContentClick }: ModuleOverviewProps) 
             <div>
               <p className="text-sm text-gray-600 dark:text-gray-400">Duración estimada</p>
               <p className="text-xl font-semibold text-gray-900 dark:text-white">
-                {module.duration} min
+                {module.duration >= 60 ? `${Math.round(module.duration / 60)}h` : `${module.duration} min`}
               </p>
             </div>
           </div>
@@ -74,7 +83,7 @@ export const ModuleOverview = ({ module, onContentClick }: ModuleOverviewProps) 
             <div>
               <p className="text-sm text-gray-600 dark:text-gray-400">Progreso</p>
               <p className="text-xl font-semibold text-gray-900 dark:text-white">
-                {module.userProgress || 0}%
+                {moduleProgress?.progress ?? 0}%
               </p>
             </div>
           </div>
@@ -94,12 +103,12 @@ export const ModuleOverview = ({ module, onContentClick }: ModuleOverviewProps) 
         <div className="mb-6">
           <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400 mb-2">
             <span>Progreso del módulo</span>
-            <span>{module.userProgress || 0}%</span>
+            <span>{moduleProgress?.progress ?? 0}%</span>
           </div>
           <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
             <div
               className="bg-gradient-to-r from-blue-500 to-purple-600 h-3 rounded-full transition-all duration-500"
-              style={{ width: `${module.userProgress || 0}%` }}
+              style={{ width: `${moduleProgress?.progress ?? 0}%` }}
             />
           </div>
         </div>

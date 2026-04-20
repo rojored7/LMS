@@ -286,6 +286,7 @@ export const CourseLearning: React.FC = () => {
                 {contentType === 'module' && modules && contentId && (
                   <ModuleOverview
                     module={modules.find((m) => m.id === contentId)!}
+                    moduleProgress={progressData?.modules?.find((p) => p.moduleId === contentId)}
                     onContentClick={handleContentClick}
                   />
                 )}
