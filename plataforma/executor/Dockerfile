@@ -71,6 +71,9 @@ COPY --from=dependencies /app/node_modules ./node_modules
 COPY --from=build --chown=executor:executor /app/dist ./dist
 COPY --chown=executor:executor package*.json ./
 
+# Create logs directory
+RUN mkdir -p /app/logs && chown executor:executor /app/logs
+
 # Cambiar a usuario no-root
 USER executor
 
