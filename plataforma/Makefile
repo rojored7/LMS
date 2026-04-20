@@ -113,7 +113,19 @@ import-course:
 import-course-dry:
 	docker-compose exec backend python -m app.scripts.import_course --content-dir /content/contenidos/$(COURSE) --dry-run --verbose
 
-# ===== DEPLOY =====
+# ===== DEPLOY & UPDATE =====
 
 deploy:
-	NODE_ENV=production docker-compose up -d --build
+	./scripts/deploy.sh docker-compose.yml
+
+deploy-prod:
+	./scripts/update.sh --production
+
+update:
+	./scripts/update.sh
+
+update-backend:
+	./scripts/update.sh --backend
+
+update-frontend:
+	./scripts/update.sh --frontend

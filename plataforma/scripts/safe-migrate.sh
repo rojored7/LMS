@@ -2,7 +2,7 @@
 #
 # Safe Database Migration Script
 # ===============================
-# Aplica migraciones de Prisma con protección contra pérdida de datos
+# Aplica migraciones de Alembic con proteccion contra perdida de datos
 #
 # Características:
 # - Backup obligatorio pre-migración
@@ -135,25 +135,25 @@ preview_migrations() {
 
   log "Verificando estado de migraciones..."
 
-  # Mostrar estado actual
-  docker exec ciber-backend-prod npx prisma migrate status || true
+  # Mostrar estado actual de Alembic
+  docker exec ciber-backend-prod alembic current 2>&1 || true
 
   log ""
-  log "Obteniendo preview de cambios..."
+  log "Obteniendo preview de cambios SQL..."
 
-  # Intentar obtener preview (puede no estar disponible en todas las versiones)
-  docker exec ciber-backend-prod npx prisma migrate deploy --preview-only 2>&1 || {
-    log_warning "Preview no disponible en esta versión de Prisma"
-    log "Continuando con validación básica..."
+  # Dry-run: mostrar SQL que se ejecutaria
+  docker exec ciber-backend-prod alembic upgrade head --sql 2>&1 || {
+    log_warning "Preview SQL no disponible"
+    log "Continuando con validacion basica..."
   }
 
-  # Verificar que hay archivo de schema
-  if ! docker exec ciber-backend-prod test -f /app/prisma/schema.prisma; then
-    log_error "Archivo schema.prisma no encontrado"
+  # Verificar que existe configuracion de Alembic
+  if ! docker exec ciber-backend-prod test -f /app/alembic.ini; then
+    log_error "Archivo alembic.ini no encontrado"
     exit 1
   fi
 
-  log_success "Validación de migraciones completada"
+  log_success "Validacion de migraciones completada"
 }
 
 # ==========================================
@@ -170,22 +170,17 @@ apply_migrations() {
 
   log "Aplicando migraciones pendientes..."
 
-  # Aplicar migraciones
-  if docker exec ciber-backend-prod npx prisma migrate deploy 2>&1 | tee /tmp/migration.log; then
+  # Aplicar migraciones con Alembic
+  if docker exec ciber-backend-prod alembic upgrade head 2>&1 | tee /tmp/migration.log; then
     log_success "Migraciones aplicadas exitosamente"
   else
     log_error "Fallo al aplicar migraciones"
-    log "Logs de la migración:"
+    log "Logs de la migracion:"
     cat /tmp/migration.log
+    log ""
+    log "Si las columnas ya existen, puede hacer stamp:"
+    log "  docker exec ciber-backend-prod alembic stamp head"
     return 1
-  fi
-
-  # Regenerar Prisma Client
-  log "Regenerando Prisma Client..."
-  if docker exec ciber-backend-prod npx prisma generate; then
-    log_success "Prisma Client regenerado"
-  else
-    log_warning "Fallo al regenerar Prisma Client (no crítico)"
   fi
 }
 

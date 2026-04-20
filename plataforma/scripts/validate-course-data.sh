@@ -238,7 +238,7 @@ if [ $TESTS_FAILED -gt 0 ]; then
   fi
 
   echo -e "\n${YELLOW}Or perform complete reset:${NC}"
-  echo -e "  ${BLUE}docker exec ciber-backend npx prisma migrate reset${NC}"
+  echo -e "  ${BLUE}docker exec ciber-backend alembic downgrade base && docker exec ciber-backend alembic upgrade head${NC}"
 
 elif [ $TESTS_WARNING -gt 0 ]; then
   echo -e "${YELLOW}⚠️  Some warnings found. System functional but not optimal.${NC}"
