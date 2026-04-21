@@ -6,6 +6,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import * as Sentry from '@sentry/react';
 import type { User } from '../types';
 import authService from '../services/auth.service';
 
@@ -76,12 +77,13 @@ export const useAuthStore = create<AuthState>()(
         try {
           const response = await authService.login({ email, password });
 
+          const mapped = mapUser(response.user);
           set({
-            user: mapUser(response.user),
+            user: mapped,
             isAuthenticated: true,
             isLoading: false,
           });
-          // Tokens quedan en HttpOnly cookies (seteadas por el backend)
+          Sentry.setUser({ id: mapped.id, email: mapped.email });
         } catch (error: unknown) {
           const message =
             error && typeof error === 'object' && 'error' in error
@@ -127,6 +129,7 @@ export const useAuthStore = create<AuthState>()(
         } catch {
           // Ignorar error de logout, limpiar estado local de todas formas
         } finally {
+          Sentry.setUser(null);
           set({
             user: null,
             isAuthenticated: false,

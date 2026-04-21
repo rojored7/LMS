@@ -14,6 +14,7 @@ from starlette.responses import Response
 
 from app.config import get_settings
 from app.database import check_database_connection
+from app.middleware.correlation import CorrelationIdMiddleware
 from app.middleware.error_handler import register_exception_handlers
 from app.middleware.rate_limit import limiter
 from app.redis import check_redis_connection, close_redis
@@ -21,6 +22,16 @@ from app.utils.logger import setup_logging
 
 settings = get_settings()
 logger = structlog.get_logger()
+
+# Initialize GlitchTip/Sentry error tracking (if configured)
+if settings.GLITCHTIP_DSN:
+    import sentry_sdk
+    sentry_sdk.init(
+        dsn=settings.GLITCHTIP_DSN,
+        environment=settings.APP_ENV,
+        traces_sample_rate=settings.OTEL_TRACES_SAMPLE_RATE if settings.is_production else 1.0,
+        send_default_pii=False,
+    )
 
 
 @asynccontextmanager
@@ -93,6 +104,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         return response
 
 
+app.add_middleware(CorrelationIdMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
 
 app.add_middleware(
@@ -100,7 +112,7 @@ app.add_middleware(
     allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "Accept", "X-Requested-With"],
+    allow_headers=["Authorization", "Content-Type", "Accept", "X-Requested-With", "X-Request-ID"],
 )
 
 from app.routers import (

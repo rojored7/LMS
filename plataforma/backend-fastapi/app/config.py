@@ -80,6 +80,9 @@ class Settings(BaseSettings):
     CSP_STYLE_SRC: str = "'self' 'unsafe-inline'"
     CSP_SCRIPT_SRC: str = "'self'"
 
+    GLITCHTIP_DSN: str = ""
+    OTEL_TRACES_SAMPLE_RATE: float = 0.2
+
     LOG_LEVEL: Literal["debug", "info", "warning", "error", "critical"] = "info"
     LOG_DIR: str = "./logs"
 

@@ -3,6 +3,7 @@
  */
 
 import React from 'react';
+import * as Sentry from '@sentry/react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Header } from './components/layout/Header';
@@ -98,57 +99,21 @@ const DashboardRedirect: React.FC = () => {
   return <Dashboard />;
 };
 
-class ErrorBoundary extends React.Component<
-  { children: React.ReactNode },
-  { error: Error | null }
-> {
-  state = { error: null as Error | null };
-  static getDerivedStateFromError(error: Error) {
-    return { error };
-  }
-  componentDidCatch(error: Error, info: React.ErrorInfo) {
-    if (!import.meta.env.PROD) {
-      console.error('React ErrorBoundary:', error, info);
-    }
-  }
-  render() {
-    if (this.state.error) {
-      if (import.meta.env.PROD) {
-        return (
-          <div style={{ padding: 40, fontFamily: 'sans-serif', textAlign: 'center' }}>
-            <h1>Error en la aplicacion</h1>
-            <p>Ha ocurrido un error inesperado. Recarga la pagina o intenta mas tarde.</p>
-            <button
-              onClick={() => {
-                localStorage.clear();
-                window.location.href = '/login';
-              }}
-              style={{ marginTop: 16, padding: '8px 16px', cursor: 'pointer' }}
-            >
-              Reiniciar
-            </button>
-          </div>
-        );
-      }
-      return (
-        <div style={{ padding: 40, color: 'red', fontFamily: 'monospace' }}>
-          <h1>Error en la aplicacion</h1>
-          <pre>{this.state.error.message}</pre>
-          <pre>{this.state.error.stack}</pre>
-          <button
-            onClick={() => {
-              localStorage.clear();
-              window.location.href = '/login';
-            }}
-          >
-            Limpiar estado y reiniciar
-          </button>
-        </div>
-      );
-    }
-    return this.props.children;
-  }
-}
+const ErrorFallback: React.FC = () => (
+  <div style={{ padding: 40, fontFamily: 'sans-serif', textAlign: 'center' }}>
+    <h1>Error en la aplicacion</h1>
+    <p>Ha ocurrido un error inesperado. Recarga la pagina o intenta mas tarde.</p>
+    <button
+      onClick={() => {
+        localStorage.clear();
+        window.location.href = '/login';
+      }}
+      style={{ marginTop: 16, padding: '8px 16px', cursor: 'pointer' }}
+    >
+      Reiniciar
+    </button>
+  </div>
+);
 
 function App() {
   const { hydrateUser } = useAuth();
@@ -157,7 +122,7 @@ function App() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <ErrorBoundary>
+    <Sentry.ErrorBoundary fallback={<ErrorFallback />}>
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
           <div className="min-h-screen bg-gray-50" style={{ overflowX: 'hidden' }}>
@@ -450,7 +415,7 @@ function App() {
           </div>
         </BrowserRouter>
       </QueryClientProvider>
-    </ErrorBoundary>
+    </Sentry.ErrorBoundary>
   );
 }
 

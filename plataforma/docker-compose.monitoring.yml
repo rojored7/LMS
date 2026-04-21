@@ -222,6 +222,88 @@ services:
           cpus: '0.25'
           memory: 128M
 
+  # ===== GLITCHTIP - Error Tracking (Sentry-compatible) =====
+  glitchtip-postgres:
+    image: postgres:15-alpine
+    container_name: ciber-glitchtip-pg
+    environment:
+      POSTGRES_DB: glitchtip
+      POSTGRES_USER: glitchtip
+      POSTGRES_PASSWORD: ${GLITCHTIP_DB_PASSWORD:-glitchtip_secret}
+    volumes:
+      - glitchtip_pg_data:/var/lib/postgresql/data
+    networks:
+      - ciber-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+
+  glitchtip-redis:
+    image: redis:7-alpine
+    container_name: ciber-glitchtip-redis
+    networks:
+      - ciber-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 64M
+
+  glitchtip:
+    image: glitchtip/glitchtip:latest
+    container_name: ciber-glitchtip
+    environment:
+      DATABASE_URL: postgresql://glitchtip:${GLITCHTIP_DB_PASSWORD:-glitchtip_secret}@glitchtip-postgres:5432/glitchtip
+      REDIS_URL: redis://glitchtip-redis:6379/0
+      SECRET_KEY: ${GLITCHTIP_SECRET_KEY:-change-me-glitchtip-secret}
+      PORT: 8000
+      GLITCHTIP_DOMAIN: ${GLITCHTIP_DOMAIN:-http://localhost:8000}
+      DEFAULT_FROM_EMAIL: ${SMTP_FROM:-noreply@ciber.local}
+      ENABLE_USER_REGISTRATION: "false"
+      GLITCHTIP_MAX_EVENT_LIFE_DAYS: ${GLITCHTIP_RETENTION_DAYS:-90}
+    ports:
+      - "127.0.0.1:${GLITCHTIP_PORT:-8000}:8000"
+    depends_on:
+      - glitchtip-postgres
+      - glitchtip-redis
+    networks:
+      - ciber-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8000/_health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+
+  glitchtip-worker:
+    image: glitchtip/glitchtip:latest
+    container_name: ciber-glitchtip-worker
+    command: ./bin/run-celery-with-beat.sh
+    environment:
+      DATABASE_URL: postgresql://glitchtip:${GLITCHTIP_DB_PASSWORD:-glitchtip_secret}@glitchtip-postgres:5432/glitchtip
+      REDIS_URL: redis://glitchtip-redis:6379/0
+      SECRET_KEY: ${GLITCHTIP_SECRET_KEY:-change-me-glitchtip-secret}
+    depends_on:
+      - glitchtip-postgres
+      - glitchtip-redis
+    networks:
+      - ciber-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+
 # ===== VOLUMES =====
 volumes:
   prometheus_data:
@@ -229,6 +311,8 @@ volumes:
   grafana_data:
     driver: local
   alertmanager_data:
+    driver: local
+  glitchtip_pg_data:
     driver: local
 
 # ===== NETWORKS =====

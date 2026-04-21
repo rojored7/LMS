@@ -18,6 +18,14 @@ const api: AxiosInstance = axios.create({
 });
 
 /**
+ * Request interceptor: attach X-Request-ID for log correlation
+ */
+api.interceptors.request.use((config) => {
+  config.headers['X-Request-ID'] = crypto.randomUUID();
+  return config;
+});
+
+/**
  * Singleton para evitar multiples refresh simultaneos
  */
 let refreshTokenPromise: Promise<void> | null = null;
