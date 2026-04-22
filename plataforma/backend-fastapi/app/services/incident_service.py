@@ -44,7 +44,12 @@ class IncidentService:
 
         # 2. Extract user and request_id
         user_info = event_data.get("user") if event_data else None
-        tags = event_data.get("tags", {}) if event_data else {}
+        raw_tags = event_data.get("tags", {}) if event_data else {}
+        # GlitchTip API returns tags as list of {key, value}, normalize to dict
+        if isinstance(raw_tags, list):
+            tags = {t["key"]: t["value"] for t in raw_tags if "key" in t}
+        else:
+            tags = raw_tags
         request_id = tags.get("request_id", "")
         contexts = event_data.get("contexts", {}) if event_data else {}
 

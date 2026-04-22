@@ -208,4 +208,6 @@ if not settings.is_production:
     @app.get("/api/debug/error")
     async def debug_trigger_error(user=_Dep(_get_user)):
         """Endpoint de prueba que genera un error 500 real (solo dev). Requiere auth."""
-        raise RuntimeError(f"Test error for user {user.email}")
+        import random
+        error_id = random.randint(1000, 9999)
+        raise RuntimeError(f"Test error #{error_id} for user {user.email}")
