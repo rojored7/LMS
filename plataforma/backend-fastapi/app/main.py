@@ -25,12 +25,24 @@ logger = structlog.get_logger()
 
 # Initialize GlitchTip/Sentry error tracking (if configured)
 if settings.GLITCHTIP_DSN:
+    import logging as _logging
     import sentry_sdk
+    from sentry_sdk.integrations.fastapi import FastApiIntegration
+    from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
+    from sentry_sdk.integrations.redis import RedisIntegration
+    from sentry_sdk.integrations.logging import LoggingIntegration
+
     sentry_sdk.init(
         dsn=settings.GLITCHTIP_DSN,
         environment=settings.APP_ENV,
         traces_sample_rate=settings.OTEL_TRACES_SAMPLE_RATE if settings.is_production else 1.0,
         send_default_pii=False,
+        integrations=[
+            FastApiIntegration(),
+            SqlalchemyIntegration(),
+            RedisIntegration(),
+            LoggingIntegration(level=_logging.WARNING, event_level=_logging.ERROR),
+        ],
     )
 
 
@@ -188,7 +200,10 @@ async def health_live():
 
 
 if not settings.is_production:
-    @app.get("/debug/error")
-    async def debug_trigger_error():
-        """Endpoint de prueba que genera un error 500 real (solo dev)."""
-        raise RuntimeError("Test error for GlitchTip verification")
+    from fastapi import Depends as _Dep
+    from app.middleware.auth import get_current_user as _get_user
+
+    @app.get("/api/debug/error")
+    async def debug_trigger_error(user=_Dep(_get_user)):
+        """Endpoint de prueba que genera un error 500 real (solo dev). Requiere auth."""
+        raise RuntimeError(f"Test error for user {user.email}")

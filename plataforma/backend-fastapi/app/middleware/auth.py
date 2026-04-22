@@ -46,6 +46,12 @@ async def _validate_token(token: str, token_service: TokenService, db: AsyncSess
     user = result.scalar_one_or_none()
     if user is None:
         raise AuthenticationError("Usuario no encontrado")
+    # Set user context in Sentry for error tracking
+    try:
+        import sentry_sdk
+        sentry_sdk.set_user({"id": user.id, "email": user.email, "role": user.role.value})
+    except Exception:
+        pass
     return user
 
 

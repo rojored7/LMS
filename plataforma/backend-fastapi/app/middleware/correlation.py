@@ -1,6 +1,6 @@
 """
 Correlation ID Middleware
-Assigns a unique X-Request-ID to each request for log correlation.
+Assigns a unique X-Request-ID to each request for log and Sentry correlation.
 """
 
 import uuid
@@ -15,6 +15,14 @@ class CorrelationIdMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         request_id = request.headers.get("X-Request-ID") or uuid.uuid4().hex
         structlog.contextvars.bind_contextvars(request_id=request_id)
+
+        # Tag Sentry events with request_id for frontend<->backend correlation
+        try:
+            import sentry_sdk
+            sentry_sdk.set_tag("request_id", request_id)
+        except Exception:
+            pass
+
         try:
             response = await call_next(request)
             response.headers["X-Request-ID"] = request_id

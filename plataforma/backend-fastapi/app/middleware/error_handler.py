@@ -42,10 +42,14 @@ def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(AppError)
     async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
         logger.warning("app_error", code=exc.code, message=exc.message)
-        # Report server errors (5xx) to GlitchTip/Sentry
         if exc.status_code >= 500:
             try:
                 import sentry_sdk
+                sentry_sdk.set_context("request_info", {
+                    "method": request.method,
+                    "path": str(request.url.path),
+                    "query": str(request.query_params),
+                })
                 sentry_sdk.capture_exception(exc)
             except Exception:
                 pass
@@ -54,9 +58,13 @@ def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(Exception)
     async def general_error_handler(request: Request, exc: Exception) -> JSONResponse:
         logger.error("unhandled_error", error=str(exc), type=type(exc).__name__)
-        # Report ALL unhandled exceptions to GlitchTip/Sentry
         try:
             import sentry_sdk
+            sentry_sdk.set_context("request_info", {
+                "method": request.method,
+                "path": str(request.url.path),
+                "query": str(request.query_params),
+            })
             sentry_sdk.capture_exception(exc)
         except Exception:
             pass

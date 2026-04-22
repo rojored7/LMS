@@ -22,7 +22,14 @@ const api: AxiosInstance = axios.create({
  * Request interceptor: attach X-Request-ID for log correlation
  */
 api.interceptors.request.use((config) => {
-  config.headers['X-Request-ID'] = crypto.randomUUID();
+  const requestId = crypto.randomUUID();
+  config.headers['X-Request-ID'] = requestId;
+  Sentry.addBreadcrumb({
+    category: 'api',
+    message: `${config.method?.toUpperCase()} ${config.url}`,
+    data: { requestId },
+    level: 'info',
+  });
   return config;
 });
 

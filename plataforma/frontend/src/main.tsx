@@ -16,8 +16,12 @@ if (glitchtipDsn) {
     environment: import.meta.env.VITE_ENV || 'development',
     integrations: [
       Sentry.browserTracingIntegration(),
+      Sentry.replayIntegration({ maskAllText: false, blockAllMedia: false }),
+      Sentry.httpClientIntegration(),
     ],
     tracesSampleRate: import.meta.env.PROD ? 0.2 : 1.0,
+    replaysSessionSampleRate: 0,
+    replaysOnErrorSampleRate: 1.0,
   });
 }
 

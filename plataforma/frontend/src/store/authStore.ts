@@ -83,7 +83,7 @@ export const useAuthStore = create<AuthState>()(
             isAuthenticated: true,
             isLoading: false,
           });
-          Sentry.setUser({ id: mapped.id, email: mapped.email });
+          Sentry.setUser({ id: mapped.id, email: mapped.email, role: mapped.role });
         } catch (error: unknown) {
           const message =
             error && typeof error === 'object' && 'error' in error
