@@ -185,3 +185,10 @@ async def health_ready():
 @app.get("/health/live")
 async def health_live():
     return {"status": "alive"}
+
+
+if not settings.is_production:
+    @app.get("/debug/error")
+    async def debug_trigger_error():
+        """Endpoint de prueba que genera un error 500 real (solo dev)."""
+        raise RuntimeError("Test error for GlitchTip verification")

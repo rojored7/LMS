@@ -5,6 +5,7 @@
  */
 
 import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from 'axios';
+import * as Sentry from '@sentry/react';
 import { API_URL, API_TIMEOUT } from '../utils/constants';
 import type { ApiError } from '../types';
 
@@ -65,6 +66,18 @@ api.interceptors.response.use(
         window.location.href = '/login?reason=expired';
         return Promise.reject(error);
       }
+    }
+
+    // Report server errors (5xx) and network errors to GlitchTip
+    if (!error.response || error.response.status >= 500) {
+      Sentry.captureException(error, {
+        extra: {
+          url: error.config?.url,
+          method: error.config?.method,
+          status: error.response?.status,
+          requestId: error.config?.headers?.['X-Request-ID'],
+        },
+      });
     }
 
     const apiError: ApiError = {

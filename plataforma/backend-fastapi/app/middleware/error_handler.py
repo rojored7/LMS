@@ -42,9 +42,22 @@ def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(AppError)
     async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
         logger.warning("app_error", code=exc.code, message=exc.message)
+        # Report server errors (5xx) to GlitchTip/Sentry
+        if exc.status_code >= 500:
+            try:
+                import sentry_sdk
+                sentry_sdk.capture_exception(exc)
+            except Exception:
+                pass
         return JSONResponse(status_code=exc.status_code, content={"success": False, "data": None, "error": {"code": exc.code, "message": exc.message}})
 
     @app.exception_handler(Exception)
     async def general_error_handler(request: Request, exc: Exception) -> JSONResponse:
         logger.error("unhandled_error", error=str(exc), type=type(exc).__name__)
+        # Report ALL unhandled exceptions to GlitchTip/Sentry
+        try:
+            import sentry_sdk
+            sentry_sdk.capture_exception(exc)
+        except Exception:
+            pass
         return JSONResponse(status_code=500, content={"success": False, "data": None, "error": {"code": "INTERNAL_ERROR", "message": "Error interno del servidor"}})
