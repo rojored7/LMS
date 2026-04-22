@@ -1,33 +1,31 @@
+import structlog
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.database import get_db
 from app.middleware.auth import require_admin
+from app.middleware.rate_limit import limiter
 from app.models.user import User
 from app.schemas.common import ApiResponse
 from app.services.incident_service import IncidentService
 
+logger = structlog.get_logger()
 settings = get_settings()
 router = APIRouter(prefix="/api/incidents", tags=["incidents"])
 
 
-@router.post("/webhook/glitchtip")
-async def glitchtip_webhook(request: Request, db: AsyncSession = Depends(get_db)):
-    """Webhook receiver for GlitchTip alerts. No auth required (internal network only)."""
+async def _handle_webhook(request: Request, db: AsyncSession) -> dict:
+    """Shared handler for webhook processing."""
     payload = await request.json()
-    import structlog
-    _log = structlog.get_logger()
-    _log.info("glitchtip_webhook_received", payload_keys=list(payload.keys()) if isinstance(payload, dict) else "not_dict")
+    logger.info("glitchtip_webhook_received", payload_keys=list(payload.keys()) if isinstance(payload, dict) else "not_dict")
 
-    # GlitchTip sends Slack-format webhook: {text, attachments[{title, title_link, ...}]}
-    # Normalize to our expected format
+    # GlitchTip sends Slack-format: {text, attachments[{title, title_link}]}
     if "attachments" in payload and "title" not in payload:
         attachments = payload.get("attachments", [])
         if attachments and isinstance(attachments, list):
             att = attachments[0]
             title_link = att.get("title_link", "")
-            # Extract issue ID from URL: .../issues/14 -> 14
             issue_id = title_link.rstrip("/").split("/")[-1] if title_link else None
             payload = {
                 "id": issue_id,
@@ -36,10 +34,37 @@ async def glitchtip_webhook(request: Request, db: AsyncSession = Depends(get_db)
                 "url": title_link,
                 "project_slug": "lms-platform",
             }
-            _log.info("glitchtip_webhook_normalized", issue_id=issue_id, title=payload["title"][:60])
+            logger.info("glitchtip_webhook_normalized", issue_id=issue_id, title=payload["title"][:60])
+
     service = IncidentService(db)
     report = await service.process_webhook(payload)
-    return ApiResponse(success=True, data={"incident_id": report.incident_id}).model_dump()
+    return {"incident_id": report.incident_id, "error_source": report.error_source}
+
+
+@router.post("/webhook/glitchtip/{secret}")
+@limiter.limit("10/minute")
+async def glitchtip_webhook_auth(secret: str, request: Request, db: AsyncSession = Depends(get_db)):
+    """Webhook receiver with URL-based secret authentication."""
+    if settings.GLITCHTIP_WEBHOOK_SECRET and secret != settings.GLITCHTIP_WEBHOOK_SECRET:
+        raise HTTPException(status_code=401, detail="Invalid webhook secret")
+    try:
+        data = await _handle_webhook(request, db)
+        return ApiResponse(success=True, data=data).model_dump()
+    except Exception as e:
+        logger.error("webhook_processing_failed", error=str(e))
+        return ApiResponse(success=False, data={"error": "processing failed"}).model_dump()
+
+
+@router.post("/webhook/glitchtip")
+@limiter.limit("10/minute")
+async def glitchtip_webhook(request: Request, db: AsyncSession = Depends(get_db)):
+    """Webhook receiver for internal network (no auth)."""
+    try:
+        data = await _handle_webhook(request, db)
+        return ApiResponse(success=True, data=data).model_dump()
+    except Exception as e:
+        logger.error("webhook_processing_failed", error=str(e))
+        return ApiResponse(success=False, data={"error": "processing failed"}).model_dump()
 
 
 @router.get("")
