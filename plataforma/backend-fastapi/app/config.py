@@ -81,7 +81,12 @@ class Settings(BaseSettings):
     CSP_SCRIPT_SRC: str = "'self'"
 
     GLITCHTIP_DSN: str = ""
+    GLITCHTIP_INTERNAL_URL: str = "http://ciber-glitchtip:8000"
+    GLITCHTIP_API_TOKEN: str = ""
+    GLITCHTIP_WEBHOOK_SECRET: str = ""
     OTEL_TRACES_SAMPLE_RATE: float = 0.2
+    INCIDENT_STORAGE_DIR: str = "./incidents"
+    INCIDENT_NOTIFY_ADMINS: bool = True
 
     LOG_LEVEL: Literal["debug", "info", "warning", "error", "critical"] = "info"
     LOG_DIR: str = "./logs"

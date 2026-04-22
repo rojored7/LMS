@@ -21,6 +21,7 @@ class NotificationType(str, enum.Enum):
     ACHIEVEMENT = "ACHIEVEMENT"
     COURSE = "COURSE"
     REMINDER = "REMINDER"
+    INCIDENT = "INCIDENT"
 
 
 class Badge(Base):

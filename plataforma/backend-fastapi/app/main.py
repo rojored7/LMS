@@ -135,6 +135,7 @@ from app.routers import (
     certificates,
     course_management,
     courses,
+    incidents,
     instructor,
     labs,
     lessons,
@@ -172,6 +173,7 @@ app.include_router(admin.router)
 app.include_router(training_profiles.router)
 app.include_router(analytics.router)
 app.include_router(course_management.router)
+app.include_router(incidents.router)
 app.include_router(instructor.router)
 
 
