@@ -75,20 +75,26 @@ log "Images built"
 info "Saving images to tar..."
 IMAGES_FILE="${TMP_DIR}/prod-images.tar.gz"
 docker save plataforma-backend plataforma-frontend plataforma-executor | gzip > "$IMAGES_FILE"
+# Resolve to absolute Windows path for Python
+if command -v cygpath &>/dev/null; then
+    IMAGES_FILE_ABS="$(cygpath -w "$IMAGES_FILE")"
+else
+    IMAGES_FILE_ABS="$IMAGES_FILE"
+fi
 SIZE=$(du -h "$IMAGES_FILE" | cut -f1)
 log "Images saved: ${SIZE}"
 
 # --- Step 3: Upload and deploy via Python/Paramiko ---
 info "Deploying to ${SERVER}..."
 
-python3 -c "
+python -c "
 import paramiko, os, sys, time, json
 
 SERVER = '${SERVER}'
 USER = '${USER_SSH}'
 PASS = '${PASS_SSH}'
 REMOTE_DIR = '${REMOTE_DIR}'
-IMAGES = '${IMAGES_FILE}'
+IMAGES = r'${IMAGES_FILE_ABS}'
 COMPOSE = '${COMPOSE_FILE}'
 
 print('Connecting...')
