@@ -178,12 +178,13 @@ async def get_course_admin(
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     from sqlalchemy.orm import selectinload
+    from app.models.assessment import Quiz as QuizModel
     enroll_count_q = select(func.count(Enrollment.id)).where(Enrollment.course_id == Course.id).correlate(Course).scalar_subquery()
     result = await db.execute(
         select(Course, enroll_count_q.label("enroll_count"))
         .options(
             selectinload(Course.modules).selectinload(Module.lessons),
-            selectinload(Course.modules).selectinload(Module.quizzes),
+            selectinload(Course.modules).selectinload(Module.quizzes).selectinload(QuizModel.questions),
             selectinload(Course.modules).selectinload(Module.labs),
         )
         .where(Course.id == course_id)
@@ -197,6 +198,13 @@ async def get_course_admin(
     from app.schemas.course import CourseAdminDetailResponse
     d = CourseAdminDetailResponse.model_validate(course).model_dump()
     d["enrollmentCount"] = enroll_count or 0
+    # Enrich quiz/lab counts that summary schemas don't auto-populate
+    for mod_data, mod_obj in zip(d.get("modules", []), course.modules):
+        for quiz_data, quiz_obj in zip(mod_data.get("quizzes", []), mod_obj.quizzes):
+            quiz_data["questionCount"] = len(quiz_obj.questions) if quiz_obj.questions else 0
+            quiz_data["passingScore"] = quiz_obj.passing_score
+        for lab_data, lab_obj in zip(mod_data.get("labs", []), mod_obj.labs):
+            lab_data["testCaseCount"] = len(lab_obj.tests) if isinstance(lab_obj.tests, (list, dict)) else 0
     return {"success": True, "data": d}
 
 

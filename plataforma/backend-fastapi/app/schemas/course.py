@@ -42,7 +42,7 @@ class CourseResponse(CamelModel):
     thumbnail: str | None = None
     duration: int
     level: str
-    tags: list[str] | None = None
+    tags: list[str] = []
     is_published: bool
     author: str
     version: str
@@ -88,6 +88,8 @@ class QuizSummary(CamelModel):
     id: str
     title: str
     description: str | None = None
+    passing_score: int = 0
+    question_count: int = 0
 
 
 class LabSummary(CamelModel):
@@ -95,6 +97,7 @@ class LabSummary(CamelModel):
     title: str
     description: str | None = None
     language: str | None = None
+    test_case_count: int = 0
 
 
 class ModuleResponse(CamelModel):

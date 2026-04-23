@@ -287,7 +287,7 @@ const CourseEditorPage: React.FC = () => {
                   </label>
                   <input
                     type="text"
-                    value={currentCourse.tags.join(', ')}
+                    value={(currentCourse.tags || []).join(', ')}
                     onChange={(e) =>
                       updateCourse({
                         tags: e.target.value
@@ -334,7 +334,7 @@ const CourseEditorPage: React.FC = () => {
                           {module.lessons.map((lesson) => (
                             <div
                               key={lesson.id}
-                              onClick={() => setSelectedLessonContent(lesson.content)}
+                              onClick={() => setSelectedLessonContent((lesson as any).content || '')}
                               className="text-sm text-gray-700 hover:text-blue-600 cursor-pointer py-1"
                             >
                               • {lesson.title}
@@ -386,8 +386,8 @@ const CourseEditorPage: React.FC = () => {
                               <div>
                                 <p className="font-medium">{quiz.title}</p>
                                 <p className="text-sm text-gray-500">
-                                  {(quiz.questions || []).length} preguntas • Puntaje mínimo:{' '}
-                                  {quiz.passingScore}%
+                                  {(quiz as any).questionCount || 0} preguntas • Puntaje mínimo:{' '}
+                                  {(quiz as any).passingScore || 0}%
                                 </p>
                               </div>
                               <button className="text-blue-600 hover:text-blue-700">Editar</button>
@@ -433,7 +433,7 @@ const CourseEditorPage: React.FC = () => {
                               <div>
                                 <p className="font-medium">{lab.title}</p>
                                 <p className="text-sm text-gray-500">
-                                  Lenguaje: {lab.language} • {lab.testCases?.length || 0} casos de
+                                  Lenguaje: {lab.language || '?'} • {(lab as any).testCaseCount || 0} casos de
                                   prueba
                                 </p>
                               </div>
