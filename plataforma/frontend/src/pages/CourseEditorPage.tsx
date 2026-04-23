@@ -156,10 +156,12 @@ const CourseEditorPage: React.FC = () => {
                 <div>
                   <h1 className="text-xl font-bold text-gray-900">{currentCourse.title}</h1>
                   <div className="flex items-center space-x-2 mt-1">
-                    <span className={`
+                    <span
+                      className={`
                       inline-flex px-2 py-0.5 text-xs font-medium rounded-full
                       ${currentCourse.isPublished ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}
-                    `}>
+                    `}
+                    >
                       {currentCourse.isPublished ? 'Publicado' : 'Borrador'}
                     </span>
                     {isDirty && (
@@ -200,9 +202,11 @@ const CourseEditorPage: React.FC = () => {
                 onClick={() => setActiveTab(tab as any)}
                 className={`
                   py-4 px-1 border-b-2 font-medium text-sm transition-colors
-                  ${activeTab === tab
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700'}
+                  ${
+                    activeTab === tab
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                  }
                 `}
               >
                 {tab === 'overview' && 'Información general'}
@@ -250,9 +254,7 @@ const CourseEditorPage: React.FC = () => {
 
                 <div className="grid grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Nivel
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Nivel</label>
                     <select
                       value={currentCourse.level}
                       onChange={(e) => updateCourse({ level: e.target.value as any })}
@@ -286,9 +288,14 @@ const CourseEditorPage: React.FC = () => {
                   <input
                     type="text"
                     value={currentCourse.tags.join(', ')}
-                    onChange={(e) => updateCourse({
-                      tags: e.target.value.split(',').map(t => t.trim()).filter(t => t)
-                    })}
+                    onChange={(e) =>
+                      updateCourse({
+                        tags: e.target.value
+                          .split(',')
+                          .map((t) => t.trim())
+                          .filter((t) => t),
+                      })
+                    }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                     placeholder="seguridad, redes, programación"
                   />
@@ -364,30 +371,34 @@ const CourseEditorPage: React.FC = () => {
               </div>
 
               <div className="space-y-4">
-                {(currentCourse.modules || []).map((module) => (
-                  module.quizzes && module.quizzes.length > 0 && (
-                    <div key={module.id} className="border border-gray-200 rounded-lg p-4">
-                      <h3 className="font-medium mb-3">{module.title}</h3>
-                      <div className="space-y-2">
-                        {module.quizzes.map((quiz) => (
-                          <div key={quiz.id} className="flex items-center justify-between p-3 bg-gray-50 rounded">
-                            <div>
-                              <p className="font-medium">{quiz.title}</p>
-                              <p className="text-sm text-gray-500">
-                                {quiz.questions.length} preguntas • Puntaje mínimo: {quiz.passingScore}%
-                              </p>
+                {(currentCourse.modules || []).map(
+                  (module) =>
+                    module.quizzes &&
+                    module.quizzes.length > 0 && (
+                      <div key={module.id} className="border border-gray-200 rounded-lg p-4">
+                        <h3 className="font-medium mb-3">{module.title}</h3>
+                        <div className="space-y-2">
+                          {module.quizzes.map((quiz) => (
+                            <div
+                              key={quiz.id}
+                              className="flex items-center justify-between p-3 bg-gray-50 rounded"
+                            >
+                              <div>
+                                <p className="font-medium">{quiz.title}</p>
+                                <p className="text-sm text-gray-500">
+                                  {(quiz.questions || []).length} preguntas • Puntaje mínimo:{' '}
+                                  {quiz.passingScore}%
+                                </p>
+                              </div>
+                              <button className="text-blue-600 hover:text-blue-700">Editar</button>
                             </div>
-                            <button className="text-blue-600 hover:text-blue-700">
-                              Editar
-                            </button>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  )
-                ))}
+                    )
+                )}
 
-                {!(currentCourse.modules || []).some(m => m.quizzes && m.quizzes.length > 0) && (
+                {!(currentCourse.modules || []).some((m) => m.quizzes && m.quizzes.length > 0) && (
                   <div className="text-center py-12 text-gray-500">
                     No hay quizzes en este curso
                   </div>
@@ -407,30 +418,34 @@ const CourseEditorPage: React.FC = () => {
               </div>
 
               <div className="space-y-4">
-                {(currentCourse.modules || []).map((module) => (
-                  module.labs && module.labs.length > 0 && (
-                    <div key={module.id} className="border border-gray-200 rounded-lg p-4">
-                      <h3 className="font-medium mb-3">{module.title}</h3>
-                      <div className="space-y-2">
-                        {module.labs.map((lab) => (
-                          <div key={lab.id} className="flex items-center justify-between p-3 bg-gray-50 rounded">
-                            <div>
-                              <p className="font-medium">{lab.title}</p>
-                              <p className="text-sm text-gray-500">
-                                Lenguaje: {lab.language} • {lab.testCases?.length || 0} casos de prueba
-                              </p>
+                {(currentCourse.modules || []).map(
+                  (module) =>
+                    module.labs &&
+                    module.labs.length > 0 && (
+                      <div key={module.id} className="border border-gray-200 rounded-lg p-4">
+                        <h3 className="font-medium mb-3">{module.title}</h3>
+                        <div className="space-y-2">
+                          {module.labs.map((lab) => (
+                            <div
+                              key={lab.id}
+                              className="flex items-center justify-between p-3 bg-gray-50 rounded"
+                            >
+                              <div>
+                                <p className="font-medium">{lab.title}</p>
+                                <p className="text-sm text-gray-500">
+                                  Lenguaje: {lab.language} • {lab.testCases?.length || 0} casos de
+                                  prueba
+                                </p>
+                              </div>
+                              <button className="text-blue-600 hover:text-blue-700">Editar</button>
                             </div>
-                            <button className="text-blue-600 hover:text-blue-700">
-                              Editar
-                            </button>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  )
-                ))}
+                    )
+                )}
 
-                {!(currentCourse.modules || []).some(m => m.labs && m.labs.length > 0) && (
+                {!(currentCourse.modules || []).some((m) => m.labs && m.labs.length > 0) && (
                   <div className="text-center py-12 text-gray-500">
                     No hay laboratorios en este curso
                   </div>
