@@ -4,7 +4,11 @@ import { ArrowLeftIcon, CloudArrowUpIcon } from '@heroicons/react/24/outline';
 import MarkdownEditor from '../components/common/MarkdownEditor';
 import { useCourseEditorStore } from '../store/courseEditorStore';
 import { useUiStore } from '../store/uiStore';
-import courseManagementService from '../services/api/courseManagement.service';
+import courseManagementService, {
+  AdminLessonSummary,
+  AdminQuizSummary,
+  AdminLabSummary,
+} from '../services/api/courseManagement.service';
 
 const CourseEditorPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -334,7 +338,9 @@ const CourseEditorPage: React.FC = () => {
                           {module.lessons.map((lesson) => (
                             <div
                               key={lesson.id}
-                              onClick={() => setSelectedLessonContent((lesson as any).content || '')}
+                              onClick={() =>
+                                setSelectedLessonContent((lesson as AdminLessonSummary).content || '')
+                              }
                               className="text-sm text-gray-700 hover:text-blue-600 cursor-pointer py-1"
                             >
                               • {lesson.title}
@@ -386,8 +392,8 @@ const CourseEditorPage: React.FC = () => {
                               <div>
                                 <p className="font-medium">{quiz.title}</p>
                                 <p className="text-sm text-gray-500">
-                                  {(quiz as any).questionCount || 0} preguntas • Puntaje mínimo:{' '}
-                                  {(quiz as any).passingScore || 0}%
+                                  {(quiz as AdminQuizSummary).questionCount || 0} preguntas • Puntaje mínimo:{' '}
+                                  {(quiz as AdminQuizSummary).passingScore || 0}%
                                 </p>
                               </div>
                               <button className="text-blue-600 hover:text-blue-700">Editar</button>
@@ -433,8 +439,8 @@ const CourseEditorPage: React.FC = () => {
                               <div>
                                 <p className="font-medium">{lab.title}</p>
                                 <p className="text-sm text-gray-500">
-                                  Lenguaje: {lab.language || '?'} • {(lab as any).testCaseCount || 0} casos de
-                                  prueba
+                                  Lenguaje: {lab.language || '?'} •{' '}
+                                  {(lab as AdminLabSummary).testCaseCount || 0} casos de prueba
                                 </p>
                               </div>
                               <button className="text-blue-600 hover:text-blue-700">Editar</button>

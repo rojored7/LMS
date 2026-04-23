@@ -44,6 +44,11 @@ class CourseResponse(CamelModel):
     level: str
     tags: list[str] = []
     is_published: bool
+
+    @field_validator("tags", mode="before")
+    @classmethod
+    def coerce_tags(cls, v: list[str] | None) -> list[str]:
+        return v if v is not None else []
     author: str
     version: str
     price: float
@@ -82,6 +87,7 @@ class LessonSummary(CamelModel):
     order: int
     type: str
     estimated_time: int
+    content: str = ""
 
 
 class QuizSummary(CamelModel):

@@ -177,8 +177,11 @@ async def get_course_admin(
     _user: User = Depends(require_instructor),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
+    from sqlalchemy import true as sa_true
     from sqlalchemy.orm import selectinload
     from app.models.assessment import Quiz as QuizModel
+    # Ownership filter in query (not after load) to prevent authorization oracle
+    author_filter = Course.author_id == _user.id if _user.role == UserRole.INSTRUCTOR else sa_true()
     enroll_count_q = select(func.count(Enrollment.id)).where(Enrollment.course_id == Course.id).correlate(Course).scalar_subquery()
     result = await db.execute(
         select(Course, enroll_count_q.label("enroll_count"))
@@ -187,24 +190,34 @@ async def get_course_admin(
             selectinload(Course.modules).selectinload(Module.quizzes).selectinload(QuizModel.questions),
             selectinload(Course.modules).selectinload(Module.labs),
         )
-        .where(Course.id == course_id)
+        .where(Course.id == course_id, author_filter)
     )
     row = result.unique().one_or_none()
     if row is None:
         raise NotFoundError("Curso no encontrado")
     course, enroll_count = row
-    if _user.role == UserRole.INSTRUCTOR and course.author_id != _user.id:
-        raise AuthorizationError("No tiene permisos sobre este curso")
     from app.schemas.course import CourseAdminDetailResponse
     d = CourseAdminDetailResponse.model_validate(course).model_dump()
     d["enrollmentCount"] = enroll_count or 0
-    # Enrich quiz/lab counts that summary schemas don't auto-populate
+    # Enrich quiz/lab counts - match by ID (not position) for order safety
     for mod_data, mod_obj in zip(d.get("modules", []), course.modules):
-        for quiz_data, quiz_obj in zip(mod_data.get("quizzes", []), mod_obj.quizzes):
-            quiz_data["questionCount"] = len(quiz_obj.questions) if quiz_obj.questions else 0
-            quiz_data["passingScore"] = quiz_obj.passing_score
-        for lab_data, lab_obj in zip(mod_data.get("labs", []), mod_obj.labs):
-            lab_data["testCaseCount"] = len(lab_obj.tests) if isinstance(lab_obj.tests, (list, dict)) else 0
+        quiz_by_id = {q.id: q for q in mod_obj.quizzes}
+        for quiz_data in mod_data.get("quizzes", []):
+            qobj = quiz_by_id.get(quiz_data.get("id"))
+            if qobj:
+                quiz_data["questionCount"] = len(qobj.questions) if qobj.questions else 0
+                quiz_data["passingScore"] = qobj.passing_score
+        lab_by_id = {lb.id: lb for lb in mod_obj.labs}
+        for lab_data in mod_data.get("labs", []):
+            lobj = lab_by_id.get(lab_data.get("id"))
+            if lobj:
+                tests = lobj.tests
+                if isinstance(tests, list):
+                    lab_data["testCaseCount"] = len(tests)
+                elif isinstance(tests, dict):
+                    lab_data["testCaseCount"] = len(tests.get("cases", tests.get("tests", [])))
+                else:
+                    lab_data["testCaseCount"] = 0
     return {"success": True, "data": d}
 
 

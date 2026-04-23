@@ -91,6 +91,44 @@ export interface TestCase {
   description?: string;
 }
 
+// Admin detail endpoint returns summary versions (not full CRUD versions)
+export interface AdminLessonSummary {
+  id: string;
+  title: string;
+  order: number;
+  type: string;
+  estimatedTime: number;
+  content: string;
+}
+
+export interface AdminQuizSummary {
+  id: string;
+  title: string;
+  description?: string;
+  questionCount: number;
+  passingScore: number;
+}
+
+export interface AdminLabSummary {
+  id: string;
+  title: string;
+  description?: string;
+  language?: string;
+  testCaseCount: number;
+}
+
+export interface AdminModule {
+  id: string;
+  title: string;
+  description: string;
+  order: number;
+  duration: number;
+  isPublished: boolean;
+  lessons: AdminLessonSummary[];
+  quizzes: AdminQuizSummary[];
+  labs: AdminLabSummary[];
+}
+
 class CourseManagementService {
   private baseURL = '/admin/courses';
 
