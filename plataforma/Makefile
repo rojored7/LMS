@@ -119,7 +119,10 @@ deploy:
 	./scripts/deploy.sh docker-compose.yml
 
 deploy-prod:
-	./scripts/update.sh --production
+	./scripts/deploy-prod.sh
+
+validate:
+	./scripts/validate-parity.sh
 
 update:
 	./scripts/update.sh
