@@ -64,7 +64,7 @@ class CourseDetailResponse(CourseResponse):
 
 
 class CourseAdminDetailResponse(CourseResponse):
-    modules: list["ModuleResponse"] = []
+    modules: list["ModuleAdminResponse"] = []
 
 
 class CourseListResponse(CamelModel):
@@ -87,6 +87,9 @@ class LessonSummary(CamelModel):
     order: int
     type: str
     estimated_time: int
+
+
+class LessonAdminSummary(LessonSummary):
     content: str = ""
 
 
@@ -115,6 +118,19 @@ class ModuleResponse(CamelModel):
     duration: int
     is_published: bool
     lessons: list[LessonSummary] = []
+    quizzes: list[QuizSummary] = []
+    labs: list[LabSummary] = []
+
+
+class ModuleAdminResponse(CamelModel):
+    id: str
+    course_id: str
+    order: int
+    title: str
+    description: str
+    duration: int
+    is_published: bool
+    lessons: list[LessonAdminSummary] = []
     quizzes: list[QuizSummary] = []
     labs: list[LabSummary] = []
 
