@@ -177,20 +177,25 @@ async def get_course_admin(
     _user: User = Depends(require_instructor),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    mod_count_q = select(func.count(Module.id)).where(Module.course_id == Course.id).correlate(Course).scalar_subquery()
+    from sqlalchemy.orm import selectinload
     enroll_count_q = select(func.count(Enrollment.id)).where(Enrollment.course_id == Course.id).correlate(Course).scalar_subquery()
     result = await db.execute(
-        select(Course, mod_count_q.label("mod_count"), enroll_count_q.label("enroll_count"))
+        select(Course, enroll_count_q.label("enroll_count"))
+        .options(
+            selectinload(Course.modules).selectinload(Module.lessons),
+            selectinload(Course.modules).selectinload(Module.quizzes),
+            selectinload(Course.modules).selectinload(Module.labs),
+        )
         .where(Course.id == course_id)
     )
-    row = result.one_or_none()
+    row = result.unique().one_or_none()
     if row is None:
         raise NotFoundError("Curso no encontrado")
-    course, mod_count, enroll_count = row
+    course, enroll_count = row
     if _user.role == UserRole.INSTRUCTOR and course.author_id != _user.id:
         raise AuthorizationError("No tiene permisos sobre este curso")
-    d = CourseResponse.model_validate(course).model_dump()
-    d["moduleCount"] = mod_count or 0
+    from app.schemas.course import CourseAdminDetailResponse
+    d = CourseAdminDetailResponse.model_validate(course).model_dump()
     d["enrollmentCount"] = enroll_count or 0
     return {"success": True, "data": d}
 

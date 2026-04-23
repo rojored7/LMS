@@ -310,7 +310,7 @@ const CourseEditorPage: React.FC = () => {
                 </div>
 
                 <div className="space-y-2">
-                  {currentCourse.modules.map((module) => (
+                  {(currentCourse.modules || []).map((module) => (
                     <div key={module.id} className="border border-gray-200 rounded-lg p-3">
                       <div
                         onClick={() => setSelectedModuleId(module.id || null)}
@@ -364,7 +364,7 @@ const CourseEditorPage: React.FC = () => {
               </div>
 
               <div className="space-y-4">
-                {currentCourse.modules.map((module) => (
+                {(currentCourse.modules || []).map((module) => (
                   module.quizzes && module.quizzes.length > 0 && (
                     <div key={module.id} className="border border-gray-200 rounded-lg p-4">
                       <h3 className="font-medium mb-3">{module.title}</h3>
@@ -387,7 +387,7 @@ const CourseEditorPage: React.FC = () => {
                   )
                 ))}
 
-                {!currentCourse.modules.some(m => m.quizzes && m.quizzes.length > 0) && (
+                {!(currentCourse.modules || []).some(m => m.quizzes && m.quizzes.length > 0) && (
                   <div className="text-center py-12 text-gray-500">
                     No hay quizzes en este curso
                   </div>
@@ -407,7 +407,7 @@ const CourseEditorPage: React.FC = () => {
               </div>
 
               <div className="space-y-4">
-                {currentCourse.modules.map((module) => (
+                {(currentCourse.modules || []).map((module) => (
                   module.labs && module.labs.length > 0 && (
                     <div key={module.id} className="border border-gray-200 rounded-lg p-4">
                       <h3 className="font-medium mb-3">{module.title}</h3>
@@ -430,7 +430,7 @@ const CourseEditorPage: React.FC = () => {
                   )
                 ))}
 
-                {!currentCourse.modules.some(m => m.labs && m.labs.length > 0) && (
+                {!(currentCourse.modules || []).some(m => m.labs && m.labs.length > 0) && (
                   <div className="text-center py-12 text-gray-500">
                     No hay laboratorios en este curso
                   </div>

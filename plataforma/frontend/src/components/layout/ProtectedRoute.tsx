@@ -51,7 +51,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const location = useLocation();
 
   // AC3: Mostrar loader mientras se verifica autenticación
-  if (isLoading) {
+  // Also wait for user hydration when authenticated but user not loaded yet
+  if (isLoading || (isAuthenticated && !user)) {
     return <Loader fullScreen text="Verificando autenticación..." />;
   }
 

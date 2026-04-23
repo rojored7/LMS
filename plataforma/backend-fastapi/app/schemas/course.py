@@ -58,6 +58,10 @@ class CourseDetailResponse(CourseResponse):
     is_enrolled: bool = False
 
 
+class CourseAdminDetailResponse(CourseResponse):
+    modules: list["ModuleResponse"] = []
+
+
 class CourseListResponse(CamelModel):
     id: str
     slug: str
