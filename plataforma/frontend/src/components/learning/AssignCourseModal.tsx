@@ -33,18 +33,19 @@ export default function AssignCourseModal({
   const [assigning, setAssigning] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const enrolledKey = JSON.stringify(enrolledCourseIds);
+
   // Load courses when modal opens
   useEffect(() => {
     if (isOpen) {
       loadCourses();
     } else {
-      // Reset state when modal closes
       setSearchTerm('');
       setSelectedCourse(null);
       setError(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, enrolledCourseIds]);
+  }, [isOpen, enrolledKey]);
 
   // Filter courses based on search term
   useEffect(() => {
