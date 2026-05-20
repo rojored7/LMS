@@ -1,16 +1,23 @@
 /**
  * UsersList Page
- * Admin page for managing all users
+ * Admin page for managing all users with course assignment
  */
 
 import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Users, UserPlus, Search, Filter } from 'lucide-react';
-import { Button } from '../components/common/Button';
+import { Search, BookPlus } from 'lucide-react';
 import { useToast } from '../hooks/useToast';
 import userService from '../services/user.service';
+import { assignCourseToUser } from '../services/api/admin.service';
+import AssignCourseModal from '../components/learning/AssignCourseModal';
 import type { User } from '../types';
 import { ROLE_LABELS } from '../utils/constants';
+
+interface SelectedUser {
+  id: string;
+  name: string;
+  email: string;
+}
 
 export const UsersList: React.FC = () => {
   const toast = useToast();
@@ -19,6 +26,9 @@ export const UsersList: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
   const [roleFilter, setRoleFilter] = useState<string>(searchParams.get('role') || 'ALL');
+
+  const [assignModalOpen, setAssignModalOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<SelectedUser | null>(null);
 
   useEffect(() => {
     loadUsers();
@@ -30,7 +40,7 @@ export const UsersList: React.FC = () => {
       const response = await userService.getUsers({ page: 1, limit: 100 });
       const userData = (response as any)?.data || response;
       setUsers(Array.isArray(userData) ? userData : userData?.users || []);
-    } catch (err: any) {
+    } catch {
       toast.error('Error al cargar usuarios');
     } finally {
       setLoading(false);
@@ -38,7 +48,7 @@ export const UsersList: React.FC = () => {
   };
 
   const handleDeleteUser = async (userId: string) => {
-    if (!confirm('¿Eliminar este usuario? Esta acción no se puede deshacer.')) return;
+    if (!confirm('Eliminar este usuario? Esta accion no se puede deshacer.')) return;
 
     try {
       await userService.deleteUser(userId);
@@ -47,6 +57,22 @@ export const UsersList: React.FC = () => {
     } catch (err: any) {
       toast.error(err?.error?.message || 'Error al eliminar usuario');
     }
+  };
+
+  const handleAssignCourse = (user: User) => {
+    setSelectedUser({
+      id: user.id,
+      name: user.name || user.email,
+      email: user.email,
+    });
+    setAssignModalOpen(true);
+  };
+
+  const handleConfirmAssign = async (courseId: string) => {
+    if (!selectedUser) return;
+    await assignCourseToUser(selectedUser.id, courseId);
+    toast.success('Curso asignado correctamente');
+    loadUsers();
   };
 
   const filteredUsers = users.filter((user) => {
@@ -61,11 +87,11 @@ export const UsersList: React.FC = () => {
   });
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8" data-testid="userslist">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-          Gestión de Usuarios
+          Gestion de Usuarios
         </h1>
         <p className="text-gray-600 dark:text-gray-400">
           Administra todos los usuarios del sistema
@@ -165,6 +191,15 @@ export const UsersList: React.FC = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      {user.role === 'STUDENT' && (
+                        <button
+                          onClick={() => handleAssignCourse(user)}
+                          title="Asignar curso"
+                          className="text-green-600 hover:text-green-900 dark:text-green-400 mr-4"
+                        >
+                          <BookPlus className="w-5 h-5 inline" />
+                        </button>
+                      )}
                       <Link
                         to={`/admin/users/${user.id}/progress`}
                         className="text-blue-600 hover:text-blue-900 dark:text-blue-400 mr-4"
@@ -205,6 +240,20 @@ export const UsersList: React.FC = () => {
           </p>
         </div>
       </div>
+
+      {/* Assign Course Modal */}
+      {selectedUser && (
+        <AssignCourseModal
+          isOpen={assignModalOpen}
+          onClose={() => {
+            setAssignModalOpen(false);
+            setSelectedUser(null);
+          }}
+          onAssign={handleConfirmAssign}
+          userName={selectedUser.name}
+          userEmail={selectedUser.email}
+        />
+      )}
     </div>
   );
 };
