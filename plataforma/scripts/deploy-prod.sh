@@ -28,7 +28,7 @@ info() { echo -e "${CYAN}[>>]${NC} $1"; }
 # --- Config ---
 SERVER="${SERVER:-192.168.200.21}"
 USER_SSH="${USER_SSH:-itac}"
-PASS_SSH="${PASS_SSH:-qwerty}"
+PASS_SSH="${PASS_SSH:?ERROR: PASS_SSH es requerido. Uso: PASS_SSH=xxx ./scripts/deploy-prod.sh}"
 REMOTE_DIR="/home/${USER_SSH}/LMS/plataforma"
 COMPOSE_FILE="docker-compose.prod.yml"
 
@@ -99,6 +99,7 @@ COMPOSE = '${COMPOSE_FILE}'
 
 print('Connecting...')
 ssh = paramiko.SSHClient()
+# TODO: Reemplazar AutoAddPolicy con RejectPolicy + known_hosts para produccion
 ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 ssh.connect(SERVER, username=USER, password=PASS, timeout=15)
 sftp = ssh.open_sftp()
@@ -116,7 +117,6 @@ config_files = [
     'Makefile',
     'scripts/deploy.sh',
     'scripts/update.sh',
-    'scripts/deploy-prod.sh',
 ]
 for f in config_files:
     local = os.path.join(os.getcwd(), f)
@@ -165,8 +165,11 @@ time.sleep(20)
 
 # Apply migrations
 print('Applying migrations...')
-out = run(f'docker exec ciber-backend-prod alembic upgrade head 2>&1 || docker exec ciber-backend-prod alembic stamp head 2>&1')
-print(f'  Migration: {out.strip()[-80:]}')
+out = run(f'docker exec ciber-backend-prod alembic upgrade head 2>&1')
+print(f'  Migration: {out.strip()[-200:]}')
+if 'error' in out.lower() or 'exception' in out.lower():
+    print('  ERROR: Migration failed - check logs and apply manually')
+    sys.exit(1)
 
 # Health checks
 time.sleep(5)
