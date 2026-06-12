@@ -20,7 +20,7 @@ class ExportService:
             select(
                 Enrollment.id,
                 User.email,
-                User.full_name,
+                User.name,
                 Course.title.label("course_title"),
                 Course.slug,
                 Enrollment.progress,
@@ -47,7 +47,7 @@ class ExportService:
             writer.writerow({
                 "id": row.id,
                 "email": row.email,
-                "nombre": row.full_name or "",
+                "nombre": row.name or "",
                 "curso": row.course_title,
                 "slug": row.slug,
                 "progreso_%": row.progress,
@@ -60,7 +60,7 @@ class ExportService:
         query = (
             select(
                 User.email,
-                User.full_name,
+                User.name,
                 Module.title.label("module_title"),
                 Module.order.label("module_order"),
                 UserProgress.completed,
@@ -85,7 +85,7 @@ class ExportService:
         for row in rows:
             writer.writerow({
                 "email": row.email,
-                "nombre": row.full_name or "",
+                "nombre": row.name or "",
                 "modulo_orden": row.module_order,
                 "modulo": row.module_title,
                 "completado": "si" if row.completed else "no",
