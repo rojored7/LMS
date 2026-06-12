@@ -1,13 +1,22 @@
 /**
  * LessonContent Component
- * Displays lesson content with completion tracking
+ * Displays lesson content with completion tracking, optional video embed, and attachments
  */
 
 import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { MarkdownRenderer } from './MarkdownRenderer';
-import { LessonDetail } from '../../services/api/lesson.service';
+import VideoEmbed from '../common/VideoEmbed';
+import { LessonDetail, getAttachments } from '../../services/api/lesson.service';
 import { useCompleteLesson } from '../../hooks/useLessons';
-import { ClockIcon, CheckCircleIcon, PlayIcon, CodeBracketIcon } from '@heroicons/react/24/outline';
+import {
+  ClockIcon,
+  CheckCircleIcon,
+  PlayIcon,
+  CodeBracketIcon,
+  PaperClipIcon,
+  ArrowDownTrayIcon,
+} from '@heroicons/react/24/outline';
 import { CheckCircleIcon as CheckCircleSolidIcon } from '@heroicons/react/24/solid';
 
 interface LessonContentProps {
@@ -19,6 +28,12 @@ export const LessonContent: React.FC<LessonContentProps> = ({ lesson, courseId }
   const [timeSpent, setTimeSpent] = useState(0);
   const [startTime, setStartTime] = useState<number>(Date.now());
   const completeLesson = useCompleteLesson();
+
+  const { data: attachments = [] } = useQuery({
+    queryKey: ['attachments', lesson.id],
+    queryFn: () => getAttachments(lesson.id),
+    staleTime: 5 * 60 * 1000,
+  });
 
   const isCompleted = lesson.userProgress?.completed || false;
 
@@ -93,10 +108,57 @@ export const LessonContent: React.FC<LessonContentProps> = ({ lesson, courseId }
         </div>
       </div>
 
+      {/* Video embed (si la leccion tiene video_url) */}
+      {lesson.videoUrl && (
+        <div className="px-6 pt-6">
+          <VideoEmbed url={lesson.videoUrl} title={lesson.title} />
+        </div>
+      )}
+
       {/* Lesson Content */}
       <div className="px-6 py-8">
         <MarkdownRenderer content={lesson.content} />
       </div>
+
+      {/* Attachments */}
+      {attachments.length > 0 && (
+        <div className="px-6 pb-6">
+          <div className="border border-gray-200 rounded-lg p-4">
+            <div className="flex items-center space-x-2 mb-3 text-gray-700 font-medium">
+              <PaperClipIcon className="h-5 w-5" />
+              <span>Materiales adjuntos ({attachments.length})</span>
+            </div>
+            <ul className="space-y-2">
+              {attachments.map((att) => (
+                <li
+                  key={att.id}
+                  className="flex items-center justify-between p-2 bg-gray-50 rounded hover:bg-gray-100 transition-colors"
+                >
+                  <div className="flex items-center space-x-2 min-w-0">
+                    <PaperClipIcon className="h-4 w-4 text-gray-400 shrink-0" />
+                    <span className="text-sm text-gray-800 truncate">{att.originalFilename}</span>
+                    {att.description && (
+                      <span className="text-xs text-gray-500 truncate hidden sm:block">
+                        — {att.description}
+                      </span>
+                    )}
+                  </div>
+                  <a
+                    href={att.downloadUrl}
+                    download={att.originalFilename}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="ml-2 p-1 text-blue-600 hover:text-blue-800 shrink-0"
+                    title="Descargar"
+                  >
+                    <ArrowDownTrayIcon className="h-4 w-4" />
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
 
       {/* Lesson Footer - Complete Button */}
       <div className="border-t border-gray-200 px-6 py-4 bg-gray-50">

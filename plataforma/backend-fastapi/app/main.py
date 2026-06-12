@@ -130,11 +130,13 @@ app.add_middleware(
 from app.routers import (
     admin,
     analytics,
+    attachments,
     auth,
     badges,
     certificates,
     course_management,
     courses,
+    export,
     incidents,
     instructor,
     labs,
@@ -148,12 +150,13 @@ from app.routers import (
     users,
 )
 
-# Static files for uploads (certificates, etc.)
+# Static files for uploads (certificates, lesson attachments, etc.)
 _uploads_dir = os.environ.get("UPLOADS_DIR", "/app/uploads")
-try:
-    os.makedirs(os.path.join(_uploads_dir, "certificates"), exist_ok=True)
-except OSError:
-    pass  # Volume may already exist with different ownership
+for _subdir in ("certificates", "lessons"):
+    try:
+        os.makedirs(os.path.join(_uploads_dir, _subdir), exist_ok=True)
+    except OSError:
+        pass  # Volume may already exist with different ownership
 if os.path.isdir(_uploads_dir):
     app.mount("/api/uploads", StaticFiles(directory=_uploads_dir), name="uploads")
 
@@ -172,6 +175,8 @@ app.include_router(badges.router)
 app.include_router(admin.router)
 app.include_router(training_profiles.router)
 app.include_router(analytics.router)
+app.include_router(attachments.router)
+app.include_router(export.router)
 app.include_router(course_management.router)
 app.include_router(incidents.router)
 app.include_router(instructor.router)

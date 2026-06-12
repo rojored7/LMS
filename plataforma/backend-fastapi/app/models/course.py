@@ -108,6 +108,8 @@ class Lesson(Base):
     content: Mapped[str] = mapped_column(Text, nullable=False)
     type: Mapped[LessonType] = mapped_column(SAEnum(LessonType), default=LessonType.TEXT, nullable=False)
     estimated_time: Mapped[int] = mapped_column(Integer, nullable=False)
+    video_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
+    video_provider: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
     module: Mapped[Module] = relationship(back_populates="lessons")
     user_progress: Mapped[list["UserProgress"]] = relationship(back_populates="lesson")  # type: ignore[name-defined]

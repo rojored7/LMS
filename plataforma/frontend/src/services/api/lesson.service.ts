@@ -5,6 +5,17 @@
 
 import api from '../api';
 
+export interface LessonAttachment {
+  id: string;
+  lessonId: string;
+  originalFilename: string;
+  fileSize: number;
+  mimeType: string;
+  description: string | null;
+  downloadUrl: string;
+  createdAt: string;
+}
+
 export interface LessonDetail {
   id: string;
   title: string;
@@ -14,6 +25,8 @@ export interface LessonDetail {
   estimatedTime: number;
   order: number;
   moduleId: string;
+  videoUrl?: string | null;
+  videoProvider?: string | null;
   module: {
     id: string;
     title: string;
@@ -29,6 +42,11 @@ export interface LessonDetail {
     timeSpent: number;
   };
 }
+
+export const getAttachments = async (lessonId: string): Promise<LessonAttachment[]> => {
+  const response = await api.get(`/attachments/lesson/${lessonId}`);
+  return (response as any).data || [];
+};
 
 export interface LessonProgress {
   completed: boolean;

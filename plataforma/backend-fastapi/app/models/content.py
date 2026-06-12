@@ -58,3 +58,24 @@ class AuditLog(Base):
     details: Mapped[str | None] = mapped_column(Text, nullable=True)
     ip_address: Mapped[str | None] = mapped_column(String(45), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+
+
+class Attachment(Base):
+    __tablename__ = "attachments"
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_gen_id)
+    lesson_id: Mapped[str] = mapped_column(String(32), ForeignKey("lessons.id", ondelete="CASCADE"), nullable=False)
+    original_filename: Mapped[str] = mapped_column(String(500), nullable=False)
+    stored_filename: Mapped[str] = mapped_column(String(200), nullable=False)
+    file_path: Mapped[str] = mapped_column(String(1000), nullable=False)
+    file_size: Mapped[int] = mapped_column(Integer, nullable=False)
+    mime_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    description: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    uploaded_by: Mapped[str | None] = mapped_column(String(32), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+
+    lesson: Mapped["Lesson"] = relationship()  # type: ignore[name-defined]
+    uploader: Mapped["User"] = relationship(foreign_keys=[uploaded_by])  # type: ignore[name-defined]
+
+    __table_args__ = (
+        Index("ix_attachments_lesson_id", "lesson_id"),
+    )
