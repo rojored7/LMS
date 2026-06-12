@@ -102,6 +102,8 @@ Para cada módulo:
   quiz = {
     title: "Evaluación: [Título del Módulo]",
     questionCount: Math.max(10, Math.ceil(numLecciones * 2.5)),
+    questionType: "MULTIPLE_CHOICE",  // UNICO tipo permitido
+    optionsPerQuestion: 4,             // SIEMPRE 4 opciones por pregunta
     passingScore: 70,
     timeLimit: questionCount * 2, // 2 min por pregunta
     attempts: 3

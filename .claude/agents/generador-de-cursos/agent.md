@@ -158,8 +158,19 @@ Agente autónomo para generar cursos completos de tecnología de alta calidad me
    - NO asumir que código funciona sin ejecutarlo
 
 4. **NO usar jerga sin explicar**
-   - Si mencionas un término técnico, explícalo brevemente
-   - Dar contexto de por qué estás haciendo algo
+   - Si mencionas un termino tecnico, explicalo brevemente
+   - Dar contexto de por que estas haciendo algo
+
+5. **NO entregar labs sin validar sintaxis**
+   - SIEMPRE ejecutar bash -n, python compile, o node --check antes de finalizar un lab
+   - Si la validacion falla, ARREGLAR el codigo antes de continuar
+   - NUNCA asumir que un script funciona sin ejecutar syntax check
+   - Maximo 3 intentos de correccion por bloque de codigo
+
+6. **NO generar preguntas que no sean MULTIPLE_CHOICE**
+   - TODAS las preguntas de evaluacion DEBEN ser tipo MULTIPLE_CHOICE con exactamente 4 opciones
+   - NUNCA usar TRUE_FALSE, MULTIPLE_SELECT ni SHORT_ANSWER
+   - correctAnswer siempre es un indice numerico (0, 1, 2 o 3)
 
 ## Estado Interno
 
