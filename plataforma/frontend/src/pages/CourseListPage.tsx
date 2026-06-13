@@ -16,10 +16,12 @@ import CourseActionMenu from '../components/courses/CourseActionMenu';
 import useCourseManagement from '../hooks/useCourseManagement';
 import { useUiStore } from '../store/uiStore';
 import DifficultyScore from '../components/common/DifficultyScore';
+import { useAuth } from '../hooks/useAuth';
 
 const CourseListPage: React.FC = () => {
   const navigate = useNavigate();
   const { addToast } = useUiStore();
+  const { isAdmin } = useAuth();
   const {
     courses,
     totalCourses,
@@ -116,12 +118,18 @@ const CourseListPage: React.FC = () => {
         header: 'Titulo',
         accessor: (course) => (
           <div className="max-w-[280px]">
-            <Link
-              to={`/admin/courses/${course.id}/edit`}
-              className="font-medium text-gray-900 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 block truncate"
-            >
-              {course.title}
-            </Link>
+            {isAdmin() ? (
+              <span className="font-medium text-gray-900 dark:text-gray-100 block truncate">
+                {course.title}
+              </span>
+            ) : (
+              <Link
+                to={`/admin/courses/${course.id}/edit`}
+                className="font-medium text-gray-900 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 block truncate"
+              >
+                {course.title}
+              </Link>
+            )}
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 line-clamp-1 break-words">
               {course.description}
             </p>
@@ -145,9 +153,7 @@ const CourseListPage: React.FC = () => {
       {
         key: 'score',
         header: 'Dif.',
-        accessor: (course) => (
-          <DifficultyScore score={course.score ?? 1} size="sm" />
-        ),
+        accessor: (course) => <DifficultyScore score={course.score ?? 1} size="sm" />,
         sortable: true,
         width: '100px',
       },
@@ -193,8 +199,8 @@ const CourseListPage: React.FC = () => {
         accessor: (course) => (
           <CourseActionMenu
             course={course}
-            onEdit={handleEdit}
-            onDuplicate={handleDuplicateInit}
+            onEdit={isAdmin() ? undefined : handleEdit}
+            onDuplicate={isAdmin() ? undefined : handleDuplicateInit}
             onExport={exportCourse}
             onPublish={publishCourse}
             onUnpublish={unpublishCourse}
@@ -267,20 +273,24 @@ const CourseListPage: React.FC = () => {
                   <ArrowLeftIcon className="w-4 h-4" />
                   <span>Dashboard</span>
                 </button>
-                <Link
-                  to="/admin/courses/import"
-                  className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center space-x-2 text-sm"
-                >
-                  <ArrowDownTrayIcon className="w-4 h-4" />
-                  <span>Importar</span>
-                </Link>
-                <Link
-                  to="/admin/courses/create"
-                  className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center space-x-2 text-sm"
-                >
-                  <PlusIcon className="w-4 h-4" />
-                  <span>Crear Curso</span>
-                </Link>
+                {!isAdmin() && (
+                  <>
+                    <Link
+                      to="/admin/courses/import"
+                      className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center space-x-2 text-sm"
+                    >
+                      <ArrowDownTrayIcon className="w-4 h-4" />
+                      <span>Importar</span>
+                    </Link>
+                    <Link
+                      to="/admin/courses/create"
+                      className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center space-x-2 text-sm"
+                    >
+                      <PlusIcon className="w-4 h-4" />
+                      <span>Crear Curso</span>
+                    </Link>
+                  </>
+                )}
               </div>
 
               {/* Mobile menu button */}
@@ -309,26 +319,30 @@ const CourseListPage: React.FC = () => {
                   <ArrowLeftIcon className="w-5 h-5" />
                   <span>Volver al Dashboard</span>
                 </button>
-                <Link
-                  to="/admin/courses/import"
-                  onClick={() => setShowMobileMenu(false)}
-                  className="block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
-                >
-                  <div className="flex items-center space-x-2">
-                    <ArrowDownTrayIcon className="w-5 h-5" />
-                    <span>Importar ZIP</span>
-                  </div>
-                </Link>
-                <Link
-                  to="/admin/courses/create"
-                  onClick={() => setShowMobileMenu(false)}
-                  className="block w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                >
-                  <div className="flex items-center justify-center space-x-2">
-                    <PlusIcon className="w-5 h-5" />
-                    <span>Crear Curso</span>
-                  </div>
-                </Link>
+                {!isAdmin() && (
+                  <>
+                    <Link
+                      to="/admin/courses/import"
+                      onClick={() => setShowMobileMenu(false)}
+                      className="block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <ArrowDownTrayIcon className="w-5 h-5" />
+                        <span>Importar ZIP</span>
+                      </div>
+                    </Link>
+                    <Link
+                      to="/admin/courses/create"
+                      onClick={() => setShowMobileMenu(false)}
+                      className="block w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    >
+                      <div className="flex items-center justify-center space-x-2">
+                        <PlusIcon className="w-5 h-5" />
+                        <span>Crear Curso</span>
+                      </div>
+                    </Link>
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -480,8 +494,8 @@ const CourseListPage: React.FC = () => {
                       key={course.id}
                       course={course}
                       getLevelBadgeClass={getLevelBadgeClass}
-                      onEdit={handleEdit}
-                      onDuplicate={handleDuplicateInit}
+                      onEdit={isAdmin() ? undefined : handleEdit}
+                      onDuplicate={isAdmin() ? undefined : handleDuplicateInit}
                       onExport={exportCourse}
                       onPublish={publishCourse}
                       onUnpublish={unpublishCourse}

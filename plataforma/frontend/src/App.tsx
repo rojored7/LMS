@@ -26,6 +26,7 @@ import {
   UsersList,
   UserProgressDetail,
   TrainingProfiles,
+  AdminGamification,
   ProjectSubmission,
   SubmissionsReview,
   PublicProfile,
@@ -33,6 +34,7 @@ import {
 } from './pages';
 import { ForgotPassword } from './pages/ForgotPassword';
 import { ResetPassword } from './pages/ResetPassword';
+import { OAuthCallback } from './pages/OAuthCallback';
 import QuizBuilder from './pages/QuizBuilder';
 import CourseImportPage from './pages/CourseImportPage';
 import CourseListPage from './pages/CourseListPage';
@@ -146,6 +148,7 @@ function App() {
                 {/* HU-005: Password Reset Routes */}
                 <Route path={ROUTES.FORGOT_PASSWORD} element={<ForgotPassword />} />
                 <Route path={ROUTES.RESET_PASSWORD} element={<ResetPassword />} />
+                <Route path="/auth/oauth/callback" element={<OAuthCallback />} />
 
                 <Route
                   path={ROUTES.COURSES}
@@ -288,6 +291,17 @@ function App() {
                   }
                 />
 
+                <Route
+                  path="/admin/gamification"
+                  element={
+                    <ProtectedRoute requiredRoles={[UserRole.ADMIN]}>
+                      <DashboardLayout>
+                        <AdminGamification />
+                      </DashboardLayout>
+                    </ProtectedRoute>
+                  }
+                />
+
                 {/* Course Management Routes */}
                 <Route
                   path="/admin/courses"
@@ -303,7 +317,7 @@ function App() {
                 <Route
                   path="/admin/courses/import"
                   element={
-                    <ProtectedRoute requiredRoles={[UserRole.ADMIN, UserRole.INSTRUCTOR]}>
+                    <ProtectedRoute requiredRoles={[UserRole.INSTRUCTOR]}>
                       <DashboardLayout>
                         <CourseImportPage />
                       </DashboardLayout>
@@ -314,7 +328,7 @@ function App() {
                 <Route
                   path="/admin/courses/create"
                   element={
-                    <ProtectedRoute requiredRoles={[UserRole.ADMIN, UserRole.INSTRUCTOR]}>
+                    <ProtectedRoute requiredRoles={[UserRole.INSTRUCTOR]}>
                       <DashboardLayout>
                         <CourseWizardPage />
                       </DashboardLayout>
@@ -325,7 +339,7 @@ function App() {
                 <Route
                   path="/admin/courses/:id/edit"
                   element={
-                    <ProtectedRoute requiredRoles={[UserRole.ADMIN, UserRole.INSTRUCTOR]}>
+                    <ProtectedRoute requiredRoles={[UserRole.INSTRUCTOR]}>
                       <DashboardLayout>
                         <CourseEditorPage />
                       </DashboardLayout>

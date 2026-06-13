@@ -82,6 +82,7 @@ def require_role(allowed_roles: list[UserRole]):
 
 require_admin = require_role([UserRole.ADMIN])
 require_instructor = require_role([UserRole.ADMIN, UserRole.INSTRUCTOR])
+require_instructor_only = require_role([UserRole.INSTRUCTOR])
 
 
 async def verify_module_ownership(module_id: str, user: User, db: AsyncSession) -> None:
