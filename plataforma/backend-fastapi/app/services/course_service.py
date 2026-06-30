@@ -114,12 +114,15 @@ class CourseService:
         result = await self.db.execute(select(Enrollment).options(selectinload(Enrollment.course)).where(Enrollment.user_id == user_id).order_by(Enrollment.enrolled_at.desc()))
         return list(result.scalars().all())
 
-    async def get_course_modules(self, course_id_or_slug: str) -> list[Module]:
+    async def get_course_modules(self, course_id_or_slug: str, published_only: bool = False) -> list[Module]:
         course = await self.db.execute(select(Course).where((Course.id == course_id_or_slug) | (Course.slug == course_id_or_slug)))
         course_obj = course.scalar_one_or_none()
         if course_obj is None:
             raise NotFoundError("Curso no encontrado")
-        result = await self.db.execute(select(Module).options(selectinload(Module.lessons), selectinload(Module.quizzes), selectinload(Module.labs)).where(Module.course_id == course_obj.id).order_by(Module.order))
+        query = select(Module).options(selectinload(Module.lessons), selectinload(Module.quizzes), selectinload(Module.labs)).where(Module.course_id == course_obj.id)
+        if published_only:
+            query = query.where(Module.is_published == True)  # noqa: E712
+        result = await self.db.execute(query.order_by(Module.order))
         return list(result.scalars().all())
 
     async def get_module_lessons(self, module_id: str, course_id: str | None = None) -> list[Lesson]:

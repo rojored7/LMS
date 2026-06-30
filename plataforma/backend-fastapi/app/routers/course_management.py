@@ -320,6 +320,9 @@ async def publish_course(
     if _user.role == UserRole.INSTRUCTOR and course.author_id != _user.id:
         raise AuthorizationError("No tiene permisos sobre este curso")
     course.is_published = True
+    modules_result = await db.execute(select(Module).where(Module.course_id == course_id))
+    for module in modules_result.scalars().all():
+        module.is_published = True
     await db.flush()
     return {"success": True, "data": CourseResponse.model_validate(course).model_dump()}
 
@@ -337,6 +340,9 @@ async def unpublish_course(
     if _user.role == UserRole.INSTRUCTOR and course.author_id != _user.id:
         raise AuthorizationError("No tiene permisos sobre este curso")
     course.is_published = False
+    modules_result = await db.execute(select(Module).where(Module.course_id == course_id))
+    for module in modules_result.scalars().all():
+        module.is_published = False
     await db.flush()
     return {"success": True, "data": CourseResponse.model_validate(course).model_dump()}
 

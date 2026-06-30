@@ -1,11 +1,13 @@
 import math
 
 from fastapi import APIRouter, Depends, Query
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.middleware.auth import get_current_user, get_optional_user, require_admin, require_instructor, require_instructor_only
 from app.middleware.error_handler import AuthorizationError
+from app.models.course import Module
 from app.models.user import User, UserRole
 from app.schemas.common import PaginationMeta
 from app.schemas.course import CourseCreate, CourseListResponse, CourseResponse, CourseUpdate, EnrollmentResponse, ModuleResponse, LessonResponse
@@ -39,7 +41,9 @@ async def search_courses(q: str = "", db: AsyncSession = Depends(get_db)) -> dic
 async def get_course(id_or_slug: str, user: User | None = Depends(get_optional_user), db: AsyncSession = Depends(get_db)) -> dict:
     service = CourseService(db)
     course = await service.get_course_by_id_or_slug(id_or_slug)
+    module_count = (await db.execute(select(func.count(Module.id)).where(Module.course_id == course.id))).scalar() or 0
     data = CourseResponse.model_validate(course).model_dump()
+    data["moduleCount"] = module_count
     if user:
         data["isEnrolled"] = await service.is_user_enrolled(user.id, course.id)
     else:
@@ -90,7 +94,8 @@ async def unenroll_from_course(course_id: str, user: User = Depends(get_current_
 @router.get("/{course_id}/modules")
 async def get_course_modules(course_id: str, user: User | None = Depends(get_optional_user), db: AsyncSession = Depends(get_db)) -> dict:
     service = CourseService(db)
-    modules = await service.get_course_modules(course_id)
+    is_privileged = user is not None and user.role in (UserRole.ADMIN, UserRole.INSTRUCTOR)
+    modules = await service.get_course_modules(course_id, published_only=not is_privileged)
     return {"success": True, "data": [ModuleResponse.model_validate(m).model_dump() for m in modules]}
 
 
