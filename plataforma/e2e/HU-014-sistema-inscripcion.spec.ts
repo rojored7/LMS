@@ -16,7 +16,7 @@ import { test, expect } from '@playwright/test';
 import { loginAsStudent } from './helpers/auth';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
-const API_URL = process.env.API_URL || 'http://localhost:4000/api';
+const API_URL = process.env.API_URL || `${BASE_URL}/api`;
 
 test.describe('HU-014: Sistema de Inscripción', () => {
   test.beforeEach(async ({ page }) => {

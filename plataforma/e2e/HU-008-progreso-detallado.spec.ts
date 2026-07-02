@@ -16,7 +16,7 @@ import { test, expect } from '@playwright/test';
 import { loginAsAdmin, createTestStudent } from './helpers/auth';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
-const API_URL = process.env.API_URL || 'http://localhost:4000/api';
+const API_URL = process.env.API_URL || `${BASE_URL}/api`;
 
 test.describe('HU-008: Ver Progreso Detallado de Usuario', () => {
   test.beforeEach(async ({ page }) => {

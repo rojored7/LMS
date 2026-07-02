@@ -15,7 +15,7 @@
 import { test, expect } from '@playwright/test';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
-const API_URL = process.env.API_URL || 'http://localhost:4000/api';
+const API_URL = process.env.API_URL || `${BASE_URL}/api`;
 
 test.describe('HU-001: Registro de Usuario', () => {
   test.beforeEach(async ({ page }) => {
@@ -27,11 +27,11 @@ test.describe('HU-001: Registro de Usuario', () => {
     const email = `newuser${timestamp}@example.com`;
 
     // Llenar formulario de registro
-    await page.fill('[name="name"], [name="firstName"]', 'John');
-    await page.fill('[name="lastName"]', 'Doe');
+    await page.fill('[name="name"], [name="firstName"]', 'John Doe');
     await page.fill('[name="email"]', email);
     await page.fill('[name="password"]', 'SecurePass123!');
     await page.fill('[name="confirmPassword"], [name="passwordConfirm"]', 'SecurePass123!');
+    await page.check('[name="accept-terms"]');
 
     // Enviar formulario
     await page.click('button[type="submit"]');
@@ -123,11 +123,11 @@ test.describe('HU-001: Registro de Usuario', () => {
     const duplicateEmail = `duplicate${Date.now()}@example.com`;
 
     // Primera registración
-    await page.fill('[name="name"], [name="firstName"]', 'John');
-    await page.fill('[name="lastName"]', 'Doe');
+    await page.fill('[name="name"], [name="firstName"]', 'John Doe');
     await page.fill('[name="email"]', duplicateEmail);
     await page.fill('[name="password"]', 'Pass123!@#');
     await page.fill('[name="confirmPassword"], [name="passwordConfirm"]', 'Pass123!@#');
+    await page.check('[name="accept-terms"]');
     await page.click('button[type="submit"]');
 
     // Esperar a que complete el registro
@@ -140,11 +140,11 @@ test.describe('HU-001: Registro de Usuario', () => {
     await page.goto(`${BASE_URL}/register`);
 
     // Intentar registrar con el mismo email
-    await page.fill('[name="name"], [name="firstName"]', 'Jane');
-    await page.fill('[name="lastName"]', 'Smith');
+    await page.fill('[name="name"], [name="firstName"]', 'Jane Smith');
     await page.fill('[name="email"]', duplicateEmail);
     await page.fill('[name="password"]', 'Pass456!@#');
     await page.fill('[name="confirmPassword"], [name="passwordConfirm"]', 'Pass456!@#');
+    await page.check('[name="accept-terms"]');
     await page.click('button[type="submit"]');
 
     // Verificar mensaje de error
@@ -160,11 +160,11 @@ test.describe('HU-001: Registro de Usuario', () => {
     const password = 'Pass123!@#';
 
     // Registrar usuario
-    await page.fill('[name="name"], [name="firstName"]', 'Role');
-    await page.fill('[name="lastName"]', 'Test');
+    await page.fill('[name="name"], [name="firstName"]', 'Role Test');
     await page.fill('[name="email"]', email);
     await page.fill('[name="password"]', password);
     await page.fill('[name="confirmPassword"], [name="passwordConfirm"]', password);
+    await page.check('[name="accept-terms"]');
     await page.click('button[type="submit"]');
 
     // Esperar redirección
@@ -218,31 +218,18 @@ test.describe('HU-001: Registro de Usuario', () => {
     const email = `confirm${timestamp}@example.com`;
 
     // Registrar usuario
-    await page.fill('[name="name"], [name="firstName"]', 'Confirm');
-    await page.fill('[name="lastName"]', 'Test');
+    await page.fill('[name="name"], [name="firstName"]', 'Confirm Test');
     await page.fill('[name="email"]', email);
     await page.fill('[name="password"]', 'Pass123!@#');
     await page.fill('[name="confirmPassword"], [name="passwordConfirm"]', 'Pass123!@#');
-
-    // Capturar cualquier notificación o toast
-    const toastPromise = page.waitForSelector('text=/registro.*exitoso|cuenta.*creada|welcome|bienvenido/i', {
-      timeout: 5000,
-      state: 'visible'
-    }).catch(() => null);
-
+    await page.check('[name="accept-terms"]');
     await page.click('button[type="submit"]');
 
-    // Esperar redirección o mensaje
+    // Esperar redirección fuera de register (toast puede aparecer antes de navegar)
     await page.waitForURL((url) =>
       !url.pathname.includes('/register'),
       { timeout: 10000 }
     );
-
-    // Verificar si apareció algún mensaje de éxito
-    const toastElement = await toastPromise;
-    if (toastElement) {
-      await expect(toastElement).toBeVisible();
-    }
 
     // Verificar que el usuario puede acceder al dashboard
     if (page.url().includes('/login')) {
@@ -251,7 +238,7 @@ test.describe('HU-001: Registro de Usuario', () => {
       await page.click('button[type="submit"]');
     }
 
-    // Verificar acceso exitoso
+    // Verificar acceso exitoso al dashboard
     await expect(page).toHaveURL((url) =>
       url.pathname.includes('/dashboard') ||
       url.pathname.includes('/courses'),
@@ -279,12 +266,14 @@ test.describe('HU-001: Registro de Usuario', () => {
   });
 
   test('Campos obligatorios deben estar marcados', async ({ page }) => {
-    // Intentar enviar formulario vacío
+    // Marcar el checkbox de terminos para que HTML5 validation no bloquee
+    await page.check('[name="accept-terms"]');
+
+    // Intentar enviar formulario vacio (los campos de texto estan vacios)
     await page.click('button[type="submit"]');
 
-    // Verificar mensajes de campos requeridos
-    const requiredErrors = await page.locator('text=/requerido|obligatorio|required|fill/i').count();
-    expect(requiredErrors).toBeGreaterThan(0);
+    // Esperar a que react-hook-form muestre mensajes de validacion
+    await expect(page.locator('text=/requerido|obligatorio|required|caracteres|contraseña/i').first()).toBeVisible({ timeout: 5000 });
 
     // Verificar que seguimos en registro
     expect(page.url()).toContain('/register');

@@ -6,7 +6,7 @@
 import { test, expect } from '@playwright/test';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
-const API_URL = process.env.API_URL || 'http://localhost:4000/api';
+const API_URL = process.env.API_URL || `${BASE_URL}/api`;
 
 // Seed users provisioned by seed_base script
 const SEED_STUDENT = { email: 'student@ciber.com', password: 'Student123!', name: 'Student' };
