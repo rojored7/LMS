@@ -57,7 +57,7 @@ export const CourseDetail: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8" data-testid="course-detail">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Main Content */}
         <div className="lg:col-span-2">
@@ -126,7 +126,9 @@ export const CourseDetail: React.FC = () => {
               <div className="mb-6">
                 <h2 className="text-xl font-semibold mb-4 text-gray-900">
                   Contenido del Curso
-                  {modules && modules.length > 0 ? ` (${modules.length} modulos)` : ''}
+                  {modules && modules.length > 0 ? (
+                    <span data-testid="course-module-count"> ({modules.length} modulos)</span>
+                  ) : ''}
                 </h2>
 
                 {isLoadingModules ? (
@@ -209,6 +211,7 @@ export const CourseDetail: React.FC = () => {
                   variant="primary"
                   size="lg"
                   className="w-full mb-4"
+                  data-testid="continue-button"
                   onClick={() => navigate(`/courses/${id}/learn`)}
                 >
                   Continuar Curso
@@ -218,6 +221,7 @@ export const CourseDetail: React.FC = () => {
                   variant="primary"
                   size="lg"
                   className="w-full mb-4"
+                  data-testid="enroll-button"
                   onClick={handleEnroll}
                   isLoading={isEnrolling}
                 >

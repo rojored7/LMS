@@ -14,10 +14,10 @@ test.describe('Contenido y Sistema de Quizzes', () => {
     const student = await registerAndLogin(page, 'STUDENT');
 
     // Inscribirse en curso
-    await enrollInCourse(page, 'ciberseguridad-postcuantica');
+    await enrollInCourse(page, 'hacking-etico-pentesting-fundamentos');
 
     // Navegar a página de aprendizaje
-    await page.goto(`${BASE_URL}/courses/ciberseguridad-postcuantica/learning`);
+    await page.goto(`${BASE_URL}/courses/hacking-etico-pentesting-fundamentos/learn`);
 
     // Click en primera lección disponible
     const firstLesson = page.locator('[data-testid^="lesson-"]').first().or(
@@ -107,7 +107,7 @@ test.describe('Contenido y Sistema de Quizzes', () => {
     await enrollInCourse(page);
 
     // Navegar al primer quiz disponible
-    await page.goto(`${BASE_URL}/courses/ciberseguridad-postcuantica/learning`);
+    await page.goto(`${BASE_URL}/courses/hacking-etico-pentesting-fundamentos/learn`);
 
     // Buscar quiz en el menú
     const quizLink = page.locator('a:has-text("Quiz")').first().or(
@@ -185,7 +185,7 @@ test.describe('Contenido y Sistema de Quizzes', () => {
     const student = await registerAndLogin(page, 'STUDENT');
     await enrollInCourse(page);
 
-    await page.goto(`${BASE_URL}/courses/ciberseguridad-postcuantica/quizzes/1`);
+    await page.goto(`${BASE_URL}/courses/hacking-etico-pentesting-fundamentos/quizzes/1`);
 
     // Responder quiz
     const questions = page.locator('[data-testid^="question-"]');
@@ -246,7 +246,7 @@ test.describe('Contenido y Sistema de Quizzes', () => {
     await enrollInCourse(page);
 
     // Navegar a un quiz
-    await page.goto(`${BASE_URL}/courses/ciberseguridad-postcuantica/quizzes/1`);
+    await page.goto(`${BASE_URL}/courses/hacking-etico-pentesting-fundamentos/quizzes/1`);
 
     // Verificar información de intentos
     const attemptsInfo = page.locator('[data-testid="attempts-info"]').or(
@@ -304,7 +304,7 @@ test.describe('Contenido y Sistema de Quizzes', () => {
     const student = await registerAndLogin(page, 'STUDENT');
     await enrollInCourse(page);
 
-    await page.goto(`${BASE_URL}/courses/ciberseguridad-postcuantica/quizzes/1`);
+    await page.goto(`${BASE_URL}/courses/hacking-etico-pentesting-fundamentos/quizzes/1`);
 
     // Responder quiz
     const questions = page.locator('[data-testid^="question-"]');
@@ -362,23 +362,21 @@ test.describe('Contenido y Sistema de Quizzes', () => {
     const student = await registerAndLogin(page, 'STUDENT');
     await enrollInCourse(page);
 
-    await page.goto(`${BASE_URL}/courses/ciberseguridad-postcuantica/learning`);
+    await page.goto(`${BASE_URL}/courses/hacking-etico-pentesting-fundamentos/learn`);
 
-    // Navegar a primera lección
-    const firstLesson = page.locator('[data-testid="lesson-1"]').or(
-      page.locator('a:has-text("Lección 1")').first()
-    );
-
-    await firstLesson.click();
+    // Navegar a primera lección (auto-seleccionada por la pagina)
+    // La pagina ya carga la primera leccion automaticamente
+    // Solo verificar que el contenido esta visible
+    await expect(page.locator('[data-testid="lesson-content"]')).toBeVisible({ timeout: 15000 });
 
     // Verificar controles de navegación
-    const nextButton = page.locator('button:has-text("Siguiente")').or(
-      page.locator('[data-testid="next-lesson"]')
-    );
+    const nextButton = page.locator('[data-testid="next-lesson"]').or(
+      page.locator('button:has-text("Siguiente")').first()
+    ).first();
 
-    const prevButton = page.locator('button:has-text("Anterior")').or(
-      page.locator('[data-testid="prev-lesson"]')
-    );
+    const prevButton = page.locator('[data-testid="prev-lesson"]').or(
+      page.locator('button:has-text("Anterior")').first()
+    ).first();
 
     // En la primera lección, anterior debería estar deshabilitado
     if (await prevButton.isVisible({ timeout: 2000 })) {
@@ -392,7 +390,7 @@ test.describe('Contenido y Sistema de Quizzes', () => {
       await page.waitForLoadState('networkidle');
 
       // Verificar que cambió la lección
-      const currentTitle = await page.locator('h1').textContent();
+      const currentTitle = await page.locator('h1').first().textContent();
       expect(currentTitle).toBeTruthy();
 
       // Ahora anterior debería estar habilitado
@@ -405,7 +403,7 @@ test.describe('Contenido y Sistema de Quizzes', () => {
         await page.waitForLoadState('networkidle');
 
         // Verificar que volvimos
-        const newTitle = await page.locator('h1').textContent();
+        const newTitle = await page.locator('h1').first().textContent();
         expect(newTitle).not.toBe(currentTitle);
       }
     }
@@ -425,7 +423,7 @@ test.describe('Contenido y Sistema de Quizzes', () => {
     const student = await registerAndLogin(page, 'STUDENT');
     await enrollInCourse(page);
 
-    await page.goto(`${BASE_URL}/courses/ciberseguridad-postcuantica/learning`);
+    await page.goto(`${BASE_URL}/courses/hacking-etico-pentesting-fundamentos/learn`);
 
     // Ir a una lección
     const lesson = page.locator('[data-testid^="lesson-"]').first();

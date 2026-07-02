@@ -38,32 +38,38 @@ export const AdminDashboard = () => {
   const [loadingActivity, setLoadingActivity] = useState(true);
 
   useEffect(() => {
-    dashboardAnalytics.getPlatformStats()
+    dashboardAnalytics
+      .getPlatformStats()
       .then(setStats)
       .catch(() => addToast({ type: 'error', message: 'Error al cargar datos del dashboard' }))
       .finally(() => setLoadingStats(false));
 
-    dashboardAnalytics.getEnrollmentTrends(30)
+    dashboardAnalytics
+      .getEnrollmentTrends(30)
       .then(setTrends)
       .catch(() => addToast({ type: 'error', message: 'Error al cargar datos del dashboard' }))
       .finally(() => setLoadingTrends(false));
 
-    dashboardAnalytics.getCourseStats()
+    dashboardAnalytics
+      .getCourseStats()
       .then(setCourseStats)
       .catch(() => addToast({ type: 'error', message: 'Error al cargar datos del dashboard' }))
       .finally(() => setLoadingCourses(false));
 
-    dashboardAnalytics.getUserDistribution()
+    dashboardAnalytics
+      .getUserDistribution()
       .then(setUserDist)
       .catch(() => addToast({ type: 'error', message: 'Error al cargar datos del dashboard' }))
       .finally(() => setLoadingDist(false));
 
-    dashboardAnalytics.getComparativeStats()
+    dashboardAnalytics
+      .getComparativeStats()
       .then(setComparative)
       .catch(() => addToast({ type: 'error', message: 'Error al cargar datos del dashboard' }))
       .finally(() => setLoadingComparative(false));
 
-    dashboardAnalytics.getRecentActivity(10)
+    dashboardAnalytics
+      .getRecentActivity(10)
       .then(setActivity)
       .catch(() => addToast({ type: 'error', message: 'Error al cargar datos del dashboard' }))
       .finally(() => setLoadingActivity(false));

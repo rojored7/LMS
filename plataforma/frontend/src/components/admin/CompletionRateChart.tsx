@@ -3,7 +3,16 @@
  * Displays course completion rates using bar chart
  */
 
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Cell,
+} from 'recharts';
 
 interface CompletionRateChartProps {
   data?: Array<{
@@ -28,7 +37,7 @@ const COLORS = ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444'];
 
 export const CompletionRateChart: React.FC<CompletionRateChartProps> = ({
   data = sampleData,
-  isLoading
+  isLoading,
 }) => {
   if (isLoading) {
     return (

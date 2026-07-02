@@ -33,7 +33,10 @@ export default function DifficultyScore({
   const gap = size === 'sm' ? 'gap-0.5' : 'gap-1';
 
   return (
-    <div className="inline-flex items-center gap-1.5" title={`${clamped}/10 - ${getScoreLabel(clamped)}`}>
+    <div
+      className="inline-flex items-center gap-1.5"
+      title={`${clamped}/10 - ${getScoreLabel(clamped)}`}
+    >
       <div className={`flex items-center ${gap}`}>
         {Array.from({ length: 10 }, (_, i) => {
           const idx = i + 1;

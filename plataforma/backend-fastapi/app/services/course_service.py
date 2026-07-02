@@ -75,15 +75,26 @@ class CourseService:
         await self.db.delete(course)
         await self.db.flush()
 
-    async def enroll_user(self, user_id: str, course_id: str) -> tuple[Enrollment, bool]:
-        course = await self.db.execute(select(Course).where(Course.id == course_id, Course.is_published == True))  # noqa: E712
-        if course.scalar_one_or_none() is None:
+    async def _resolve_course(self, course_id_or_slug: str) -> Course:
+        result = await self.db.execute(
+            select(Course).where(
+                (Course.id == course_id_or_slug) | (Course.slug == course_id_or_slug),
+                Course.is_published == True,  # noqa: E712
+            )
+        )
+        course = result.scalar_one_or_none()
+        if course is None:
             raise NotFoundError("Curso no encontrado o no publicado")
-        existing = await self.db.execute(select(Enrollment).options(selectinload(Enrollment.course)).where(Enrollment.user_id == user_id, Enrollment.course_id == course_id))
+        return course
+
+    async def enroll_user(self, user_id: str, course_id: str) -> tuple[Enrollment, bool]:
+        course = await self._resolve_course(course_id)
+        actual_course_id = course.id
+        existing = await self.db.execute(select(Enrollment).options(selectinload(Enrollment.course)).where(Enrollment.user_id == user_id, Enrollment.course_id == actual_course_id))
         enrollment = existing.scalar_one_or_none()
         if enrollment is not None:
             return enrollment, False
-        enrollment = Enrollment(user_id=user_id, course_id=course_id)
+        enrollment = Enrollment(user_id=user_id, course_id=actual_course_id)
         self.db.add(enrollment)
         await self.db.flush()
         result = await self.db.execute(select(Enrollment).options(selectinload(Enrollment.course)).where(Enrollment.id == enrollment.id))
@@ -95,7 +106,9 @@ class CourseService:
         return result.scalar_one_or_none() is not None
 
     async def unenroll_user(self, user_id: str, course_id: str) -> None:
-        result = await self.db.execute(select(Enrollment).where(Enrollment.user_id == user_id, Enrollment.course_id == course_id))
+        course = await self._resolve_course(course_id)
+        actual_course_id = course.id
+        result = await self.db.execute(select(Enrollment).where(Enrollment.user_id == user_id, Enrollment.course_id == actual_course_id))
         enrollment = result.scalar_one_or_none()
         if enrollment is None:
             raise NotFoundError("Inscripcion no encontrada")

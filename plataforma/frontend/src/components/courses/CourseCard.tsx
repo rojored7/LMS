@@ -161,7 +161,9 @@ const CourseCard: React.FC<CourseCardProps> = ({
         </span>
         <StatusBadge isPublished={course.isPublished} />
         {course.score != null && <DifficultyScore score={course.score} size="sm" />}
-        <span className="text-xs text-gray-500 dark:text-gray-400">{Math.round(course.duration / 60)}h</span>
+        <span className="text-xs text-gray-500 dark:text-gray-400">
+          {Math.round(course.duration / 60)}h
+        </span>
         <span className="text-xs text-gray-500 dark:text-gray-400">
           {course.moduleCount || 0} modulos
         </span>

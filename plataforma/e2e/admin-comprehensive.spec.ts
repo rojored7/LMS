@@ -12,9 +12,9 @@
 import { test, expect, Page } from '@playwright/test';
 import * as path from 'path';
 
-const BASE_URL = 'http://localhost:3000';
+const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 const ADMIN_EMAIL = 'admin@ciber.com';
-const ADMIN_PASSWORD = 'Admin1234!';
+const ADMIN_PASSWORD = 'Admin123!';
 const SCREENSHOT_DIR = process.cwd();
 
 async function captureScreenshot(page: Page, filename: string) {
@@ -25,7 +25,7 @@ async function captureScreenshot(page: Page, filename: string) {
 
 async function loginAsAdmin(page: Page) {
   await page.goto(`${BASE_URL}/login`);
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('load');
 
   const emailInput = page.locator('input[type="email"], input[name="email"]').first();
   await expect(emailInput).toBeVisible({ timeout: 10000 });
@@ -69,7 +69,7 @@ test.describe('Admin E2E Comprehensive Tests', () => {
     consoleErrors.length = 0;
 
     await page.goto(`${BASE_URL}/login`);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
 
     const emailInput = page.locator('input[type="email"], input[name="email"]').first();
     await expect(emailInput).toBeVisible({ timeout: 10000 });
@@ -105,7 +105,7 @@ test.describe('Admin E2E Comprehensive Tests', () => {
     // STEP 3: Admin Dashboard
     // ----------------------------------------------------------------
     await page.goto(`${BASE_URL}/admin`);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
 
     const adminDashUrl = page.url();
     await captureScreenshot(page, 'e2e-admin-02-admin-dashboard.png');
@@ -166,7 +166,7 @@ test.describe('Admin E2E Comprehensive Tests', () => {
     // STEP 4: Admin Users List
     // ----------------------------------------------------------------
     await page.goto(`${BASE_URL}/admin/users`);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
 
     const usersUrl = page.url();
     await captureScreenshot(page, 'e2e-admin-03-users-list.png');
@@ -205,7 +205,7 @@ test.describe('Admin E2E Comprehensive Tests', () => {
     // STEP 5: Admin Courses List
     // ----------------------------------------------------------------
     await page.goto(`${BASE_URL}/admin/courses`);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
 
     const adminCoursesUrl = page.url();
     await captureScreenshot(page, 'e2e-admin-04-courses-list.png');
@@ -244,7 +244,7 @@ test.describe('Admin E2E Comprehensive Tests', () => {
     // STEP 6: Admin Training Profiles
     // ----------------------------------------------------------------
     await page.goto(`${BASE_URL}/admin/training-profiles`);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
 
     const trainingProfilesUrl = page.url();
     await captureScreenshot(page, 'e2e-admin-05-training-profiles.png');
@@ -288,7 +288,7 @@ test.describe('Admin E2E Comprehensive Tests', () => {
     // STEP 7: Courses Catalog
     // ----------------------------------------------------------------
     await page.goto(`${BASE_URL}/courses`);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
 
     const catalogUrl = page.url();
     await captureScreenshot(page, 'e2e-admin-06-courses-catalog.png');

@@ -4,109 +4,138 @@
  */
 
 import { Page } from '@playwright/test';
+import path from 'path';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 const API_URL = process.env.API_URL || 'http://localhost:4000/api';
 
 /**
- * Login como usuario ADMIN
+ * Rutas a los archivos de estado de autenticación guardados por auth.setup.ts
+ * Usar con test.use({ storageState: AUTH_FILES.student }) para evitar login por UI
+ */
+export const AUTH_FILES = {
+  admin: path.join(__dirname, '../.auth/admin.json'),
+  instructor: path.join(__dirname, '../.auth/instructor.json'),
+  student: path.join(__dirname, '../.auth/student.json'),
+};
+
+// Credenciales de usuarios seed (confirmados en DB: SELECT email, role FROM users)
+export const TEST_CREDENTIALS = {
+  admin: { email: 'admin@ciber.com', password: 'Admin123!' },
+  instructor: { email: 'instructor@test.com', password: 'Test123!' },
+  student: { email: 'student@ciber.com', password: 'Student123!' },
+};
+
+/**
+ * Login como usuario ADMIN via UI
  */
 export async function loginAsAdmin(page: Page) {
   await page.goto(`${BASE_URL}/login`);
-  await page.fill('[name="email"]', 'admin@test.com');
-  await page.fill('[name="password"]', 'admin123');
+  await page.fill('[name="email"]', TEST_CREDENTIALS.admin.email);
+  await page.fill('[name="password"]', TEST_CREDENTIALS.admin.password);
   await page.click('button[type="submit"]');
   await page.waitForURL(/.*admin|dashboard/, { timeout: 10000 });
 }
 
 /**
- * Login como usuario INSTRUCTOR
+ * Login como usuario ADMIN via API (retorna token de acceso)
+ */
+export async function loginAsAdminAPI(page: Page): Promise<string> {
+  const response = await page.request.post(`${API_URL}/auth/login`, {
+    data: TEST_CREDENTIALS.admin,
+  });
+  const body = await response.json();
+  return body.data?.access_token || body.access_token || '';
+}
+
+/**
+ * Login como usuario INSTRUCTOR via UI
  */
 export async function loginAsInstructor(page: Page) {
   await page.goto(`${BASE_URL}/login`);
-  await page.fill('[name="email"]', 'instructor@test.com');
-  await page.fill('[name="password"]', 'instructor123');
+  await page.fill('[name="email"]', TEST_CREDENTIALS.instructor.email);
+  await page.fill('[name="password"]', TEST_CREDENTIALS.instructor.password);
   await page.click('button[type="submit"]');
   await page.waitForURL(/.*courses|dashboard/, { timeout: 10000 });
 }
 
 /**
- * Login como usuario STUDENT
+ * Login como usuario INSTRUCTOR via API (retorna token de acceso)
+ */
+export async function loginAsInstructorAPI(page: Page): Promise<string> {
+  const response = await page.request.post(`${API_URL}/auth/login`, {
+    data: TEST_CREDENTIALS.instructor,
+  });
+  const body = await response.json();
+  return body.data?.access_token || body.access_token || '';
+}
+
+/**
+ * Login como usuario STUDENT via UI usando cuenta seed
  */
 export async function loginAsStudent(page: Page) {
-  await page.goto(`${BASE_URL}/login`);
-  await page.fill('[name="email"]', 'student@test.com');
-  await page.fill('[name="password"]', 'student123');
-  await page.click('button[type="submit"]');
-  await page.waitForURL(/.*courses|dashboard/, { timeout: 10000 });
+  return registerAndLogin(page, 'STUDENT');
 }
 
 /**
- * Registrar y hacer login con un nuevo usuario
+ * Login con usuario seed de STUDENT o INSTRUCTOR.
+ * NOTA: No registra usuario nuevo (rate limit: 5/hora).
+ * Usa cuentas seed pre-existentes en la DB.
  */
 export async function registerAndLogin(page: Page, userType: 'STUDENT' | 'INSTRUCTOR' = 'STUDENT') {
-  const testEmail = `test_${Date.now()}@example.com`;
-  const testPassword = 'Test123!@#';
-  const testName = `Test ${userType} ${Date.now()}`;
+  const creds = userType === 'INSTRUCTOR'
+    ? TEST_CREDENTIALS.instructor
+    : TEST_CREDENTIALS.student;
 
-  // Registrar usuario
-  const registerResponse = await page.request.post(`${API_URL}/auth/register`, {
-    data: {
-      name: testName,
-      email: testEmail,
-      password: testPassword,
-    },
-  });
+  await page.goto(`${BASE_URL}/login`);
+  await page.fill('[name="email"]', creds.email);
+  await page.fill('[name="password"]', creds.password);
+  await page.click('button[type="submit"]');
+  await page.waitForURL(/\/(dashboard|courses)/, { timeout: 15000 });
 
-  const registerData = await registerResponse.json();
-  const accessToken = registerData.accessToken || registerData.data?.accessToken;
-
-  // Setear token en localStorage
-  await page.goto(BASE_URL);
-  await page.evaluate((token) => {
-    localStorage.setItem('accessToken', token);
-    localStorage.setItem('refreshToken', token); // Por si se necesita
-  }, accessToken);
-
-  return { email: testEmail, password: testPassword, name: testName, token: accessToken };
+  return { email: creds.email, password: creds.password, name: userType === 'INSTRUCTOR' ? 'Instructor Test' : 'Estudiante Demo' };
 }
 
 /**
- * Logout del usuario actual
+ * Logout del usuario actual.
+ * El dropdown de usuario está en el Header (botón con avatar + nombre de usuario).
+ * El botón de logout dice "Cerrar Sesión" dentro del dropdown.
  */
 export async function logout(page: Page) {
-  // Intentar diferentes selectores de logout
-  const logoutSelectors = [
-    'button[aria-label="User menu"]',
-    'button[aria-label="Logout"]',
-    '[data-testid="user-menu"]',
-    '.user-menu-button',
-  ];
+  // Abrir el dropdown del usuario haciendo click en el botón del header
+  // El botón tiene el nombre del usuario como texto visible
+  const userMenuButton = page.locator('header button').filter({
+    has: page.locator('span.hidden.sm\\:inline'),
+  }).first();
 
-  for (const selector of logoutSelectors) {
-    const element = page.locator(selector).first();
-    if (await element.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await element.click();
-      break;
+  if (await userMenuButton.isVisible({ timeout: 3000 }).catch(() => false)) {
+    await userMenuButton.click();
+  } else {
+    // Fallback: buscar el último botón en el header (suele ser el menú de usuario)
+    const headerButtons = page.locator('header button');
+    const count = await headerButtons.count();
+    if (count > 0) {
+      await headerButtons.nth(count - 1).click();
     }
   }
 
-  // Buscar y hacer click en el botón de cerrar sesión
-  const logoutButton = page.locator('text=/cerrar.*sesi[oó]n/i').or(page.locator('text=/logout/i'));
-  if (await logoutButton.isVisible({ timeout: 2000 })) {
+  // Hacer click en "Cerrar Sesión" en el dropdown
+  const logoutButton = page.locator('button:has-text("Cerrar Sesión"), button:has-text("Cerrar sesión")').first();
+  if (await logoutButton.isVisible({ timeout: 3000 }).catch(() => false)) {
     await logoutButton.click();
   }
 
   // Esperar redirección a login
-  await page.waitForURL(/\/(login|home|\/)/, { timeout: 5000 });
+  await page.waitForURL(/\/(login|home|\/)/, { timeout: 8000 });
 }
 
 /**
  * Verificar que el usuario está autenticado
+ * Fix: el backend usa HttpOnly cookies, no localStorage.
+ * Verifica que la URL actual no sea /login.
  */
 export async function verifyAuthenticated(page: Page) {
-  const token = await page.evaluate(() => localStorage.getItem('accessToken'));
-  return token !== null && token !== '';
+  return !page.url().includes('/login');
 }
 
 /**

@@ -1,7 +1,18 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, BookOpen, GraduationCap, Award, FileCheck, TrendingUp, TrendingDown } from 'lucide-react';
-import type { PlatformStats, ComparativeStats } from '../../services/api/dashboard-analytics.service';
+import {
+  Users,
+  BookOpen,
+  GraduationCap,
+  Award,
+  FileCheck,
+  TrendingUp,
+  TrendingDown,
+} from 'lucide-react';
+import type {
+  PlatformStats,
+  ComparativeStats,
+} from '../../services/api/dashboard-analytics.service';
 
 interface KpiCardsRowProps {
   stats: PlatformStats | null;
@@ -25,7 +36,10 @@ function AnimatedNumber({ target, duration = 600 }: { target: number; duration?:
   const [current, setCurrent] = useState(0);
 
   useEffect(() => {
-    if (target === 0) { setCurrent(0); return; }
+    if (target === 0) {
+      setCurrent(0);
+      return;
+    }
     const start = performance.now();
     const step = (now: number) => {
       const elapsed = now - start;
@@ -40,7 +54,17 @@ function AnimatedNumber({ target, duration = 600 }: { target: number; duration?:
   return <>{current}</>;
 }
 
-function KpiCard({ label, value, subtitle, changePercent, icon, accentColor, isLoading, onClick, delay = 0 }: KpiCardProps) {
+function KpiCard({
+  label,
+  value,
+  subtitle,
+  changePercent,
+  icon,
+  accentColor,
+  isLoading,
+  onClick,
+  delay = 0,
+}: KpiCardProps) {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -94,9 +118,16 @@ function KpiCard({ label, value, subtitle, changePercent, icon, accentColor, isL
         </p>
         <div className="flex items-center gap-2 mt-2">
           {changePercent !== undefined && (
-            <span className={`flex items-center gap-1 text-xs font-medium ${isPositive ? 'text-emerald-400' : 'text-red-400'}`}>
-              {isPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-              {isPositive ? '+' : ''}{changePercent}%
+            <span
+              className={`flex items-center gap-1 text-xs font-medium ${isPositive ? 'text-emerald-400' : 'text-red-400'}`}
+            >
+              {isPositive ? (
+                <TrendingUp className="w-3 h-3" />
+              ) : (
+                <TrendingDown className="w-3 h-3" />
+              )}
+              {isPositive ? '+' : ''}
+              {changePercent}%
             </span>
           )}
           {subtitle && <span className="text-white/40 text-xs">{subtitle}</span>}
@@ -111,48 +142,56 @@ export default function KpiCardsRow({ stats, comparative, isLoading }: KpiCardsR
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-      <KpiCard
-        label="Total Usuarios"
-        value={stats?.totalUsers ?? 0}
-        changePercent={comparative?.users.changePercent}
-        subtitle="vs mes anterior"
-        icon={<Users className="w-5 h-5" style={{ color: '#00A6FF' }} />}
-        accentColor="#00A6FF"
-        isLoading={isLoading}
-        onClick={() => navigate('/admin/users')}
-        delay={0}
-      />
-      <KpiCard
-        label="Cursos Activos"
-        value={stats?.totalCourses ?? 0}
-        icon={<BookOpen className="w-5 h-5" style={{ color: '#FF5100' }} />}
-        accentColor="#FF5100"
-        isLoading={isLoading}
-        onClick={() => navigate('/admin/courses')}
-        delay={80}
-      />
-      <KpiCard
-        label="Inscripciones"
-        value={stats?.totalEnrollments ?? 0}
-        changePercent={comparative?.enrollments.changePercent}
-        subtitle="vs mes anterior"
-        icon={<GraduationCap className="w-5 h-5" style={{ color: '#166EB6' }} />}
-        accentColor="#166EB6"
-        isLoading={isLoading}
-        onClick={() => navigate('/admin/users')}
-        delay={160}
-      />
-      <KpiCard
-        label="Tasa Completado"
-        value={`${stats?.completionRate ?? 0}%`}
-        changePercent={comparative?.completions.changePercent}
-        subtitle="vs mes anterior"
-        icon={<Award className="w-5 h-5" style={{ color: '#10B981' }} />}
-        accentColor="#10B981"
-        isLoading={isLoading}
-        onClick={() => navigate('/admin/users')}
-        delay={240}
-      />
+      <div data-testid="total-users">
+        <KpiCard
+          label="Total Usuarios"
+          value={stats?.totalUsers ?? 0}
+          changePercent={comparative?.users.changePercent}
+          subtitle="vs mes anterior"
+          icon={<Users className="w-5 h-5" style={{ color: '#00A6FF' }} />}
+          accentColor="#00A6FF"
+          isLoading={isLoading}
+          onClick={() => navigate('/admin/users')}
+          delay={0}
+        />
+      </div>
+      <div data-testid="total-courses">
+        <KpiCard
+          label="Cursos Activos"
+          value={stats?.totalCourses ?? 0}
+          icon={<BookOpen className="w-5 h-5" style={{ color: '#FF5100' }} />}
+          accentColor="#FF5100"
+          isLoading={isLoading}
+          onClick={() => navigate('/admin/courses')}
+          delay={80}
+        />
+      </div>
+      <div data-testid="active-enrollments">
+        <KpiCard
+          label="Inscripciones"
+          value={stats?.totalEnrollments ?? 0}
+          changePercent={comparative?.enrollments.changePercent}
+          subtitle="vs mes anterior"
+          icon={<GraduationCap className="w-5 h-5" style={{ color: '#166EB6' }} />}
+          accentColor="#166EB6"
+          isLoading={isLoading}
+          onClick={() => navigate('/admin/users')}
+          delay={160}
+        />
+      </div>
+      <div data-testid="completion-rate">
+        <KpiCard
+          label="Tasa Completado"
+          value={`${stats?.completionRate ?? 0}%`}
+          changePercent={comparative?.completions.changePercent}
+          subtitle="vs mes anterior"
+          icon={<Award className="w-5 h-5" style={{ color: '#10B981' }} />}
+          accentColor="#10B981"
+          isLoading={isLoading}
+          onClick={() => navigate('/admin/users')}
+          delay={240}
+        />
+      </div>
       <KpiCard
         label="Certificados"
         value={stats?.totalCertificates ?? 0}

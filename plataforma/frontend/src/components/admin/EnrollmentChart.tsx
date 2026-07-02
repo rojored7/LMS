@@ -3,7 +3,16 @@
  * Displays enrollment trends over time using Recharts
  */
 
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+} from 'recharts';
 
 interface EnrollmentChartProps {
   data?: Array<{
@@ -24,7 +33,10 @@ const sampleData = [
   { date: 'Jun', enrollments: 45, completions: 32 },
 ];
 
-export const EnrollmentChart: React.FC<EnrollmentChartProps> = ({ data = sampleData, isLoading }) => {
+export const EnrollmentChart: React.FC<EnrollmentChartProps> = ({
+  data = sampleData,
+  isLoading,
+}) => {
   if (isLoading) {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
@@ -54,17 +66,14 @@ export const EnrollmentChart: React.FC<EnrollmentChartProps> = ({ data = sampleD
             </linearGradient>
           </defs>
           <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
-          <XAxis
-            dataKey="date"
-            className="text-xs text-gray-600 dark:text-gray-400"
-          />
+          <XAxis dataKey="date" className="text-xs text-gray-600 dark:text-gray-400" />
           <YAxis className="text-xs text-gray-600 dark:text-gray-400" />
           <Tooltip
             contentStyle={{
               backgroundColor: 'rgb(31 41 55)',
               border: 'none',
               borderRadius: '0.5rem',
-              color: 'white'
+              color: 'white',
             }}
           />
           <Legend />

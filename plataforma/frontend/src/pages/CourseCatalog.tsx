@@ -47,7 +47,7 @@ export const CourseCatalog: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8" data-testid="course-catalog">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold font-heading text-gray-900 mb-2">Catálogo de Cursos</h1>
@@ -62,6 +62,7 @@ export const CourseCatalog: React.FC = () => {
             placeholder="Buscar cursos..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            data-testid="search-input"
             leftIcon={
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
@@ -79,6 +80,7 @@ export const CourseCatalog: React.FC = () => {
           value={selectedLevel}
           onChange={(e) => setSelectedLevel(e.target.value)}
           className="input w-full md:w-48"
+          data-testid="level-filter"
         >
           <option value="">Todos los niveles</option>
           <option value="BEGINNER">Principiante</option>
@@ -98,12 +100,14 @@ export const CourseCatalog: React.FC = () => {
           </CardBody>
         </Card>
       ) : filteredCourses.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" data-testid="course-grid">
           {filteredCourses.map((course) => (
             <Card
               key={course.id}
               className="hover:shadow-lg hover:border-[#00A6FF]/30 transition-shadow cursor-pointer"
               onClick={() => navigate(`${ROUTES.COURSES}/${course.id}`)}
+              data-testid="course-card"
+              data-course-slug={course.slug}
             >
               <CardBody>
                 {/* Thumbnail */}
@@ -117,7 +121,7 @@ export const CourseCatalog: React.FC = () => {
 
                 {/* Course Info */}
                 <div className="mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">{course.title}</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2" data-testid="course-title">{course.title}</h3>
                   <p className="text-sm text-gray-600 line-clamp-2 mb-3">{course.description}</p>
 
                   {/* Metadata */}
@@ -175,6 +179,7 @@ export const CourseCatalog: React.FC = () => {
                   variant={course.isEnrolled ? 'secondary' : 'primary'}
                   size="sm"
                   className="w-full"
+                  data-testid={course.isEnrolled ? 'continue-button' : 'enroll-button'}
                   onClick={(e) => {
                     e.stopPropagation();
                     navigate(`${ROUTES.COURSES}/${course.id}`);

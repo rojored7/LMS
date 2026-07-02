@@ -133,7 +133,7 @@ export const QuizTaker: React.FC<QuizTakerProps> = ({ quiz, onComplete }) => {
   // Results view
   if (showResults && quizResult) {
     return (
-      <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+      <div className="bg-white rounded-lg shadow-lg overflow-hidden" data-testid="quiz-results">
         <div className={`px-6 py-8 text-center ${quizResult.passed ? 'bg-green-50' : 'bg-red-50'}`}>
           {quizResult.passed ? (
             <CheckCircleIcon className="h-16 w-16 text-green-500 mx-auto mb-4" />
@@ -143,7 +143,7 @@ export const QuizTaker: React.FC<QuizTakerProps> = ({ quiz, onComplete }) => {
           <h2 className="text-2xl font-bold text-gray-900 mb-2">
             {quizResult.passed ? 'Quiz Aprobado' : 'Quiz No Aprobado'}
           </h2>
-          <p className="text-4xl font-bold text-gray-900 mb-2">{quizResult.score}%</p>
+          <p className="text-4xl font-bold text-gray-900 mb-2" data-testid="quiz-score">{quizResult.score}%</p>
           <p className="text-gray-600">
             {quizResult.correctAnswers} de {quizResult.totalQuestions} respuestas correctas
           </p>
@@ -177,7 +177,7 @@ export const QuizTaker: React.FC<QuizTakerProps> = ({ quiz, onComplete }) => {
   if (!currentQuestionData) return null;
 
   return (
-    <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+    <div className="bg-white rounded-lg shadow-lg overflow-hidden" data-testid="quiz-container">
       {/* Quiz Header */}
       <div className="px-6 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white">
         <div className="flex items-center justify-between">

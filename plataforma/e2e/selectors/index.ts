@@ -1,0 +1,67 @@
+export const SELECTORS = {
+  auth: {
+    emailInput: '[name="email"]',
+    passwordInput: '[name="password"]',
+    submitButton: 'button[type="submit"]',
+    nameInput: '[name="name"]',
+    logoutButton: 'button:has-text("Cerrar sesión")',
+    userMenu: '[data-testid="user-menu"]',
+  },
+  courses: {
+    catalog: '[data-testid="course-catalog"]',
+    grid: '[data-testid="course-grid"]',
+    card: '[data-testid="course-card"]',
+    title: '[data-testid="course-title"]',
+    searchInput: '[data-testid="search-input"]',
+    levelFilter: '[data-testid="level-filter"]',
+    enrollButton: '[data-testid="enroll-button"]',
+    continueButton: '[data-testid="continue-button"]',
+    moduleCount: '[data-testid="course-module-count"]',
+  },
+  learning: {
+    sidebar: '[data-testid="course-sidebar"]',
+    moduleItem: (id: string) => `[data-testid="module-${id}"]`,
+    lessonItem: (id: string) => `[data-testid="lesson-${id}"]`,
+    quizItem: (id: string) => `[data-testid="quiz-${id}"]`,
+    labItem: (id: string) => `[data-testid="lab-${id}"]`,
+    lessonContent: '[data-testid="lesson-content"]',
+    markCompleteButton: '[data-testid="mark-complete"]',
+    nextLessonButton: '[data-testid="next-lesson"]',
+    prevLessonButton: '[data-testid="prev-lesson"]',
+    progressBar: '[data-testid="course-progress"]',
+  },
+  lab: {
+    executor: '[data-testid="lab-executor"]',
+    runButton: '[data-testid="run-code"]',
+    terminalOutput: '[data-testid="terminal-output"]',
+    labStatus: '[data-testid="lab-status"]',
+    monacoEditor: '.monaco-editor',
+    languageSelector: '[data-testid="language-selector"]',
+    submitLabButton: '[data-testid="submit-lab"]',
+    saveStatus: '[data-testid="save-status"]',
+  },
+  quiz: {
+    container: '[data-testid="quiz-container"]',
+    startButton: '[data-testid="take-quiz"]',
+    question: (n: number) => `[data-testid="question-${n}"]`,
+    optionInput: 'input[type="radio"], input[type="checkbox"]',
+    submitButton: 'button:has-text("Enviar Quiz"), button:has-text("Enviar")',
+    resultContainer: '[data-testid="quiz-results"]',
+    score: '[data-testid="quiz-score"]',
+    retryButton: 'button:has-text("Reintentar")',
+  },
+  admin: {
+    totalUsers: '[data-testid="total-users"]',
+    totalCourses: '[data-testid="total-courses"]',
+    activeEnrollments: '[data-testid="active-enrollments"]',
+    completionRate: '[data-testid="completion-rate"]',
+  },
+  dashboard: {
+    root: '[data-testid="student-dashboard"]',
+    enrolledCoursesGrid: '[data-testid="enrolled-courses-grid"]',
+    courseProgress: '[data-testid="course-progress"]',
+  },
+};
+
+export const TEST_COURSE_SLUG = 'hacking-etico-pentesting-fundamentos';
+export const TEST_COURSE_SLUG_PROD = 'hacking-etico-pentesting-fundamentos';

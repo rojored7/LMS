@@ -1,4 +1,12 @@
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from 'recharts';
 import type { EnrollmentTrend } from '../../services/api/dashboard-analytics.service';
 
 interface EnrollmentTrendsChartProps {

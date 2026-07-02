@@ -23,7 +23,7 @@ export const Dashboard: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8" data-testid="student-dashboard">
       {/* Welcome Section */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold font-heading text-gray-900 mb-2">
@@ -173,7 +173,7 @@ export const Dashboard: React.FC = () => {
               </Button>
             </div>
           ) : enrolledCourses && enrolledCourses.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" data-testid="enrolled-courses-grid">
               {enrolledCourses.map((enrollment) => (
                 <Card key={enrollment.id} variant="outlined">
                   <CardBody>
@@ -207,7 +207,7 @@ export const Dashboard: React.FC = () => {
                     </div>
 
                     {/* Progress Bar */}
-                    <div className="mb-4">
+                    <div className="mb-4" data-testid="course-progress">
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-sm text-gray-600">Progreso</span>
                         <span className="text-sm font-medium text-gray-900">

@@ -62,7 +62,7 @@ export const ModuleSidebar: React.FC<ModuleSidebarProps> = ({
   };
 
   return (
-    <div className="h-full overflow-y-auto bg-white border-r border-gray-200">
+    <div className="h-full overflow-y-auto bg-white border-r border-gray-200" data-testid="course-sidebar">
       <div className="p-4">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Contenido del Curso</h2>
         <div className="space-y-2">
@@ -97,6 +97,7 @@ export const ModuleSidebar: React.FC<ModuleSidebarProps> = ({
                     onClick={() => onModuleClick(module.id)}
                     className="flex-1 min-w-0 text-left py-3 pr-4 hover:text-blue-600 transition-colors"
                     title="Ver información del módulo"
+                    data-testid={`module-${module.id}`}
                   >
                     <p
                       className={`text-sm font-medium truncate ${
@@ -153,6 +154,7 @@ export const ModuleSidebar: React.FC<ModuleSidebarProps> = ({
                             className={`w-full px-4 py-2 flex items-center space-x-3 hover:bg-gray-50 transition-colors ${
                               isActive ? 'bg-blue-50 border-l-4 border-blue-600' : ''
                             }`}
+                            data-testid={`lesson-${lesson.id}`}
                           >
                             <BookOpenIcon
                               className={`h-4 w-4 flex-shrink-0 ${isActive ? 'text-blue-600' : 'text-gray-400'}`}
@@ -187,6 +189,7 @@ export const ModuleSidebar: React.FC<ModuleSidebarProps> = ({
                           className={`w-full px-4 py-2 flex items-center space-x-3 hover:bg-gray-50 transition-colors ${
                             isActive ? 'bg-purple-50 border-l-4 border-purple-600' : ''
                           }`}
+                          data-testid={`quiz-${quiz.id}`}
                         >
                           <AcademicCapIcon
                             className={`h-4 w-4 flex-shrink-0 ${isActive ? 'text-purple-600' : 'text-gray-400'}`}
@@ -221,6 +224,7 @@ export const ModuleSidebar: React.FC<ModuleSidebarProps> = ({
                           className={`w-full px-4 py-2 flex items-center space-x-3 hover:bg-gray-50 transition-colors ${
                             isActive ? 'bg-green-50 border-l-4 border-green-600' : ''
                           }`}
+                          data-testid={`lab-${lab.id}`}
                         >
                           <BeakerIcon
                             className={`h-4 w-4 flex-shrink-0 ${isActive ? 'text-green-600' : 'text-gray-400'}`}

@@ -11,7 +11,7 @@ const API_URL = process.env.API_URL || 'http://localhost:4000/api';
 /**
  * Inscribirse en un curso
  */
-export async function enrollInCourse(page: Page, courseSlug = 'ciberseguridad-postcuantica') {
+export async function enrollInCourse(page: Page, courseSlug = 'hacking-etico-pentesting-fundamentos') {
   await page.goto(`${BASE_URL}/courses/${courseSlug}`);
 
   // Buscar y hacer click en el botón de inscripción
@@ -127,20 +127,30 @@ export async function submitQuizWithCorrectAnswers(page: Page) {
 
 /**
  * Enviar lab con código correcto
+ * Fix: Monaco editor usa contenteditable, no textarea standard.
+ * Usar keyboard.type en lugar de .fill()
  */
 export async function submitLabWithCorrectCode(page: Page, language = 'python') {
-  const codeExamples = {
+  const codeExamples: Record<string, string> = {
     python: 'print("Hello World")',
     javascript: 'console.log("Hello World")',
-    bash: 'echo "Hello World"'
+    bash: 'echo "Hello World"',
   };
 
-  // Escribir código en el editor
-  const codeEditor = page.locator('.monaco-editor textarea').or(
-    page.locator('textarea[name="code"]')
-  );
+  const code = codeExamples[language] || codeExamples.python;
 
-  await codeEditor.fill(codeExamples[language] || codeExamples.python);
+  // Monaco editor: usar keyboard API, no .fill()
+  const monacoEditor = page.locator('.monaco-editor');
+  if (await monacoEditor.isVisible({ timeout: 5000 })) {
+    await monacoEditor.click();
+    await page.keyboard.press('Control+A');
+    await page.keyboard.type(code);
+    await page.waitForTimeout(500);
+  } else {
+    // Fallback para textarea standard
+    const textarea = page.locator('textarea[name="code"]');
+    await textarea.fill(code);
+  }
 
   // Ejecutar código
   await page.click('button:has-text("Ejecutar")');

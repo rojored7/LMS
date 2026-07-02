@@ -18,7 +18,12 @@ import { LabExecutor } from '../components/learning/LabExecutor';
 import { ProgressBar } from '../components/learning/ProgressBar';
 import { LessonNavigation } from '../components/learning/LessonNavigation';
 import { Loader } from '../components/common/Loader';
-import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
+import {
+  Bars3Icon,
+  XMarkIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+} from '@heroicons/react/24/outline';
 
 type ContentType = 'lesson' | 'quiz' | 'lab' | 'module' | null;
 
@@ -199,7 +204,7 @@ export const CourseLearning: React.FC = () => {
           >
             ← Volver al curso
           </button>
-          <div className="flex-1 max-w-xl mx-8">
+          <div className="flex-1 max-w-xl mx-8" data-testid="course-progress">
             <ProgressBar
               progress={progressData?.overallProgress || 0}
               label="Progreso del curso"
@@ -300,6 +305,30 @@ export const CourseLearning: React.FC = () => {
                 {contentType === 'quiz' && quiz && <QuizTaker quiz={quiz} />}
 
                 {contentType === 'lab' && lab && <LabExecutor lab={lab} />}
+
+                {/* Bottom Navigation */}
+                {contentId && (hasPrevious || hasNext) && (
+                  <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between gap-4">
+                    <button
+                      onClick={handlePrevious}
+                      disabled={!hasPrevious}
+                      data-testid="prev-lesson"
+                      className={`flex items-center space-x-2 px-4 py-3 rounded-lg transition-colors ${hasPrevious ? 'text-blue-600 hover:bg-blue-50 border border-blue-300' : 'text-gray-400 cursor-not-allowed border border-gray-200'}`}
+                    >
+                      <ChevronLeftIcon className="h-5 w-5" />
+                      <span>Anterior</span>
+                    </button>
+                    <button
+                      onClick={handleNext}
+                      disabled={!hasNext}
+                      data-testid="next-lesson"
+                      className={`flex items-center space-x-2 px-4 py-3 rounded-lg transition-colors ${hasNext ? 'text-blue-600 hover:bg-blue-50 border border-blue-300' : 'text-gray-400 cursor-not-allowed border border-gray-200'}`}
+                    >
+                      <span>Siguiente</span>
+                      <ChevronRightIcon className="h-5 w-5" />
+                    </button>
+                  </div>
+                )}
               </div>
             </>
           )}

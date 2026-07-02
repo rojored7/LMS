@@ -74,11 +74,16 @@ export default function UserDistributionChart({ data, isLoading }: UserDistribut
                 }}
               />
               <Legend
-                formatter={(value) => <span style={{ color: 'rgba(255,255,255,0.7)' }}>{value}</span>}
+                formatter={(value) => (
+                  <span style={{ color: 'rgba(255,255,255,0.7)' }}>{value}</span>
+                )}
               />
             </PieChart>
           </ResponsiveContainer>
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ marginBottom: '40px' }}>
+          <div
+            className="absolute inset-0 flex items-center justify-center pointer-events-none"
+            style={{ marginBottom: '40px' }}
+          >
             <div className="text-center">
               <p className="text-3xl font-bold text-white">{total}</p>
               <p className="text-white/40 text-xs">Total</p>
