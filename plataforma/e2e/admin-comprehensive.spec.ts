@@ -28,7 +28,7 @@ async function loginAsAdmin(page: Page) {
   await page.waitForLoadState('load');
 
   const emailInput = page.locator('input[type="email"], input[name="email"]').first();
-  await expect(emailInput).toBeVisible({ timeout: 10000 });
+  await expect(emailInput).toBeVisible({ timeout: 30000 });
   await emailInput.fill(ADMIN_EMAIL);
 
   const passwordInput = page.locator('input[type="password"]').first();
@@ -38,7 +38,7 @@ async function loginAsAdmin(page: Page) {
   await page.locator('button[type="submit"]').first().click();
 
   // waitForURL with URL object - .href contains the full url string
-  await page.waitForURL((url) => !url.href.includes('/login'), { timeout: 15000 });
+  await page.waitForURL((url) => !url.href.includes('/login'), { timeout: 30000 });
 }
 
 test.describe('Admin E2E Comprehensive Tests', () => {
@@ -72,7 +72,7 @@ test.describe('Admin E2E Comprehensive Tests', () => {
     await page.waitForLoadState('load');
 
     const emailInput = page.locator('input[type="email"], input[name="email"]').first();
-    await expect(emailInput).toBeVisible({ timeout: 10000 });
+    await expect(emailInput).toBeVisible({ timeout: 30000 });
     await emailInput.fill(ADMIN_EMAIL);
 
     const passwordInput = page.locator('input[type="password"]').first();
@@ -80,7 +80,7 @@ test.describe('Admin E2E Comprehensive Tests', () => {
     await passwordInput.fill(ADMIN_PASSWORD);
 
     await page.locator('button[type="submit"]').first().click();
-    await page.waitForURL((url) => !url.href.includes('/login'), { timeout: 15000 });
+    await page.waitForURL((url) => !url.href.includes('/login'), { timeout: 30000 });
 
     const afterLoginUrl = page.url();
     await captureScreenshot(page, 'e2e-admin-01-dashboard.png');

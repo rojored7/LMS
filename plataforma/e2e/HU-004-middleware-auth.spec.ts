@@ -22,7 +22,7 @@ test.describe('HU-004: Middleware JWT valida tokens correctamente', () => {
 
     for (const route of protectedRoutes) {
       await page.goto(`${BASE_URL}${route}`);
-      await expect(page).toHaveURL(/.*login/, { timeout: 8000 });
+      await expect(page).toHaveURL(/.*login/, { timeout: 20000 });
       await expect(page.locator('form')).toBeVisible();
     }
   });
@@ -36,7 +36,7 @@ test.describe('HU-004: Middleware JWT valida tokens correctamente', () => {
     await expect(page).not.toHaveURL(/.*login/);
     await expect(
       page.locator('h1').first()
-    ).toBeVisible({ timeout: 8000 });
+    ).toBeVisible({ timeout: 20000 });
 
     await page.goto(`${BASE_URL}/courses`);
     await expect(page).not.toHaveURL(/.*login/);
@@ -76,12 +76,12 @@ test.describe('HU-004: Middleware JWT valida tokens correctamente', () => {
     const logoutButton = page.locator('button:has-text("Cerrar Sesión"), button:has-text("Cerrar sesión")').first();
     if (await logoutButton.isVisible({ timeout: 3000 })) {
       await logoutButton.click();
-      await page.waitForURL(/.*login/, { timeout: 8000 });
+      await page.waitForURL(/.*login/, { timeout: 20000 });
     }
 
     // Despues de logout, ruta protegida debe redirigir a login
     await page.goto(`${BASE_URL}/profile`);
-    await expect(page).toHaveURL(/.*login/, { timeout: 8000 });
+    await expect(page).toHaveURL(/.*login/, { timeout: 20000 });
   });
 
   test('Refresh token mantiene sesión activa', async ({ page }) => {

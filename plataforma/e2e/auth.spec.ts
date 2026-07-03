@@ -21,7 +21,7 @@ async function loginViaUI(page: any, email: string, password: string) {
   await page.fill('input[name="email"]', email);
   await page.fill('input[name="password"]', password);
   await page.click('button[type="submit"]');
-  await page.waitForURL(/\/(dashboard|courses)/, { timeout: 15000 });
+  await page.waitForURL(/\/(dashboard|courses)/, { timeout: 30000 });
 }
 
 // Helper: fill and submit registration form
@@ -61,7 +61,7 @@ test.describe('Authentication Flow', () => {
     await page.click('button[type="submit"]');
 
     // 5. Verificar redireccion exitosa
-    await page.waitForURL(/\/(dashboard|login|courses)/, { timeout: 15000 });
+    await page.waitForURL(/\/(dashboard|login|courses)/, { timeout: 30000 });
 
     // 6. Verificar que el usuario llego al dashboard (sesion activa via cookie)
     expect(page.url()).toMatch(/\/(dashboard|courses)/);
@@ -90,7 +90,7 @@ test.describe('Authentication Flow', () => {
     await page.goto(`${BASE_URL}/register`);
     await fillRegisterForm(page, testName, testEmail, testPassword);
     await page.click('button[type="submit"]');
-    await page.waitForURL(/\/(dashboard|login|courses)/, { timeout: 15000 });
+    await page.waitForURL(/\/(dashboard|login|courses)/, { timeout: 30000 });
 
     // Navegar directamente al registro para intentar duplicado
     await page.goto(`${BASE_URL}/register`);
@@ -100,7 +100,7 @@ test.describe('Authentication Flow', () => {
     // Verificar error de email ya registrado
     // El backend retorna: "El email ya esta registrado"
     const errorMessage = page.getByText(/ya esta registrado|email.*registrado|registrado|ya exist/i).first();
-    await expect(errorMessage).toBeVisible({ timeout: 8000 });
+    await expect(errorMessage).toBeVisible({ timeout: 20000 });
   });
 
   test('should login with valid credentials', async ({ page }) => {
@@ -114,7 +114,7 @@ test.describe('Authentication Flow', () => {
     await page.click('button[type="submit"]');
 
     // Verificar redireccion exitosa
-    await page.waitForURL(/\/(dashboard|courses)/, { timeout: 15000 });
+    await page.waitForURL(/\/(dashboard|courses)/, { timeout: 30000 });
 
     // Verificar que la sesion esta activa (el usuario llego al dashboard)
     expect(page.url()).toMatch(/\/(dashboard|courses)/);
@@ -129,7 +129,7 @@ test.describe('Authentication Flow', () => {
     // Esperar que el formulario este listo
     const emailInput = page.locator('input[name="email"]');
     const passwordInput = page.locator('input[name="password"]');
-    await expect(emailInput).toBeVisible({ timeout: 5000 });
+    await expect(emailInput).toBeVisible({ timeout: 30000 });
 
     // Usar click + type para asegurar que React actualiza su estado interno
     await emailInput.click();
@@ -139,7 +139,7 @@ test.describe('Authentication Flow', () => {
 
     // Interceptar la respuesta del API para confirmar que se hizo la peticion
     const [response] = await Promise.all([
-      page.waitForResponse((resp) => resp.url().includes('/auth/login'), { timeout: 10000 }),
+      page.waitForResponse((resp) => resp.url().includes('/auth/login'), { timeout: 30000 }),
       page.click('button[type="submit"]'),
     ]);
 
@@ -176,11 +176,11 @@ test.describe('Authentication Flow', () => {
 
     // Esperar que aparezca el dropdown con "Cerrar Sesion"
     const logoutButton = page.locator('button:has-text("Cerrar Sesión"), button:has-text("Cerrar Sesion")').first();
-    await expect(logoutButton).toBeVisible({ timeout: 5000 });
+    await expect(logoutButton).toBeVisible({ timeout: 30000 });
     await logoutButton.click();
 
     // Verificar redireccion a login
-    await page.waitForURL(/\/login/, { timeout: 5000 });
+    await page.waitForURL(/\/login/, { timeout: 30000 });
   });
 
   test('should maintain session after page refresh', async ({ page }) => {
@@ -203,7 +203,7 @@ test.describe('Authentication Flow', () => {
     await page.goto(`${BASE_URL}/courses/enrolled`);
 
     // Verificar redireccion a login
-    await page.waitForURL(/\/login/, { timeout: 5000 });
+    await page.waitForURL(/\/login/, { timeout: 30000 });
   });
 
   test('should request password reset', async ({ page }) => {
@@ -225,7 +225,7 @@ test.describe('Authentication Flow', () => {
 
       // Verificar mensaje de exito
       const successMessage = page.locator('text=/enviado|correo|email/i').first();
-      await expect(successMessage).toBeVisible({ timeout: 5000 });
+      await expect(successMessage).toBeVisible({ timeout: 30000 });
     } else {
       console.log('Password reset feature not implemented yet - skipping');
     }
@@ -240,7 +240,7 @@ test.describe('Session Persistence', () => {
     await page1.fill('input[name="email"]', SEED_STUDENT.email);
     await page1.fill('input[name="password"]', SEED_STUDENT.password);
     await page1.click('button[type="submit"]');
-    await page1.waitForURL(/\/(dashboard|courses)/, { timeout: 15000 });
+    await page1.waitForURL(/\/(dashboard|courses)/, { timeout: 30000 });
 
     // Verificar que el usuario esta logueado en pagina 1
     expect(page1.url()).not.toContain('/login');

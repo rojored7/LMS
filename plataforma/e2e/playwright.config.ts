@@ -9,8 +9,7 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  // En produccion (BASE_URL externo) limitar workers para respetar rate limits de Nginx
-  workers: process.env.CI ? 1 : (process.env.BASE_URL && !process.env.BASE_URL.includes('localhost') ? 2 : undefined),
+  workers: process.env.CI ? 1 : undefined,
   reporter: [
     ['html'],
     ['list'],

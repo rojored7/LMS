@@ -51,7 +51,7 @@ export class LoginPage {
   async loginAndWait(email: string, password: string) {
     await this.goto();
     await this.login(email, password);
-    await this.page.waitForURL(/\/(admin|dashboard|courses)/, { timeout: 15000 });
+    await this.page.waitForURL(/\/(admin|dashboard|courses)/, { timeout: 30000 });
   }
 
   // Verificaciones

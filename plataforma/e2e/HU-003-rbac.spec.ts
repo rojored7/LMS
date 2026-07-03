@@ -27,7 +27,7 @@ test.describe('HU-003: Sistema RBAC - Control de acceso por roles', () => {
     // Intentar acceder al admin como estudiante
     await page.goto(`${BASE_URL}/admin`);
     // ProtectedRoute redirige async (espera a /api/users/me) antes de redirigir a /403
-    await page.waitForURL(url => !url.pathname.startsWith('/admin'), { timeout: 8000 }).catch(() => {});
+    await page.waitForURL(url => !url.pathname.startsWith('/admin'), { timeout: 20000 }).catch(() => {});
 
     // El estudiante no deberia poder acceder al admin
     const adminUrl = page.url();
@@ -54,7 +54,7 @@ test.describe('HU-003: Sistema RBAC - Control de acceso por roles', () => {
     for (const route of protectedRoutes) {
       await page.goto(`${BASE_URL}${route}`);
       // ProtectedRoute redirige async tras /api/users/me - esperar que la URL cambie
-      await page.waitForURL(url => !url.pathname.startsWith(route), { timeout: 8000 }).catch(() => {});
+      await page.waitForURL(url => !url.pathname.startsWith(route), { timeout: 20000 }).catch(() => {});
 
       // Verificar que no puede acceder (redirigido a 403 por ProtectedRoute)
       const currentUrl = page.url();

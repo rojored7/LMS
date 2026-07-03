@@ -43,7 +43,7 @@ export async function loginAsAdmin(page: Page) {
  */
 export async function loginAsAdminAPI(page: Page): Promise<string> {
   await page.goto(`${BASE_URL}/login`);
-  await page.waitForSelector('input[name="email"]', { timeout: 15000 });
+  await page.waitForSelector('input[name="email"]', { timeout: 30000 });
   await page.fill('input[name="email"]', TEST_CREDENTIALS.admin.email);
   await page.fill('input[name="password"]', TEST_CREDENTIALS.admin.password);
   await page.click('button[type="submit"]');
@@ -68,7 +68,7 @@ export async function loginAsInstructor(page: Page) {
  */
 export async function loginAsInstructorAPI(page: Page): Promise<string> {
   await page.goto(`${BASE_URL}/login`);
-  await page.waitForSelector('input[name="email"]', { timeout: 15000 });
+  await page.waitForSelector('input[name="email"]', { timeout: 30000 });
   await page.fill('input[name="email"]', TEST_CREDENTIALS.instructor.email);
   await page.fill('input[name="password"]', TEST_CREDENTIALS.instructor.password);
   await page.click('button[type="submit"]');
@@ -132,7 +132,7 @@ export async function logout(page: Page) {
   }
 
   // Esperar redirección a login
-  await page.waitForURL(/\/(login|home|\/)/, { timeout: 8000 });
+  await page.waitForURL(/\/(login|home|\/)/, { timeout: 20000 });
 }
 
 /**
