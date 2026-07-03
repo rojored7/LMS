@@ -69,6 +69,22 @@ export async function getCurrentUser(): Promise<AuthResponse['user']> {
   return (envelope as any).data;
 }
 
+/**
+ * Get available auth providers
+ */
+export async function getAuthProviders(): Promise<Record<string, boolean>> {
+  const envelope = await api.get('/auth/providers');
+  return (envelope as any).data?.providers ?? { local: true };
+}
+
+/**
+ * Login with LDAP credentials
+ */
+export async function loginLdap(username: string, password: string): Promise<AuthResponse> {
+  const envelope = await api.post('/auth/login/ldap', { username, password });
+  return (envelope as any).data;
+}
+
 const authService = {
   login,
   register,
@@ -78,6 +94,8 @@ const authService = {
   forgotPassword,
   resetPassword,
   getCurrentUser,
+  getAuthProviders,
+  loginLdap,
 };
 
 export default authService;

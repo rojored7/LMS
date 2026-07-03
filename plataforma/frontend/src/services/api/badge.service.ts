@@ -38,7 +38,7 @@ export const getMyBadges = async (): Promise<UserBadge[]> => {
  * @param userId - User ID
  */
 export const getUserBadges = async (userId: string): Promise<UserBadge[]> => {
-  const response = await api.get(`/badges/users/${userId}/badges`);
+  const response = await api.get(`/badges/user/${userId}`);
   return response.data;
 };
 

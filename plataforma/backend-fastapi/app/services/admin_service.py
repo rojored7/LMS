@@ -2,8 +2,9 @@ import structlog
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.middleware.error_handler import NotFoundError
 from app.models.course import Course
-from app.models.gamification import Certificate
+from app.models.gamification import Certificate, XpTransaction
 from app.models.progress import Enrollment
 from app.models.user import User, UserRole
 
@@ -63,11 +64,47 @@ class AdminService:
         ]
 
     async def bulk_update_role(self, user_ids: list[str], role: str) -> int:
-        result = await self.db.execute(select(User).where(User.id.in_(user_ids)))
-        users = list(result.scalars().all())
+        from sqlalchemy import update
         new_role = UserRole(role)
-        for user in users:
-            user.role = new_role
+        result = await self.db.execute(
+            update(User).where(User.id.in_(user_ids)).values(role=new_role)
+        )
         await self.db.flush()
-        logger.info("bulk_role_update", count=len(users), role=role)
-        return len(users)
+        count = result.rowcount
+        logger.info("bulk_role_update", count=count, role=role)
+        return count
+
+    async def get_leaderboard(self, page: int = 1, limit: int = 20) -> tuple[list[User], int]:
+        total = (await self.db.execute(select(func.count()).select_from(User))).scalar() or 0
+        offset = (page - 1) * limit
+        result = await self.db.execute(
+            select(User).order_by(User.xp.desc(), User.name.asc()).offset(offset).limit(limit)
+        )
+        return list(result.scalars().all()), total
+
+    async def adjust_user_xp(self, user_id: str, amount: int, reason: str, admin_id: str) -> XpTransaction:
+        result = await self.db.execute(select(User).where(User.id == user_id))
+        user = result.scalar_one_or_none()
+        if not user:
+            raise NotFoundError("Usuario no encontrado")
+        tx = XpTransaction(
+            user_id=user_id,
+            amount=amount,
+            reason=reason,
+            source="manual",
+            admin_id=admin_id,
+        )
+        self.db.add(tx)
+        user.xp = max(0, (user.xp or 0) + amount)
+        await self.db.flush()
+        logger.info("xp_adjusted", user_id=user_id, amount=amount, new_xp=user.xp, admin_id=admin_id)
+        return tx
+
+    async def get_user_xp_history(self, user_id: str, page: int = 1, limit: int = 20) -> tuple[list[XpTransaction], int]:
+        base = select(XpTransaction).where(XpTransaction.user_id == user_id)
+        total = (await self.db.execute(select(func.count()).select_from(base.subquery()))).scalar() or 0
+        offset = (page - 1) * limit
+        result = await self.db.execute(
+            base.order_by(XpTransaction.created_at.desc()).offset(offset).limit(limit)
+        )
+        return list(result.scalars().all()), total

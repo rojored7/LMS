@@ -62,7 +62,7 @@ export const QuizQuestion: React.FC<QuizQuestionProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6" data-testid={`question-${questionNumber}`}>
       {/* Question Header */}
       <div className="mb-4">
         <h3 className="text-lg font-semibold text-gray-900">

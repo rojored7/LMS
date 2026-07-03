@@ -77,6 +77,26 @@ class Settings(BaseSettings):
     COOKIE_PREFIX: str = ""
     COOKIE_SAMESITE: str = "lax"
 
+    # LDAP
+    LDAP_ENABLED: bool = False
+    LDAP_SERVER_URL: str = ""
+    LDAP_USE_SSL: bool = False
+    LDAP_BIND_DN: str = ""
+    LDAP_BIND_PASSWORD: str = ""
+    LDAP_BASE_DN: str = ""
+    LDAP_USER_SEARCH_FILTER: str = "(sAMAccountName={username})"
+    LDAP_EMAIL_ATTR: str = "mail"
+    LDAP_NAME_ATTR: str = "cn"
+    LDAP_GROUP_ATTR: str = "memberOf"
+    LDAP_ROLE_MAPPING: str = "{}"
+    LDAP_TIMEOUT: int = 10
+
+    # OAuth 2.0
+    OAUTH_ENABLED: bool = False
+    GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_CLIENT_SECRET: str = ""
+    GOOGLE_REDIRECT_URI: str = ""
+
     CSP_STYLE_SRC: str = "'self' 'unsafe-inline'"
     CSP_SCRIPT_SRC: str = "'self'"
 

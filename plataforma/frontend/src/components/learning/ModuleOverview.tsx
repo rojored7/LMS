@@ -30,9 +30,11 @@ interface ModuleOverviewProps {
 export const ModuleOverview = ({ module, moduleProgress, onContentClick }: ModuleOverviewProps) => {
   // Use progress data from API (accurate) or fallback to module flags (may be stale)
   const totalLessons = moduleProgress?.lessons?.total ?? module.lessons.length;
-  const completedLessons = moduleProgress?.lessons?.completed ?? module.lessons.filter((l) => l.isCompleted).length;
+  const completedLessons =
+    moduleProgress?.lessons?.completed ?? module.lessons.filter((l) => l.isCompleted).length;
   const totalQuizzes = moduleProgress?.quizzes?.total ?? module.quizzes.length;
-  const passedQuizzes = moduleProgress?.quizzes?.passed ?? module.quizzes.filter((q) => q.isPassed).length;
+  const passedQuizzes =
+    moduleProgress?.quizzes?.passed ?? module.quizzes.filter((q) => q.isPassed).length;
   const totalLabs = moduleProgress?.labs?.total ?? module.labs.length;
   const passedLabs = moduleProgress?.labs?.passed ?? module.labs.filter((l) => l.isPassed).length;
 
@@ -58,13 +60,9 @@ export const ModuleOverview = ({ module, moduleProgress, onContentClick }: Modul
     <div className="max-w-4xl mx-auto p-6">
       {/* Module Header */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
-          {module.title}
-        </h1>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">{module.title}</h1>
 
-        <p className="text-gray-700 dark:text-gray-300 text-lg mb-6">
-          {module.description}
-        </p>
+        <p className="text-gray-700 dark:text-gray-300 text-lg mb-6">{module.description}</p>
 
         {/* Module Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -73,7 +71,9 @@ export const ModuleOverview = ({ module, moduleProgress, onContentClick }: Modul
             <div>
               <p className="text-sm text-gray-600 dark:text-gray-400">Duración estimada</p>
               <p className="text-xl font-semibold text-gray-900 dark:text-white">
-                {module.duration >= 60 ? `${Math.round(module.duration / 60)}h` : `${module.duration} min`}
+                {module.duration >= 60
+                  ? `${Math.round(module.duration / 60)}h`
+                  : `${module.duration} min`}
               </p>
             </div>
           </div>
@@ -124,12 +124,7 @@ export const ModuleOverview = ({ module, moduleProgress, onContentClick }: Modul
               {nextQuiz && 'Tomar evaluación'}
               {nextLab && 'Comenzar laboratorio'}
             </span>
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -181,9 +176,7 @@ export const ModuleOverview = ({ module, moduleProgress, onContentClick }: Modul
                         {index + 1}
                       </span>
                       <div className="flex-1">
-                        <p className="font-medium text-gray-900 dark:text-white">
-                          {lesson.title}
-                        </p>
+                        <p className="font-medium text-gray-900 dark:text-white">{lesson.title}</p>
                         {lesson.description && (
                           <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-1">
                             {lesson.description}
@@ -220,9 +213,7 @@ export const ModuleOverview = ({ module, moduleProgress, onContentClick }: Modul
                     className="w-full flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-colors text-left"
                   >
                     <div className="flex-1">
-                      <p className="font-medium text-gray-900 dark:text-white">
-                        {quiz.title}
-                      </p>
+                      <p className="font-medium text-gray-900 dark:text-white">{quiz.title}</p>
                       {quiz.description && (
                         <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-1">
                           {quiz.description}
@@ -260,9 +251,7 @@ export const ModuleOverview = ({ module, moduleProgress, onContentClick }: Modul
                     className="w-full flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-colors text-left"
                   >
                     <div className="flex-1">
-                      <p className="font-medium text-gray-900 dark:text-white">
-                        {lab.title}
-                      </p>
+                      <p className="font-medium text-gray-900 dark:text-white">{lab.title}</p>
                       {lab.description && (
                         <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-1">
                           {lab.description}

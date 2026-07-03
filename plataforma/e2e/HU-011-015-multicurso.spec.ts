@@ -17,7 +17,7 @@ test.describe('Sistema Multi-Curso - Vistas de Estudiante', () => {
   test('HU-011: Sistema soporta múltiples cursos', async ({ page }) => {
     // Ir a catálogo de cursos
     await page.goto(`${BASE_URL}/courses`);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
 
     // Esperar que los cursos carguen
     await page.waitForSelector('[data-testid="course-card"], [data-testid="course-grid"], .course-card', { timeout: 10000 }).catch(() => {});

@@ -24,7 +24,9 @@ const InstructorAnalytics: React.FC = () => {
       }
     };
     load();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [addToast]);
 
   if (loading) {
@@ -48,22 +50,40 @@ const InstructorAnalytics: React.FC = () => {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div onClick={() => document.getElementById('course-stats')?.scrollIntoView({behavior: 'smooth'})} className="bg-[#0F2035] rounded-xl border border-white/10 p-4 cursor-pointer hover:scale-[1.03] hover:border-[#00A6FF]/30 hover:shadow-lg transition-all">
+        <div
+          onClick={() =>
+            document.getElementById('course-stats')?.scrollIntoView({ behavior: 'smooth' })
+          }
+          className="bg-[#0F2035] rounded-xl border border-white/10 p-4 cursor-pointer hover:scale-[1.03] hover:border-[#00A6FF]/30 hover:shadow-lg transition-all"
+        >
           <p className="text-white/50 text-sm">Total Inscripciones</p>
           <p className="text-2xl font-bold text-white mt-1">{analytics.totalEnrollments}</p>
         </div>
-        <div onClick={() => document.getElementById('course-stats')?.scrollIntoView({behavior: 'smooth'})} className="bg-[#0F2035] rounded-xl border border-white/10 p-4 cursor-pointer hover:scale-[1.03] hover:border-[#00A6FF]/30 hover:shadow-lg transition-all">
+        <div
+          onClick={() =>
+            document.getElementById('course-stats')?.scrollIntoView({ behavior: 'smooth' })
+          }
+          className="bg-[#0F2035] rounded-xl border border-white/10 p-4 cursor-pointer hover:scale-[1.03] hover:border-[#00A6FF]/30 hover:shadow-lg transition-all"
+        >
           <p className="text-white/50 text-sm">Cursos Completados</p>
           <p className="text-2xl font-bold text-white mt-1">{analytics.completedEnrollments}</p>
         </div>
-        <div onClick={() => document.getElementById('course-stats')?.scrollIntoView({behavior: 'smooth'})} className="bg-[#0F2035] rounded-xl border border-white/10 p-4 cursor-pointer hover:scale-[1.03] hover:border-[#00A6FF]/30 hover:shadow-lg transition-all">
+        <div
+          onClick={() =>
+            document.getElementById('course-stats')?.scrollIntoView({ behavior: 'smooth' })
+          }
+          className="bg-[#0F2035] rounded-xl border border-white/10 p-4 cursor-pointer hover:scale-[1.03] hover:border-[#00A6FF]/30 hover:shadow-lg transition-all"
+        >
           <p className="text-white/50 text-sm">Tasa de Completado</p>
           <p className="text-2xl font-bold text-white mt-1">{analytics.completionRate}%</p>
         </div>
       </div>
 
       {/* Per-Course Stats */}
-      <div id="course-stats" className="bg-[#0F2035] rounded-xl border border-white/10 overflow-hidden">
+      <div
+        id="course-stats"
+        className="bg-[#0F2035] rounded-xl border border-white/10 overflow-hidden"
+      >
         <div className="p-4 border-b border-white/10">
           <h2 className="text-lg font-semibold text-white">Estadisticas por Curso</h2>
         </div>
@@ -81,7 +101,11 @@ const InstructorAnalytics: React.FC = () => {
               </thead>
               <tbody>
                 {analytics.courseStats.map((cs) => (
-                  <tr key={cs.courseId} onClick={() => navigate(`/instructor/courses/${cs.courseId}/students`)} className="border-b border-white/5 hover:bg-white/5 cursor-pointer transition-colors">
+                  <tr
+                    key={cs.courseId}
+                    onClick={() => navigate(`/instructor/courses/${cs.courseId}/students`)}
+                    className="border-b border-white/5 hover:bg-white/5 cursor-pointer transition-colors"
+                  >
                     <td className="px-4 py-3 text-white font-medium">{cs.title}</td>
                     <td className="px-4 py-3 text-white/70">{cs.enrollments}</td>
                     <td className="px-4 py-3">

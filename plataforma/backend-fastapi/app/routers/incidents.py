@@ -18,10 +18,15 @@ router = APIRouter(prefix="/api/incidents", tags=["incidents"])
 async def _handle_webhook(request: Request, db: AsyncSession) -> dict:
     """Shared handler for webhook processing."""
     payload = await request.json()
+
+    # GlitchTip may send an array; extract the first element
+    if isinstance(payload, list):
+        payload = payload[0] if payload else {}
+
     logger.info("glitchtip_webhook_received", payload_keys=list(payload.keys()) if isinstance(payload, dict) else "not_dict")
 
     # GlitchTip sends Slack-format: {text, attachments[{title, title_link}]}
-    if "attachments" in payload and "title" not in payload:
+    if isinstance(payload, dict) and "attachments" in payload and "title" not in payload:
         attachments = payload.get("attachments", [])
         if attachments and isinstance(attachments, list):
             att = attachments[0]

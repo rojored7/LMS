@@ -1,14 +1,18 @@
-from fastapi import APIRouter, Depends, Request, Response
+import structlog
+from fastapi import APIRouter, Depends, Query, Request, Response
+from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.database import get_db
 from app.middleware.auth import get_current_user, get_token_service
 from app.middleware.rate_limit import limiter
+from app.models.user import User
 from app.schemas.auth import (
     AuthUserResponse,
     ChangePasswordRequest,
     ForgotPasswordRequest,
+    LdapLoginRequest,
     LoginRequest,
     RefreshRequest,
     RegisterRequest,
@@ -18,10 +22,21 @@ from app.schemas.auth import (
 from app.schemas.common import ApiResponse
 from app.services.auth_service import AuthService
 from app.services.token_service import TokenService
-from app.models.user import User
+
+logger = structlog.get_logger()
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 settings = get_settings()
+
+
+@router.get("/providers")
+async def get_auth_providers():
+    providers = {"local": True, "ldap": settings.LDAP_ENABLED}
+    if settings.OAUTH_ENABLED and settings.GOOGLE_CLIENT_ID:
+        providers["google"] = True
+    else:
+        providers["google"] = False
+    return ApiResponse(success=True, data={"providers": providers}).model_dump()
 
 
 def _set_cookies(response: Response, tokens: dict) -> None:
@@ -188,3 +203,137 @@ async def change_password(
 @router.get("/me")
 async def get_me(user: User = Depends(get_current_user)):
     return ApiResponse(success=True, data=AuthUserResponse.model_validate(user).model_dump()).model_dump()
+
+
+# ---------------------------------------------------------------------------
+# OAuth 2.0
+# ---------------------------------------------------------------------------
+
+
+@router.get("/oauth/authorize/{provider}")
+async def oauth_authorize(provider: str, request: Request):
+    if not settings.OAUTH_ENABLED:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="OAuth no habilitado")
+
+    if provider != "google":
+        from fastapi import HTTPException
+        raise HTTPException(status_code=400, detail=f"Proveedor OAuth no soportado: {provider}")
+
+    from app.services.oauth_service import OAuthService, generate_oauth_state
+
+    state = generate_oauth_state()
+
+    # Guardar state en Redis para validacion anti-CSRF
+    redis = request.app.state.redis
+    if redis:
+        await redis.set(f"oauth:state:{state}", provider, ex=600)
+
+    service = OAuthService(None, None)
+    url = service.get_google_authorization_url(state)
+    return RedirectResponse(url=url, status_code=302)
+
+
+@router.get("/oauth/callback/{provider}")
+async def oauth_callback(
+    provider: str,
+    request: Request,
+    code: str = Query(default=None),
+    state: str = Query(default=None),
+    error: str = Query(default=None),
+    db: AsyncSession = Depends(get_db),
+    token_service: TokenService = Depends(get_token_service),
+):
+    frontend_url = settings.FRONTEND_URL
+
+    if error:
+        logger.warning("oauth_callback_error", provider=provider, error=error)
+        return RedirectResponse(
+            url=f"{frontend_url}/login?error=oauth_denied",
+            status_code=302,
+        )
+
+    if not code or not state:
+        return RedirectResponse(
+            url=f"{frontend_url}/login?error=oauth_invalid",
+            status_code=302,
+        )
+
+    # Validar state anti-CSRF
+    redis = request.app.state.redis
+    if redis:
+        stored_provider = await redis.get(f"oauth:state:{state}")
+        if not stored_provider:
+            return RedirectResponse(
+                url=f"{frontend_url}/login?error=oauth_state_invalid",
+                status_code=302,
+            )
+        await redis.delete(f"oauth:state:{state}")
+        if stored_provider.decode() if isinstance(stored_provider, bytes) else stored_provider != provider:
+            return RedirectResponse(
+                url=f"{frontend_url}/login?error=oauth_state_mismatch",
+                status_code=302,
+            )
+
+    if provider != "google":
+        return RedirectResponse(
+            url=f"{frontend_url}/login?error=oauth_provider_unsupported",
+            status_code=302,
+        )
+
+    from app.services.oauth_service import OAuthService
+
+    oauth_service = OAuthService(db, token_service)
+
+    try:
+        token_data = await oauth_service.exchange_google_code(code)
+        user_info = await oauth_service.get_google_user_info(token_data["access_token"])
+        result = await oauth_service.login_or_create_user("google", user_info)
+        await db.commit()
+    except Exception as e:
+        logger.error("oauth_callback_failed", provider=provider, error=str(e))
+        return RedirectResponse(
+            url=f"{frontend_url}/login?error=oauth_failed",
+            status_code=302,
+        )
+
+    redirect = RedirectResponse(
+        url=f"{frontend_url}/auth/oauth/callback?success=true",
+        status_code=302,
+    )
+    _set_cookies(redirect, result["tokens"])
+    return redirect
+
+
+# ---------------------------------------------------------------------------
+# LDAP
+# ---------------------------------------------------------------------------
+
+
+@router.post("/login/ldap")
+@limiter.limit(settings.RATE_LIMIT_AUTH_LOGIN)
+async def login_ldap(
+    request: Request,
+    body: LdapLoginRequest,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+    token_service: TokenService = Depends(get_token_service),
+):
+    if not settings.LDAP_ENABLED:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="LDAP no habilitado")
+
+    from app.services.ldap_service import LdapService
+
+    ldap_service = LdapService()
+    auth_service = AuthService(db, token_service)
+    result = await ldap_service.authenticate_and_sync(
+        body.username, body.password, db, token_service
+    )
+    user = result["user"]
+    tokens = result["tokens"]
+    _set_cookies(response, tokens)
+    return ApiResponse(
+        success=True,
+        data={"user": AuthUserResponse.model_validate(user).model_dump()},
+    ).model_dump()

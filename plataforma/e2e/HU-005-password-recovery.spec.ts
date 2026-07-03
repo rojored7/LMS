@@ -118,7 +118,7 @@ test.describe('HU-005: Recuperación de contraseña funciona correctamente', () 
 
     // Esperar que la pagina cargue y la verificacion del token termine
     // La pagina primero muestra "Verificando token..." luego el resultado
-    await page.waitForLoadState('networkidle').catch(() => {});
+    await page.waitForLoadState('load').catch(() => {});
 
     // Dar tiempo a que el componente haga la llamada API y actualice estado
     await page.waitForTimeout(3000);
@@ -166,7 +166,7 @@ test.describe('HU-005: Recuperación de contraseña funciona correctamente', () 
     await page.goto(`${BASE_URL}/reset-password?token=${mockResetToken}`);
 
     // Esperar que la verificacion del token termine
-    await page.waitForLoadState('networkidle').catch(() => {});
+    await page.waitForLoadState('load').catch(() => {});
     await page.waitForTimeout(3000);
 
     const passwordField = page.locator('input[name="newPassword"]');
@@ -220,7 +220,7 @@ test.describe('HU-005: Recuperación de contraseña funciona correctamente', () 
     await page.goto(`${BASE_URL}/reset-password?token=${expiredToken}`);
 
     // Esperar que la verificacion del token termine (spinner desaparece)
-    await page.waitForLoadState('networkidle').catch(() => {});
+    await page.waitForLoadState('load').catch(() => {});
     await page.waitForTimeout(3000);
 
     // La pagina puede mostrar error inmediatamente (token invalido verificado via API)

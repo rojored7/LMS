@@ -12,6 +12,7 @@ from app.schemas.common import ApiResponse
 from app.utils.enrollment_check import verify_enrollment_or_staff
 from app.schemas.quiz import (
     QuestionCreate,
+    QuestionResponse,
     QuestionUpdate,
     QuizAttemptRequest,
     QuizCreate,
@@ -126,7 +127,7 @@ async def add_question(
     await verify_module_ownership(quiz_row.module_id, user, db)
     service = QuizService(db)
     question = await service.add_question(quiz_id, body.model_dump())
-    return ApiResponse(success=True, data={"id": question.id, "text": question.text}).model_dump()
+    return ApiResponse(success=True, data=QuestionResponse.model_validate(question).model_dump()).model_dump()
 
 
 @router.put("/questions/{question_id}")
@@ -145,7 +146,7 @@ async def update_question(
     await verify_module_ownership(quiz_row.module_id, user, db)
     service = QuizService(db)
     question = await service.update_question(question_id, body.model_dump(exclude_unset=True))
-    return ApiResponse(success=True, data={"id": question.id, "text": question.text}).model_dump()
+    return ApiResponse(success=True, data=QuestionResponse.model_validate(question).model_dump()).model_dump()
 
 
 @router.delete("/questions/{question_id}")

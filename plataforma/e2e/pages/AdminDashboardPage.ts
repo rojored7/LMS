@@ -8,7 +8,7 @@ export class AdminDashboardPage {
 
   async navigate() {
     await this.page.goto(`${BASE_URL}/admin`);
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForLoadState('load');
   }
 
   getTotalUsers() {

@@ -6,23 +6,25 @@
 import { Page, expect } from '@playwright/test';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
-const API_URL = process.env.API_URL || 'http://localhost:4000/api';
+const API_URL = process.env.API_URL || `${BASE_URL}/api`;
 
 /**
  * Navegar al panel de administración
  */
 export async function navigateToAdminPanel(page: Page) {
   await page.goto(`${BASE_URL}/admin`);
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('load');
 }
 
 /**
  * Navegar a la lista de usuarios
  */
 export async function navigateToUsersList(page: Page) {
-  await navigateToAdminPanel(page);
-  await page.click('a:has-text("Usuarios")');
-  await page.waitForURL(/.*users/);
+  await page.goto(`${BASE_URL}/admin/users`);
+  await page.waitForLoadState('load');
+  // Esperar a que aparezcan filas reales con el link "Ver Progreso" (solo existe con usuarios cargados)
+  await page.waitForSelector('tbody tr td a[href*="/admin/users/"]', { timeout: 20000 }).catch(() => {});
+  await page.waitForTimeout(300);
 }
 
 /**
@@ -33,9 +35,10 @@ export async function searchUserByEmail(page: Page, email: string) {
     page.locator('input[name="search"]')
   );
 
-  await searchInput.fill(email);
-  await searchInput.press('Enter');
-  await page.waitForTimeout(1000);
+  await searchInput.click();
+  await searchInput.clear();
+  await searchInput.pressSequentially(email, { delay: 50 });
+  await page.waitForTimeout(800);
 }
 
 /**

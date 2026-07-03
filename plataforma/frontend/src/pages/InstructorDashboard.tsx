@@ -26,13 +26,16 @@ const InstructorDashboard: React.FC = () => {
           setCourses(dashCourses);
         }
       } catch {
-        if (!cancelled) addToast({ type: 'error', message: 'Error al cargar datos del instructor' });
+        if (!cancelled)
+          addToast({ type: 'error', message: 'Error al cargar datos del instructor' });
       } finally {
         if (!cancelled) setLoading(false);
       }
     };
     loadData();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [addToast]);
 
   if (loading) {
@@ -65,14 +68,35 @@ const InstructorDashboard: React.FC = () => {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Mis Cursos" value={stats?.totalCourses ?? 0} onClick={() => navigate('/admin/courses')} />
-        <StatCard label="Total Estudiantes" value={stats?.totalStudents ?? 0} onClick={() => document.getElementById('courses-table')?.scrollIntoView({behavior: 'smooth'})} />
-        <StatCard label="Progreso Promedio" value={`${stats?.avgProgress ?? 0}%`} onClick={() => navigate('/instructor/analytics')} />
-        <StatCard label="Submissions Pendientes" value={stats?.pendingSubmissions ?? 0} onClick={() => navigate('/admin/courses')} />
+        <StatCard
+          label="Mis Cursos"
+          value={stats?.totalCourses ?? 0}
+          onClick={() => navigate('/admin/courses')}
+        />
+        <StatCard
+          label="Total Estudiantes"
+          value={stats?.totalStudents ?? 0}
+          onClick={() =>
+            document.getElementById('courses-table')?.scrollIntoView({ behavior: 'smooth' })
+          }
+        />
+        <StatCard
+          label="Progreso Promedio"
+          value={`${stats?.avgProgress ?? 0}%`}
+          onClick={() => navigate('/instructor/analytics')}
+        />
+        <StatCard
+          label="Submissions Pendientes"
+          value={stats?.pendingSubmissions ?? 0}
+          onClick={() => navigate('/admin/courses')}
+        />
       </div>
 
       {/* Courses Table */}
-      <div id="courses-table" className="bg-[#0F2035] rounded-xl border border-white/10 overflow-hidden">
+      <div
+        id="courses-table"
+        className="bg-[#0F2035] rounded-xl border border-white/10 overflow-hidden"
+      >
         <div className="p-4 border-b border-white/10">
           <h2 className="text-lg font-semibold text-white">Mis Cursos</h2>
         </div>
@@ -94,7 +118,11 @@ const InstructorDashboard: React.FC = () => {
               </thead>
               <tbody>
                 {courses.map((course) => (
-                  <tr key={course.id} onClick={() => navigate(`/instructor/courses/${course.id}/students`)} className="border-b border-white/5 hover:bg-white/5 cursor-pointer transition-colors">
+                  <tr
+                    key={course.id}
+                    onClick={() => navigate(`/instructor/courses/${course.id}/students`)}
+                    className="border-b border-white/5 hover:bg-white/5 cursor-pointer transition-colors"
+                  >
                     <td className="px-4 py-3 text-white font-medium">{course.title}</td>
                     <td className="px-4 py-3 text-white/70">{course.enrollmentCount}</td>
                     <td className="px-4 py-3">
@@ -152,7 +180,15 @@ const InstructorDashboard: React.FC = () => {
   );
 };
 
-function StatCard({ label, value, onClick }: { label: string; value: string | number; onClick?: () => void }) {
+function StatCard({
+  label,
+  value,
+  onClick,
+}: {
+  label: string;
+  value: string | number;
+  onClick?: () => void;
+}) {
   return (
     <div
       onClick={onClick}

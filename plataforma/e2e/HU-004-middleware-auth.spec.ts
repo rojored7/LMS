@@ -90,7 +90,7 @@ test.describe('HU-004: Middleware JWT valida tokens correctamente', () => {
 
     // Navegar a cursos (hace requests al API)
     await page.goto(`${BASE_URL}/courses`);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
 
     // Navegar a otra ruta protegida - la sesion debe seguir activa
     await page.goto(`${BASE_URL}/profile`);
@@ -104,7 +104,7 @@ test.describe('HU-004: Middleware JWT valida tokens correctamente', () => {
     // Las cookies HttpOnly se envian automaticamente en requests (withCredentials: true)
     // Verificar que el perfil del usuario carga (requiere auth)
     await page.goto(`${BASE_URL}/profile`);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
 
     // La pagina debe mostrar datos del usuario (no redirigir a login)
     await expect(page).not.toHaveURL(/.*login/);

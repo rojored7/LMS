@@ -1,10 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeftIcon, CloudArrowUpIcon } from '@heroicons/react/24/outline';
+import React from 'react';
+import { useParams, Link } from 'react-router-dom';
+import {
+  ArrowLeftIcon,
+  CloudArrowUpIcon,
+  PencilIcon,
+  TrashIcon,
+  PlusIcon,
+} from '@heroicons/react/24/outline';
 import MarkdownEditor from '../components/common/MarkdownEditor';
-import { useCourseEditorStore } from '../store/courseEditorStore';
-import { useUiStore } from '../store/uiStore';
-import courseManagementService, {
+import { ConfirmDialog } from '../components/common/ConfirmDialog';
+import ModuleFormModal from '../components/editor/ModuleFormModal';
+import LessonFormModal from '../components/editor/LessonFormModal';
+import QuizFormModal from '../components/editor/QuizFormModal';
+import LabFormModal from '../components/editor/LabFormModal';
+import { useCourseEditorHandlers } from '../hooks/useCourseEditorHandlers';
+import type {
   AdminLessonSummary,
   AdminQuizSummary,
   AdminLabSummary,
@@ -12,112 +22,58 @@ import courseManagementService, {
 
 const CourseEditorPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  const { addToast } = useUiStore();
 
   const {
     currentCourse,
     isDirty,
     isSaving,
     activeTab,
-    setCourse,
     updateCourse,
-    saveCourse,
     setActiveTab,
-    reset,
-  } = useCourseEditorStore();
-
-  const [loading, setLoading] = useState(true);
-  const [selectedModuleId, setSelectedModuleId] = useState<string | null>(null);
-  const [selectedLessonContent, setSelectedLessonContent] = useState('');
-
-  useEffect(() => {
-    loadCourse();
-    return () => {
-      reset();
-    };
-  }, [id]);
-
-  const loadCourse = async () => {
-    if (!id) return;
-
-    setLoading(true);
-    try {
-      const course = await courseManagementService.getCourse(id);
-      setCourse(course);
-      setLoading(false);
-    } catch (error: any) {
-      addToast({
-        title: 'Error al cargar el curso',
-        message: error.message || 'No se pudo cargar el curso',
-        type: 'error',
-        duration: 5000,
-      });
-      setLoading(false);
-    }
-  };
-
-  const handleSave = async () => {
-    if (!currentCourse || !id) return;
-
-    try {
-      await courseManagementService.updateCourse(id, {
-        title: currentCourse.title,
-        description: currentCourse.description,
-        level: currentCourse.level,
-        duration: currentCourse.duration,
-        tags: currentCourse.tags,
-        prerequisites: currentCourse.prerequisites,
-        objectives: currentCourse.objectives,
-      });
-
-      await saveCourse();
-
-      addToast({
-        title: 'Curso guardado',
-        message: 'Los cambios han sido guardados exitosamente',
-        type: 'success',
-        duration: 3000,
-      });
-    } catch (error: any) {
-      addToast({
-        title: 'Error al guardar',
-        message: error.message || 'No se pudieron guardar los cambios',
-        type: 'error',
-        duration: 5000,
-      });
-    }
-  };
-
-  const handlePublishToggle = async () => {
-    if (!currentCourse || !id) return;
-
-    try {
-      if (currentCourse.isPublished) {
-        await courseManagementService.unpublishCourse(id);
-        updateCourse({ isPublished: false });
-      } else {
-        await courseManagementService.publishCourse(id);
-        updateCourse({ isPublished: true });
-      }
-
-      addToast({
-        title: currentCourse.isPublished ? 'Curso despublicado' : 'Curso publicado',
-        message: currentCourse.isPublished
-          ? 'El curso ya no está disponible para estudiantes'
-          : 'El curso ahora está disponible para estudiantes',
-        type: 'success',
-        duration: 3000,
-      });
-    } catch (error: any) {
-      addToast({
-        title: 'Error',
-        message: error.message || 'No se pudo cambiar el estado del curso',
-        type: 'error',
-        duration: 5000,
-      });
-    }
-  };
+    loading,
+    selectedModuleId,
+    setSelectedModuleId,
+    selectedLessonContent,
+    setSelectedLessonContent,
+    selectedLessonId,
+    setSelectedLessonId,
+    setSelectedLessonModuleId,
+    showModuleModal,
+    setShowModuleModal,
+    editingModule,
+    showLessonModal,
+    setShowLessonModal,
+    editingLesson,
+    showQuizModal,
+    setShowQuizModal,
+    editingQuiz,
+    showLabModal,
+    setShowLabModal,
+    editingLab,
+    showDeleteConfirm,
+    setShowDeleteConfirm,
+    deleteTarget,
+    setDeleteTarget,
+    deleting,
+    loadCourse,
+    handleSave,
+    handlePublishToggle,
+    handleAddModule,
+    handleEditModule,
+    handleSaveModule,
+    handleAddLesson,
+    handleEditLesson,
+    handleSaveLesson,
+    handleSaveLessonContent,
+    handleAddQuiz,
+    handleEditQuiz,
+    handleSaveQuiz,
+    handleAddLab,
+    handleEditLab,
+    handleSaveLab,
+    requestDelete,
+    handleConfirmDelete,
+  } = useCourseEditorHandlers(id);
 
   if (loading) {
     return (
@@ -143,6 +99,8 @@ const CourseEditorPage: React.FC = () => {
     );
   }
 
+  const modules = (currentCourse.modules || []).map((m) => ({ id: m.id || '', title: m.title }));
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -161,20 +119,16 @@ const CourseEditorPage: React.FC = () => {
                   <h1 className="text-xl font-bold text-gray-900">{currentCourse.title}</h1>
                   <div className="flex items-center space-x-2 mt-1">
                     <span
-                      className={`
-                      inline-flex px-2 py-0.5 text-xs font-medium rounded-full
-                      ${currentCourse.isPublished ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}
-                    `}
+                      className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${currentCourse.isPublished ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}
                     >
                       {currentCourse.isPublished ? 'Publicado' : 'Borrador'}
                     </span>
                     {isDirty && (
-                      <span className="text-xs text-orange-600">• Cambios sin guardar</span>
+                      <span className="text-xs text-orange-600">Cambios sin guardar</span>
                     )}
                   </div>
                 </div>
               </div>
-
               <div className="flex items-center space-x-3">
                 <button
                   onClick={handlePublishToggle}
@@ -204,16 +158,9 @@ const CourseEditorPage: React.FC = () => {
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab as any)}
-                className={`
-                  py-4 px-1 border-b-2 font-medium text-sm transition-colors
-                  ${
-                    activeTab === tab
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700'
-                  }
-                `}
+                className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === tab ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
               >
-                {tab === 'overview' && 'Información general'}
+                {tab === 'overview' && 'Informacion general'}
                 {tab === 'content' && 'Contenido'}
                 {tab === 'quizzes' && 'Quizzes'}
                 {tab === 'labs' && 'Laboratorios'}
@@ -229,13 +176,10 @@ const CourseEditorPage: React.FC = () => {
           {/* Overview Tab */}
           {activeTab === 'overview' && (
             <div className="p-6">
-              <h2 className="text-lg font-semibold mb-6">Información del curso</h2>
-
+              <h2 className="text-lg font-semibold mb-6">Informacion del curso</h2>
               <div className="space-y-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Título del curso
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Titulo del curso</label>
                   <input
                     type="text"
                     value={currentCourse.title}
@@ -243,11 +187,8 @@ const CourseEditorPage: React.FC = () => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
-
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Descripción
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Descripcion</label>
                   <textarea
                     value={currentCourse.description}
                     onChange={(e) => updateCourse({ description: e.target.value })}
@@ -255,7 +196,6 @@ const CourseEditorPage: React.FC = () => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
-
                 <div className="grid grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Nivel</label>
@@ -270,11 +210,8 @@ const CourseEditorPage: React.FC = () => {
                       <option value="EXPERT">Experto</option>
                     </select>
                   </div>
-
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Duración (horas)
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Duracion (horas)</label>
                     <input
                       type="number"
                       value={currentCourse.duration}
@@ -284,11 +221,8 @@ const CourseEditorPage: React.FC = () => {
                     />
                   </div>
                 </div>
-
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Etiquetas (separadas por comas)
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Etiquetas (separadas por comas)</label>
                   <input
                     type="text"
                     value={(currentCourse.tags || []).join(', ')}
@@ -301,7 +235,7 @@ const CourseEditorPage: React.FC = () => {
                       })
                     }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    placeholder="seguridad, redes, programación"
+                    placeholder="seguridad, redes, programacion"
                   />
                 </div>
               </div>
@@ -311,57 +245,95 @@ const CourseEditorPage: React.FC = () => {
           {/* Content Tab */}
           {activeTab === 'content' && (
             <div className="flex h-[600px]">
-              {/* Module Tree */}
               <div className="w-1/3 border-r border-gray-200 p-4 overflow-y-auto">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-semibold">Módulos</h3>
-                  <button className="text-blue-600 hover:text-blue-700 text-sm">
-                    + Agregar módulo
+                  <h3 className="font-semibold">Modulos</h3>
+                  <button
+                    onClick={handleAddModule}
+                    className="text-blue-600 hover:text-blue-700 text-sm flex items-center space-x-1"
+                  >
+                    <PlusIcon className="w-4 h-4" />
+                    <span>Agregar modulo</span>
                   </button>
                 </div>
-
                 <div className="space-y-2">
                   {(currentCourse.modules || []).map((module) => (
                     <div key={module.id} className="border border-gray-200 rounded-lg p-3">
-                      <div
-                        onClick={() => setSelectedModuleId(module.id || null)}
-                        className={`cursor-pointer ${selectedModuleId === module.id ? 'text-blue-600' : ''}`}
-                      >
-                        <h4 className="font-medium">{module.title}</h4>
-                        <p className="text-sm text-gray-500 mt-1">
-                          {module.lessons?.length || 0} lecciones
-                        </p>
+                      <div className="flex items-center justify-between">
+                        <div
+                          onClick={() => setSelectedModuleId(module.id || null)}
+                          className={`cursor-pointer flex-1 ${selectedModuleId === module.id ? 'text-blue-600' : ''}`}
+                        >
+                          <h4 className="font-medium">{module.title}</h4>
+                          <p className="text-sm text-gray-500 mt-1">{module.lessons?.length || 0} lecciones</p>
+                        </div>
+                        <div className="flex items-center space-x-1 ml-2">
+                          <button onClick={() => handleEditModule(module)} className="p-1 text-gray-400 hover:text-blue-600" title="Editar modulo">
+                            <PencilIcon className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => requestDelete('module', module.id || '', module.title)} className="p-1 text-gray-400 hover:text-red-600" title="Eliminar modulo">
+                            <TrashIcon className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
-
-                      {selectedModuleId === module.id && module.lessons && (
-                        <div className="mt-3 ml-4 space-y-1">
-                          {module.lessons.map((lesson) => (
-                            <div
-                              key={lesson.id}
-                              onClick={() =>
-                                setSelectedLessonContent((lesson as AdminLessonSummary).content || '')
-                              }
-                              className="text-sm text-gray-700 hover:text-blue-600 cursor-pointer py-1"
-                            >
-                              • {lesson.title}
+                      {selectedModuleId === module.id && (
+                        <div className="mt-3 ml-2 space-y-1">
+                          {(module.lessons || []).map((lesson) => (
+                            <div key={lesson.id} className="flex items-center justify-between group py-1">
+                              <div
+                                onClick={() => {
+                                  setSelectedLessonContent((lesson as AdminLessonSummary).content || '');
+                                  setSelectedLessonId(lesson.id || null);
+                                  setSelectedLessonModuleId(module.id || null);
+                                }}
+                                className="text-sm text-gray-700 hover:text-blue-600 cursor-pointer flex-1 truncate"
+                              >
+                                {lesson.title}
+                              </div>
+                              <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button onClick={() => handleEditLesson(module.id || '', lesson)} className="p-0.5 text-gray-400 hover:text-blue-600">
+                                  <PencilIcon className="w-3 h-3" />
+                                </button>
+                                <button onClick={() => requestDelete('lesson', lesson.id || '', lesson.title, module.id)} className="p-0.5 text-gray-400 hover:text-red-600">
+                                  <TrashIcon className="w-3 h-3" />
+                                </button>
+                              </div>
                             </div>
                           ))}
+                          <button
+                            onClick={() => handleAddLesson(module.id || '')}
+                            className="text-xs text-blue-600 hover:text-blue-700 flex items-center space-x-1 mt-2"
+                          >
+                            <PlusIcon className="w-3 h-3" />
+                            <span>Agregar leccion</span>
+                          </button>
                         </div>
                       )}
                     </div>
                   ))}
                 </div>
               </div>
-
-              {/* Lesson Editor */}
-              <div className="flex-1 p-4">
-                <h3 className="font-semibold mb-4">Editor de contenido</h3>
-                <MarkdownEditor
-                  value={selectedLessonContent}
-                  onChange={(value) => setSelectedLessonContent(value)}
-                  height={500}
-                  placeholder="Selecciona una lección para editar su contenido..."
-                />
+              <div className="flex-1 p-4 flex flex-col">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-semibold">Editor de contenido</h3>
+                  {selectedLessonId && (
+                    <button
+                      onClick={handleSaveLessonContent}
+                      className="px-3 py-1.5 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 flex items-center space-x-1"
+                    >
+                      <CloudArrowUpIcon className="w-4 h-4" />
+                      <span>Guardar contenido</span>
+                    </button>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <MarkdownEditor
+                    value={selectedLessonContent}
+                    onChange={(value) => setSelectedLessonContent(value)}
+                    height={500}
+                    placeholder="Selecciona una leccion para editar su contenido..."
+                  />
+                </div>
               </div>
             </div>
           )}
@@ -371,11 +343,11 @@ const CourseEditorPage: React.FC = () => {
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-lg font-semibold">Quizzes del curso</h2>
-                <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                  + Agregar quiz
+                <button onClick={handleAddQuiz} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center space-x-1">
+                  <PlusIcon className="w-5 h-5" />
+                  <span>Agregar quiz</span>
                 </button>
               </div>
-
               <div className="space-y-4">
                 {(currentCourse.modules || []).map(
                   (module) =>
@@ -384,30 +356,26 @@ const CourseEditorPage: React.FC = () => {
                       <div key={module.id} className="border border-gray-200 rounded-lg p-4">
                         <h3 className="font-medium mb-3">{module.title}</h3>
                         <div className="space-y-2">
-                          {module.quizzes.map((quiz) => (
-                            <div
-                              key={quiz.id}
-                              className="flex items-center justify-between p-3 bg-gray-50 rounded"
-                            >
+                          {(module.quizzes || []).map((quiz) => (
+                            <div key={quiz.id} className="flex items-center justify-between p-3 bg-gray-50 rounded">
                               <div>
                                 <p className="font-medium">{quiz.title}</p>
                                 <p className="text-sm text-gray-500">
-                                  {(quiz as AdminQuizSummary).questionCount || 0} preguntas • Puntaje mínimo:{' '}
-                                  {(quiz as AdminQuizSummary).passingScore || 0}%
+                                  {(quiz as unknown as AdminQuizSummary).questionCount || 0} preguntas - Puntaje minimo: {(quiz as unknown as AdminQuizSummary).passingScore || 0}%
                                 </p>
                               </div>
-                              <button className="text-blue-600 hover:text-blue-700">Editar</button>
+                              <div className="flex items-center space-x-2">
+                                <button onClick={() => handleEditQuiz(module.id || '', quiz)} className="text-blue-600 hover:text-blue-700 text-sm">Editar</button>
+                                <button onClick={() => requestDelete('quiz', quiz.id || '', quiz.title, module.id)} className="text-red-600 hover:text-red-700 text-sm">Eliminar</button>
+                              </div>
                             </div>
                           ))}
                         </div>
                       </div>
                     )
                 )}
-
                 {!(currentCourse.modules || []).some((m) => m.quizzes && m.quizzes.length > 0) && (
-                  <div className="text-center py-12 text-gray-500">
-                    No hay quizzes en este curso
-                  </div>
+                  <div className="text-center py-12 text-gray-500">No hay quizzes en este curso</div>
                 )}
               </div>
             </div>
@@ -418,11 +386,11 @@ const CourseEditorPage: React.FC = () => {
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-lg font-semibold">Laboratorios del curso</h2>
-                <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                  + Agregar laboratorio
+                <button onClick={handleAddLab} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center space-x-1">
+                  <PlusIcon className="w-5 h-5" />
+                  <span>Agregar laboratorio</span>
                 </button>
               </div>
-
               <div className="space-y-4">
                 {(currentCourse.modules || []).map(
                   (module) =>
@@ -431,36 +399,55 @@ const CourseEditorPage: React.FC = () => {
                       <div key={module.id} className="border border-gray-200 rounded-lg p-4">
                         <h3 className="font-medium mb-3">{module.title}</h3>
                         <div className="space-y-2">
-                          {module.labs.map((lab) => (
-                            <div
-                              key={lab.id}
-                              className="flex items-center justify-between p-3 bg-gray-50 rounded"
-                            >
+                          {(module.labs || []).map((lab) => (
+                            <div key={lab.id} className="flex items-center justify-between p-3 bg-gray-50 rounded">
                               <div>
                                 <p className="font-medium">{lab.title}</p>
                                 <p className="text-sm text-gray-500">
-                                  Lenguaje: {lab.language || '?'} •{' '}
-                                  {(lab as AdminLabSummary).testCaseCount || 0} casos de prueba
+                                  Lenguaje: {lab.language || '?'} - {(lab as unknown as AdminLabSummary).testCaseCount || 0} casos de prueba
                                 </p>
                               </div>
-                              <button className="text-blue-600 hover:text-blue-700">Editar</button>
+                              <div className="flex items-center space-x-2">
+                                <button onClick={() => handleEditLab(module.id || '', lab)} className="text-blue-600 hover:text-blue-700 text-sm">Editar</button>
+                                <button onClick={() => requestDelete('lab', lab.id || '', lab.title, module.id)} className="text-red-600 hover:text-red-700 text-sm">Eliminar</button>
+                              </div>
                             </div>
                           ))}
                         </div>
                       </div>
                     )
                 )}
-
                 {!(currentCourse.modules || []).some((m) => m.labs && m.labs.length > 0) && (
-                  <div className="text-center py-12 text-gray-500">
-                    No hay laboratorios en este curso
-                  </div>
+                  <div className="text-center py-12 text-gray-500">No hay laboratorios en este curso</div>
                 )}
               </div>
             </div>
           )}
         </div>
       </div>
+
+      {/* Modals */}
+      <ModuleFormModal isOpen={showModuleModal} onClose={() => setShowModuleModal(false)} onSave={handleSaveModule} module={editingModule} />
+      <LessonFormModal isOpen={showLessonModal} onClose={() => setShowLessonModal(false)} onSave={handleSaveLesson} lesson={editingLesson} />
+      <QuizFormModal
+        isOpen={showQuizModal}
+        onClose={() => { setShowQuizModal(false); loadCourse(); }}
+        onSave={handleSaveQuiz}
+        quiz={editingQuiz}
+        modules={modules}
+        courseId={id}
+      />
+      <LabFormModal isOpen={showLabModal} onClose={() => setShowLabModal(false)} onSave={handleSaveLab} lab={editingLab} modules={modules} />
+      <ConfirmDialog
+        isOpen={showDeleteConfirm}
+        onClose={() => { setShowDeleteConfirm(false); setDeleteTarget(null); }}
+        onConfirm={handleConfirmDelete}
+        title="Confirmar eliminacion"
+        message={`Estas seguro de eliminar "${deleteTarget?.label || ''}"? Esta accion no se puede deshacer.`}
+        variant="danger"
+        confirmText="Eliminar"
+        isLoading={deleting}
+      />
     </div>
   );
 };

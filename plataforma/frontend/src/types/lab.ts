@@ -1,66 +1,64 @@
-/**
- * Lab Types
- */
+export type LabType = 'EXECUTABLE' | 'DELIVERABLE';
+
+export type ProgrammingLanguage = 'python' | 'javascript' | 'bash';
 
 export interface Lab {
   id: string;
   moduleId: string;
   title: string;
-  description: string;
-  instructions: string;
+  description: string | null;
+  labType: LabType;
   language: ProgrammingLanguage;
-  starterCode: string;
-  tests: LabTest[];
-  timeLimit?: number; // in seconds
-  xpReward: number;
-  order: number;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export enum ProgrammingLanguage {
-  PYTHON = 'PYTHON',
-  JAVASCRIPT = 'JAVASCRIPT',
-  BASH = 'BASH',
+  starterCode: string | null;
+  solution?: string | null;
+  tests: LabTest[] | null;
+  hints: string[] | null;
+  // DELIVERABLE-only
+  responseInstructions: string | null;
+  fileRequired: boolean;
+  allowedFileTypes: string | null;
 }
 
 export interface LabTest {
-  id: string;
-  labId: string;
-  name: string;
-  input: string;
+  input?: string;
   expectedOutput: string;
-  isHidden: boolean;
-  order: number;
+  type: 'exact' | 'contains' | 'regex';
+  description?: string;
 }
 
-export interface LabSubmission {
+export interface LabSubmissionResult {
+  submissionId?: string;
+  passed: boolean | null;
+  stdout?: string;
+  stderr?: string;
+  exitCode?: number;
+  executionTime?: number;
+  error?: string;
+  executorError?: boolean;
+  manual?: boolean;
+  message?: string;
+}
+
+export interface LabSubmissionSummary {
   id: string;
-  labId: string;
-  userId: string;
+  passed: boolean | null;
+  stdout: string | null;
+  stderr: string | null;
+  exitCode: number | null;
+  executionTime: number | null;
   code: string;
-  language: ProgrammingLanguage;
-  output: string;
-  error?: string;
-  testResults: TestResult[];
-  passed: boolean;
-  executionTime: number; // in milliseconds
-  submittedAt: string;
+  language: string;
+  responseText: string | null;
+  filePath: string | null;
+  score: number | null;
+  feedback: string | null;
+  gradedBy: string | null;
+  gradedAt: string | null;
+  submittedAt: string | null;
 }
 
-export interface TestResult {
-  testId: string;
-  testName: string;
+export interface GradeSubmissionPayload {
   passed: boolean;
-  input: string;
-  expectedOutput: string;
-  actualOutput: string;
-  error?: string;
-}
-
-export interface ExecutionResult {
-  output: string;
-  error?: string;
-  exitCode: number;
-  executionTime: number;
+  feedback?: string;
+  score?: number;
 }

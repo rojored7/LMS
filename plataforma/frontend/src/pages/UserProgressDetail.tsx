@@ -44,7 +44,7 @@ export const UserProgressDetail: React.FC = () => {
         badgeService.getAllBadges(),
       ]);
 
-      setUser(userResponse.data);
+      setUser(userResponse.data || userResponse);
       setUserEnrollments(enrollmentsData);
       setUserBadges(badgesData);
       setAllBadges(allBadgesData);
@@ -90,13 +90,10 @@ export const UserProgressDetail: React.FC = () => {
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
         <div className="flex items-center gap-4">
           <div className="w-20 h-20 rounded-full bg-blue-600 flex items-center justify-center text-white text-2xl font-bold">
-            {user.firstName[0]}
-            {user.lastName[0]}
+            {(user.name || '?')[0]}
           </div>
           <div className="flex-1">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-              {user.firstName} {user.lastName}
-            </h1>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{user.name}</h1>
             <p className="text-gray-600 dark:text-gray-400">{user.email}</p>
           </div>
         </div>

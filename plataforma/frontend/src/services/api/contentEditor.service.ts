@@ -5,8 +5,12 @@ import {
   CourseQuiz,
   CourseLab,
   QuizQuestion,
-  TestCase,
 } from './courseManagement.service';
+
+interface ApiEnvelope<T> {
+  success: boolean;
+  data: T;
+}
 
 class ContentEditorService {
   private baseURL = '/admin/courses';
@@ -16,7 +20,7 @@ class ContentEditorService {
    */
   async createModule(courseId: string, module: Omit<CourseModule, 'id'>): Promise<CourseModule> {
     const response = await api.post(`${this.baseURL}/${courseId}/modules`, module);
-    return (response as any).data;
+    return (response as unknown as ApiEnvelope<any>).data;
   }
 
   async updateModule(
@@ -25,7 +29,7 @@ class ContentEditorService {
     updates: Partial<CourseModule>
   ): Promise<CourseModule> {
     const response = await api.put(`${this.baseURL}/${courseId}/modules/${moduleId}`, updates);
-    return (response as any).data;
+    return (response as unknown as ApiEnvelope<any>).data;
   }
 
   async deleteModule(courseId: string, moduleId: string): Promise<void> {
@@ -50,7 +54,7 @@ class ContentEditorService {
       `${this.baseURL}/${courseId}/modules/${moduleId}/lessons`,
       lesson
     );
-    return (response as any).data;
+    return (response as unknown as ApiEnvelope<any>).data;
   }
 
   async updateLesson(
@@ -63,7 +67,7 @@ class ContentEditorService {
       `${this.baseURL}/${courseId}/modules/${moduleId}/lessons/${lessonId}`,
       updates
     );
-    return (response as any).data;
+    return (response as unknown as ApiEnvelope<any>).data;
   }
 
   async deleteLesson(courseId: string, moduleId: string, lessonId: string): Promise<void> {
@@ -80,143 +84,79 @@ class ContentEditorService {
    * Quiz CRUD operations
    */
   async createQuiz(
-    courseId: string,
+    _courseId: string,
     moduleId: string,
     quiz: Omit<CourseQuiz, 'id'>
   ): Promise<CourseQuiz> {
-    const response = await api.post(
-      `${this.baseURL}/${courseId}/modules/${moduleId}/quizzes`,
-      quiz
-    );
-    return (response as any).data;
+    const response = await api.post(`/quizzes/module/${moduleId}`, quiz);
+    return (response as unknown as ApiEnvelope<any>).data;
   }
 
   async updateQuiz(
-    courseId: string,
-    moduleId: string,
+    _courseId: string,
+    _moduleId: string,
     quizId: string,
     updates: Partial<CourseQuiz>
   ): Promise<CourseQuiz> {
-    const response = await api.put(
-      `${this.baseURL}/${courseId}/modules/${moduleId}/quizzes/${quizId}`,
-      updates
-    );
-    return (response as any).data;
+    const response = await api.put(`/quizzes/${quizId}`, updates);
+    return (response as unknown as ApiEnvelope<any>).data;
   }
 
-  async deleteQuiz(courseId: string, moduleId: string, quizId: string): Promise<void> {
-    await api.delete(`${this.baseURL}/${courseId}/modules/${moduleId}/quizzes/${quizId}`);
+  async deleteQuiz(_courseId: string, _moduleId: string, quizId: string): Promise<void> {
+    await api.delete(`/quizzes/${quizId}`);
   }
 
-  /**
-   * Quiz Question operations
-   */
   async addQuestion(
-    courseId: string,
-    moduleId: string,
+    _courseId: string,
+    _moduleId: string,
     quizId: string,
     question: Omit<QuizQuestion, 'id'>
   ): Promise<QuizQuestion> {
-    const response = await api.post(
-      `${this.baseURL}/${courseId}/modules/${moduleId}/quizzes/${quizId}/questions`,
-      question
-    );
-    return (response as any).data;
+    const response = await api.post(`/quizzes/${quizId}/questions`, question);
+    return (response as unknown as ApiEnvelope<any>).data;
   }
 
   async updateQuestion(
-    courseId: string,
-    moduleId: string,
-    quizId: string,
+    _courseId: string,
+    _moduleId: string,
+    _quizId: string,
     questionId: string,
     updates: Partial<QuizQuestion>
   ): Promise<QuizQuestion> {
-    const response = await api.put(
-      `${this.baseURL}/${courseId}/modules/${moduleId}/quizzes/${quizId}/questions/${questionId}`,
-      updates
-    );
-    return (response as any).data;
+    const response = await api.put(`/quizzes/questions/${questionId}`, updates);
+    return (response as unknown as ApiEnvelope<any>).data;
   }
 
   async deleteQuestion(
-    courseId: string,
-    moduleId: string,
-    quizId: string,
+    _courseId: string,
+    _moduleId: string,
+    _quizId: string,
     questionId: string
   ): Promise<void> {
-    await api.delete(
-      `${this.baseURL}/${courseId}/modules/${moduleId}/quizzes/${quizId}/questions/${questionId}`
-    );
+    await api.delete(`/quizzes/questions/${questionId}`);
   }
 
-  /**
-   * Lab CRUD operations
-   */
   async createLab(
-    courseId: string,
+    _courseId: string,
     moduleId: string,
     lab: Omit<CourseLab, 'id'>
   ): Promise<CourseLab> {
-    const response = await api.post(`${this.baseURL}/${courseId}/modules/${moduleId}/labs`, lab);
-    return (response as any).data;
+    const response = await api.post(`/labs/module/${moduleId}`, lab);
+    return (response as unknown as ApiEnvelope<any>).data;
   }
 
   async updateLab(
-    courseId: string,
-    moduleId: string,
+    _courseId: string,
+    _moduleId: string,
     labId: string,
     updates: Partial<CourseLab>
   ): Promise<CourseLab> {
-    const response = await api.put(
-      `${this.baseURL}/${courseId}/modules/${moduleId}/labs/${labId}`,
-      updates
-    );
-    return (response as any).data;
+    const response = await api.put(`/labs/${labId}`, updates);
+    return (response as unknown as ApiEnvelope<any>).data;
   }
 
-  async deleteLab(courseId: string, moduleId: string, labId: string): Promise<void> {
-    await api.delete(`${this.baseURL}/${courseId}/modules/${moduleId}/labs/${labId}`);
-  }
-
-  /**
-   * Test Case operations
-   */
-  async addTestCase(
-    courseId: string,
-    moduleId: string,
-    labId: string,
-    testCase: Omit<TestCase, 'id'>
-  ): Promise<TestCase> {
-    const response = await api.post(
-      `${this.baseURL}/${courseId}/modules/${moduleId}/labs/${labId}/test-cases`,
-      testCase
-    );
-    return (response as any).data;
-  }
-
-  async updateTestCase(
-    courseId: string,
-    moduleId: string,
-    labId: string,
-    testCaseId: string,
-    updates: Partial<TestCase>
-  ): Promise<TestCase> {
-    const response = await api.put(
-      `${this.baseURL}/${courseId}/modules/${moduleId}/labs/${labId}/test-cases/${testCaseId}`,
-      updates
-    );
-    return (response as any).data;
-  }
-
-  async deleteTestCase(
-    courseId: string,
-    moduleId: string,
-    labId: string,
-    testCaseId: string
-  ): Promise<void> {
-    await api.delete(
-      `${this.baseURL}/${courseId}/modules/${moduleId}/labs/${labId}/test-cases/${testCaseId}`
-    );
+  async deleteLab(_courseId: string, _moduleId: string, labId: string): Promise<void> {
+    await api.delete(`/labs/${labId}`);
   }
 
   /**

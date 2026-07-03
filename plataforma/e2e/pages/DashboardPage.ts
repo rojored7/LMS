@@ -8,7 +8,7 @@ export class DashboardPage {
 
   async navigate() {
     await this.page.goto(`${BASE_URL}/dashboard`);
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForLoadState('load');
   }
 
   getRoot() {

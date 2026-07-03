@@ -20,10 +20,12 @@ class User(Base):
     __tablename__ = "users"
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_gen_id)
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
-    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     avatar: Mapped[str | None] = mapped_column(String(500), nullable=True)
     role: Mapped[UserRole] = mapped_column(SAEnum(UserRole), default=UserRole.STUDENT, nullable=False)
+    auth_provider: Mapped[str] = mapped_column(String(50), default="local", nullable=False)
+    external_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     xp: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     theme: Mapped[str] = mapped_column(String(20), default="system", nullable=False)
     locale: Mapped[str] = mapped_column(String(10), default="es", nullable=False)
@@ -41,9 +43,15 @@ class User(Base):
     # TODO: Implementar servicio de chat - migrar desde Socket.IO Express
     chat_messages: Mapped[list["ChatMessage"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     user_progress: Mapped[list["UserProgress"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    xp_transactions: Mapped[list["XpTransaction"]] = relationship(back_populates="user", cascade="all, delete-orphan", foreign_keys="[XpTransaction.user_id]")
     training_profile: Mapped["TrainingProfile | None"] = relationship(back_populates="users")
 
-    __table_args__ = (Index("ix_users_email", "email"), Index("ix_users_role", "role"))
+    __table_args__ = (
+        Index("ix_users_email", "email"),
+        Index("ix_users_role", "role"),
+        Index("ix_users_xp", "xp"),
+        Index("ix_users_auth_provider_external_id", "auth_provider", "external_id"),
+    )
 
 
 class TrainingProfile(Base):

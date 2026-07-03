@@ -6,7 +6,7 @@
 import { Page, expect } from '@playwright/test';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
-const API_URL = process.env.API_URL || 'http://localhost:4000/api';
+const API_URL = process.env.API_URL || `${BASE_URL}/api`;
 
 /**
  * Inscribirse en un curso
@@ -44,7 +44,7 @@ export async function navigateToModule(page: Page, courseSlug: string, moduleNum
   );
 
   await moduleLink.click();
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('load');
 }
 
 /**
@@ -57,7 +57,7 @@ export async function navigateToLesson(page: Page, lessonId: string | number) {
   );
 
   await lessonLink.click();
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('load');
 }
 
 /**
@@ -219,5 +219,5 @@ export async function searchCourses(page: Page, searchTerm: string) {
   await searchInput.fill(searchTerm);
   await searchInput.press('Enter');
 
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('load');
 }

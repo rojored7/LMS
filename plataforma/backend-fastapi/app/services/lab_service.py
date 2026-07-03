@@ -1,7 +1,8 @@
+from datetime import datetime, timezone
+
 import structlog
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from app.middleware.error_handler import NotFoundError
 from app.models.assessment import Lab, LabSubmission
@@ -47,16 +48,29 @@ class LabService:
         await self.db.flush()
         logger.info("lab_deleted", lab_id=lab_id)
 
-    async def submit(self, lab_id: str, user_id: str, code: str, language: str = "python", passed: bool = False, stdout: str = "", stderr: str = "", exit_code: int = 0, execution_time: int = 0) -> LabSubmission:
-        from sqlalchemy import func, select as sa_select
-        lab = await self.get_by_id(lab_id)
-        # Count previous attempts
-        count_result = await self.db.execute(
-            sa_select(func.count()).select_from(LabSubmission).where(
+    async def _attempt_count(self, lab_id: str, user_id: str) -> int:
+        from sqlalchemy import func
+        result = await self.db.execute(
+            select(func.count()).select_from(LabSubmission).where(
                 LabSubmission.lab_id == lab_id, LabSubmission.user_id == user_id
             )
         )
-        attempt_count = (count_result.scalar() or 0) + 1
+        return (result.scalar() or 0) + 1
+
+    async def submit_executable(
+        self,
+        lab_id: str,
+        user_id: str,
+        code: str,
+        language: str,
+        passed: bool,
+        stdout: str = "",
+        stderr: str = "",
+        exit_code: int = 0,
+        execution_time: int = 0,
+    ) -> LabSubmission:
+        lab = await self.get_by_id(lab_id)
+        attempts = await self._attempt_count(lab_id, user_id)
         submission = LabSubmission(
             user_id=user_id,
             lab_id=lab_id,
@@ -67,7 +81,7 @@ class LabService:
             stderr=stderr or "",
             exit_code=exit_code,
             execution_time=execution_time,
-            attempts=attempt_count,
+            attempts=attempts,
         )
         self.db.add(submission)
         await self.db.flush()
@@ -77,7 +91,60 @@ class LabService:
             ps = ProgressService(self.db)
             await ps.mark_lab_complete(user_id, lab.module_id)
 
-        logger.info("lab_submitted", lab_id=lab_id, user_id=user_id, passed=passed)
+        logger.info("lab_submitted_executable", lab_id=lab_id, user_id=user_id, passed=passed)
+        return submission
+
+    async def submit_deliverable(
+        self,
+        lab_id: str,
+        user_id: str,
+        response_text: str,
+        language: str = "none",
+    ) -> LabSubmission:
+        attempts = await self._attempt_count(lab_id, user_id)
+        submission = LabSubmission(
+            user_id=user_id,
+            lab_id=lab_id,
+            code="",
+            language=language,
+            passed=None,
+            response_text=response_text,
+            attempts=attempts,
+        )
+        self.db.add(submission)
+        await self.db.flush()
+        logger.info("lab_submitted_deliverable", lab_id=lab_id, user_id=user_id)
+        return submission
+
+    async def grade_submission(
+        self,
+        submission_id: str,
+        grader_id: str,
+        passed: bool,
+        feedback: str | None = None,
+        score: int | None = None,
+    ) -> LabSubmission:
+        result = await self.db.execute(
+            select(LabSubmission).where(LabSubmission.id == submission_id)
+        )
+        submission = result.scalar_one_or_none()
+        if not submission:
+            raise NotFoundError("Submission no encontrada")
+
+        submission.passed = passed
+        submission.feedback = feedback
+        submission.score = score
+        submission.graded_by = grader_id
+        submission.graded_at = datetime.now(timezone.utc)
+        await self.db.flush()
+
+        if passed:
+            lab = await self.get_by_id(submission.lab_id)
+            from app.services.progress_service import ProgressService
+            ps = ProgressService(self.db)
+            await ps.mark_lab_complete(submission.user_id, lab.module_id)
+
+        logger.info("lab_submission_graded", submission_id=submission_id, passed=passed)
         return submission
 
     async def get_submissions(self, lab_id: str, user_id: str | None = None) -> list[LabSubmission]:
@@ -87,3 +154,28 @@ class LabService:
         query = query.order_by(LabSubmission.submitted_at.desc())
         result = await self.db.execute(query)
         return list(result.scalars().all())
+
+    # Kept for backwards compatibility with manual complete flow
+    async def submit(
+        self,
+        lab_id: str,
+        user_id: str,
+        code: str,
+        language: str = "python",
+        passed: bool = False,
+        stdout: str = "",
+        stderr: str = "",
+        exit_code: int = 0,
+        execution_time: int = 0,
+    ) -> LabSubmission:
+        return await self.submit_executable(
+            lab_id=lab_id,
+            user_id=user_id,
+            code=code,
+            language=language,
+            passed=passed,
+            stdout=stdout,
+            stderr=stderr,
+            exit_code=exit_code,
+            execution_time=execution_time,
+        )

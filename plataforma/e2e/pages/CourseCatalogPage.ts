@@ -8,7 +8,7 @@ export class CourseCatalogPage {
 
   async navigate() {
     await this.page.goto(`${BASE_URL}/courses`);
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForLoadState('load');
   }
 
   async getCourseCards() {
@@ -31,7 +31,7 @@ export class CourseCatalogPage {
 
   async clickCourseCard(index = 0) {
     await this.page.locator(SELECTORS.courses.card).nth(index).click();
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForLoadState('load');
   }
 
   async enrollInCourse(index = 0) {

@@ -24,7 +24,9 @@ const InstructorGradebook: React.FC = () => {
       }
     };
     load();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [courseId, addToast]);
 
   if (loading) {
@@ -64,48 +66,89 @@ const InstructorGradebook: React.FC = () => {
               <tbody>
                 {entries.map((entry) => (
                   <React.Fragment key={entry.userId}>
-                  <tr onClick={() => setExpandedEntry(expandedEntry === entry.userId ? null : entry.userId)} className="border-b border-white/5 hover:bg-white/5 cursor-pointer transition-colors">
-                    <td className="px-4 py-3">
-                      <div>
-                        <p className="text-white font-medium">{entry.name}</p>
-                        <p className="text-white/50 text-sm">{entry.email}</p>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <div className="w-20 h-2 bg-white/10 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-[#00A6FF] rounded-full"
-                            style={{ width: `${entry.progress}%` }}
-                          />
-                        </div>
-                        <span className="text-white/70 text-sm">{Math.round(entry.progress)}%</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-white/70">
-                      {entry.quizAvgScore !== null ? `${entry.quizAvgScore}%` : '-'}
-                    </td>
-                    <td className="px-4 py-3 text-white/70">{entry.modulesCompleted}</td>
-                    <td className="px-4 py-3 text-white/70">
-                      {entry.completedAt
-                        ? new Date(entry.completedAt).toLocaleDateString('es')
-                        : 'En progreso'}
-                    </td>
-                  </tr>
-                  {expandedEntry === entry.userId && (
-                    <tr>
-                      <td colSpan={5} className="px-4 py-3 bg-white/5">
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                          <div><span className="text-white/40">Estudiante:</span> <span className="text-white font-medium">{entry.name}</span></div>
-                          <div><span className="text-white/40">Progreso:</span> <span className="text-[#00A6FF] font-medium">{Math.round(entry.progress)}%</span></div>
-                          <div><span className="text-white/40">Promedio Quizzes:</span> <span className="text-white/70">{entry.quizAvgScore !== null ? `${entry.quizAvgScore}%` : 'Sin datos'}</span></div>
-                          <div><span className="text-white/40">Modulos:</span> <span className="text-white/70">{entry.modulesCompleted} completados</span></div>
-                          <div><span className="text-white/40">Estado:</span> <span className={entry.completedAt ? 'text-green-400' : 'text-yellow-400'}>{entry.completedAt ? 'Completado' : 'En progreso'}</span></div>
-                          {entry.completedAt && <div><span className="text-white/40">Fecha:</span> <span className="text-white/70">{new Date(entry.completedAt).toLocaleDateString('es')}</span></div>}
+                    <tr
+                      onClick={() =>
+                        setExpandedEntry(expandedEntry === entry.userId ? null : entry.userId)
+                      }
+                      className="border-b border-white/5 hover:bg-white/5 cursor-pointer transition-colors"
+                    >
+                      <td className="px-4 py-3">
+                        <div>
+                          <p className="text-white font-medium">{entry.name}</p>
+                          <p className="text-white/50 text-sm">{entry.email}</p>
                         </div>
                       </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-20 h-2 bg-white/10 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-[#00A6FF] rounded-full"
+                              style={{ width: `${entry.progress}%` }}
+                            />
+                          </div>
+                          <span className="text-white/70 text-sm">
+                            {Math.round(entry.progress)}%
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-white/70">
+                        {entry.quizAvgScore !== null ? `${entry.quizAvgScore}%` : '-'}
+                      </td>
+                      <td className="px-4 py-3 text-white/70">{entry.modulesCompleted}</td>
+                      <td className="px-4 py-3 text-white/70">
+                        {entry.completedAt
+                          ? new Date(entry.completedAt).toLocaleDateString('es')
+                          : 'En progreso'}
+                      </td>
                     </tr>
-                  )}
+                    {expandedEntry === entry.userId && (
+                      <tr>
+                        <td colSpan={5} className="px-4 py-3 bg-white/5">
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                            <div>
+                              <span className="text-white/40">Estudiante:</span>{' '}
+                              <span className="text-white font-medium">{entry.name}</span>
+                            </div>
+                            <div>
+                              <span className="text-white/40">Progreso:</span>{' '}
+                              <span className="text-[#00A6FF] font-medium">
+                                {Math.round(entry.progress)}%
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-white/40">Promedio Quizzes:</span>{' '}
+                              <span className="text-white/70">
+                                {entry.quizAvgScore !== null
+                                  ? `${entry.quizAvgScore}%`
+                                  : 'Sin datos'}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-white/40">Modulos:</span>{' '}
+                              <span className="text-white/70">
+                                {entry.modulesCompleted} completados
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-white/40">Estado:</span>{' '}
+                              <span
+                                className={entry.completedAt ? 'text-green-400' : 'text-yellow-400'}
+                              >
+                                {entry.completedAt ? 'Completado' : 'En progreso'}
+                              </span>
+                            </div>
+                            {entry.completedAt && (
+                              <div>
+                                <span className="text-white/40">Fecha:</span>{' '}
+                                <span className="text-white/70">
+                                  {new Date(entry.completedAt).toLocaleDateString('es')}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
                   </React.Fragment>
                 ))}
               </tbody>

@@ -7,7 +7,7 @@ import { Page } from '@playwright/test';
 import path from 'path';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
-const API_URL = process.env.API_URL || 'http://localhost:4000/api';
+const API_URL = process.env.API_URL || `${BASE_URL}/api`;
 
 /**
  * Rutas a los archivos de estado de autenticación guardados por auth.setup.ts
@@ -38,14 +38,17 @@ export async function loginAsAdmin(page: Page) {
 }
 
 /**
- * Login como usuario ADMIN via API (retorna token de acceso)
+ * Login como usuario ADMIN via UI (cookies HttpOnly, no Bearer token).
+ * Hace login por UI para evitar el rate limiting de Nginx en /api/auth/login.
  */
 export async function loginAsAdminAPI(page: Page): Promise<string> {
-  const response = await page.request.post(`${API_URL}/auth/login`, {
-    data: TEST_CREDENTIALS.admin,
-  });
-  const body = await response.json();
-  return body.data?.access_token || body.access_token || '';
+  await page.goto(`${BASE_URL}/login`);
+  await page.waitForSelector('input[name="email"]', { timeout: 15000 });
+  await page.fill('input[name="email"]', TEST_CREDENTIALS.admin.email);
+  await page.fill('input[name="password"]', TEST_CREDENTIALS.admin.password);
+  await page.click('button[type="submit"]');
+  await page.waitForURL(/\/(admin|dashboard)/, { timeout: 30000 });
+  return '';
 }
 
 /**
@@ -56,18 +59,21 @@ export async function loginAsInstructor(page: Page) {
   await page.fill('[name="email"]', TEST_CREDENTIALS.instructor.email);
   await page.fill('[name="password"]', TEST_CREDENTIALS.instructor.password);
   await page.click('button[type="submit"]');
-  await page.waitForURL(/.*courses|dashboard/, { timeout: 10000 });
+  await page.waitForURL(/\/(instructor|admin|dashboard|courses)/, { timeout: 10000 });
 }
 
 /**
- * Login como usuario INSTRUCTOR via API (retorna token de acceso)
+ * Login como usuario INSTRUCTOR via UI (cookies HttpOnly, no Bearer token).
+ * Hace login por UI para evitar el rate limiting de Nginx en /api/auth/login.
  */
 export async function loginAsInstructorAPI(page: Page): Promise<string> {
-  const response = await page.request.post(`${API_URL}/auth/login`, {
-    data: TEST_CREDENTIALS.instructor,
-  });
-  const body = await response.json();
-  return body.data?.access_token || body.access_token || '';
+  await page.goto(`${BASE_URL}/login`);
+  await page.waitForSelector('input[name="email"]', { timeout: 15000 });
+  await page.fill('input[name="email"]', TEST_CREDENTIALS.instructor.email);
+  await page.fill('input[name="password"]', TEST_CREDENTIALS.instructor.password);
+  await page.click('button[type="submit"]');
+  await page.waitForURL(/\/(instructor|admin|dashboard|courses)/, { timeout: 30000 });
+  return '';
 }
 
 /**

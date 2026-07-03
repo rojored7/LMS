@@ -138,7 +138,7 @@ export const TerminalOutput: React.FC<TerminalOutputProps> = ({
   }, [output, error, exitCode, executionTime, isExecuting]);
 
   return (
-    <div className={`flex flex-col h-full ${className}`}>
+    <div className={`flex flex-col h-full ${className}`} data-testid="terminal-output">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-2 bg-gray-800 dark:bg-gray-900 border-b border-gray-700">
         <div className="flex items-center gap-2">

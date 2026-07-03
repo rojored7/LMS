@@ -38,7 +38,9 @@ class AuthService:
     async def login(self, email: str, password: str) -> dict:
         result = await self.db.execute(select(User).where(User.email == email))
         user = result.scalar_one_or_none()
-        if not user or not verify_password(password, user.password_hash):
+        if not user or user.auth_provider != "local" or not user.password_hash:
+            raise AuthenticationError("Credenciales invalidas")
+        if not verify_password(password, user.password_hash):
             raise AuthenticationError("Credenciales invalidas")
 
         user.last_login_at = datetime.now(timezone.utc)
@@ -148,6 +150,8 @@ class AuthService:
         logger.info("password_reset_completed", user_id=user.id)
 
     async def change_password(self, user: User, current_password: str, new_password: str) -> None:
+        if user.auth_provider != "local" or not user.password_hash:
+            raise ValidationError("No se puede cambiar la contrasena para usuarios externos")
         if not verify_password(current_password, user.password_hash):
             raise ValidationError("Contrasena actual incorrecta")
         user.password_hash = hash_password(new_password)

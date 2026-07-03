@@ -623,7 +623,9 @@ export const Profile: React.FC = () => {
                                           const res: any = await api.get(`/badges/user/${user.id}`);
                                           setUserBadges((res?.data ?? res) || []);
                                         }
-                                      } catch { toast.error('Error al eliminar'); }
+                                      } catch {
+                                        toast.error('Error al eliminar');
+                                      }
                                     }}
                                     className="text-red-500 hover:underline text-xs font-medium"
                                   >

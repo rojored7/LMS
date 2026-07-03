@@ -8,7 +8,7 @@ export class CourseLearningPage {
 
   async navigate(slug: string) {
     await this.page.goto(`${BASE_URL}/courses/${slug}/learn`);
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForLoadState('load');
   }
 
   getSidebar() {
@@ -33,12 +33,12 @@ export class CourseLearningPage {
 
   async clickNextLesson() {
     await this.page.locator(SELECTORS.learning.nextLessonButton).click();
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForLoadState('load');
   }
 
   async clickPrevLesson() {
     await this.page.locator(SELECTORS.learning.prevLessonButton).click();
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForLoadState('load');
   }
 
   async markComplete() {

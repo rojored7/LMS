@@ -8,7 +8,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { Search, BookPlus } from 'lucide-react';
 import { useToast } from '../hooks/useToast';
 import userService from '../services/user.service';
-import { assignCourseToUser } from '../services/api/admin.service';
+import { assignCourseToUser, getUserEnrollments } from '../services/api/admin.service';
 import AssignCourseModal from '../components/learning/AssignCourseModal';
 import type { User } from '../types';
 import { ROLE_LABELS } from '../utils/constants';
@@ -29,6 +29,7 @@ export const UsersList: React.FC = () => {
 
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<SelectedUser | null>(null);
+  const [enrolledCourseIds, setEnrolledCourseIds] = useState<string[]>([]);
 
   useEffect(() => {
     loadUsers();
@@ -59,12 +60,20 @@ export const UsersList: React.FC = () => {
     }
   };
 
-  const handleAssignCourse = (user: User) => {
+  const handleAssignCourse = async (user: User) => {
     setSelectedUser({
       id: user.id,
       name: user.name || user.email,
       email: user.email,
     });
+    try {
+      const res = await getUserEnrollments(user.id);
+      const enrollments = (res as any)?.enrollments || [];
+      const ids = enrollments.map((e: any) => e.courseId || e.course?.id).filter(Boolean);
+      setEnrolledCourseIds(ids);
+    } catch {
+      setEnrolledCourseIds([]);
+    }
     setAssignModalOpen(true);
   };
 
@@ -252,6 +261,7 @@ export const UsersList: React.FC = () => {
           onAssign={handleConfirmAssign}
           userName={selectedUser.name}
           userEmail={selectedUser.email}
+          enrolledCourseIds={enrolledCourseIds}
         />
       )}
     </div>

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -6,25 +6,24 @@ from app.database import get_db
 from app.middleware.auth import get_current_user, require_instructor, verify_module_ownership
 from app.middleware.error_handler import NotFoundError
 from app.middleware.rate_limit import limiter
-from app.models.assessment import Lab
+from app.models.assessment import Lab, LabSubmission
 from app.models.course import Module
 from app.models.user import User, UserRole
 from app.schemas.common import ApiResponse
 from app.schemas.lab import (
+    GradeSubmissionRequest,
     LabCreate,
     LabResponse,
     LabResponseStudent,
     LabUpdate,
     SubmissionResponse,
     SubmitCodeRequest,
+    SubmitDeliverableRequest,
 )
 from app.services.lab_service import LabService
 from app.utils.enrollment_check import verify_enrollment_or_staff
 
 router = APIRouter(prefix="/api/labs", tags=["labs"])
-
-
-# --- Health & manual-complete endpoints BEFORE /{lab_id} routes ---
 
 
 @router.get("/executor/health")
@@ -121,24 +120,35 @@ async def submit_lab(
     db: AsyncSession = Depends(get_db),
 ):
     if len(body.code) > 50_000:
-        from fastapi import HTTPException
         raise HTTPException(status_code=400, detail="Codigo excede el limite de 50KB")
+
     lab_service = LabService(db)
     lab = await lab_service.get_by_id(lab_id)
     mod = (await db.execute(select(Module).where(Module.id == lab.module_id))).scalar_one_or_none()
     if mod:
         await verify_enrollment_or_staff(db, user.id, mod.course_id, user.role)
 
-    import json as _json
+    if lab.lab_type == "DELIVERABLE":
+        raise HTTPException(
+            status_code=400,
+            detail="Este lab es de entrega. Usa POST /labs/{lab_id}/submit-deliverable",
+        )
+
+    # Normalize tests: must be a list for the executor
+    tests: list | None = None
+    if lab.tests:
+        if isinstance(lab.tests, list):
+            tests = lab.tests
+        elif isinstance(lab.tests, dict):
+            tests = list(lab.tests.values()) if lab.tests else None
+
     from app.services.executor_client import executor_client
-    test_code = _json.dumps(lab.tests) if lab.tests else None
     exec_result = await executor_client.execute_code(
         code=body.code,
         language=lab.language,
-        test_code=test_code,
+        tests=tests,
     )
 
-    # Infrastructure error: executor is down - do NOT create a submission
     if exec_result.get("executor_error"):
         return ApiResponse(
             success=False,
@@ -148,7 +158,6 @@ async def submit_lab(
             },
         ).model_dump()
 
-    # Executor ran the code - parse results
     result_data = exec_result.get("result", exec_result)
     passed = result_data.get("passed", False)
     stdout = result_data.get("stdout", "")
@@ -156,7 +165,7 @@ async def submit_lab(
     exit_code = result_data.get("exitCode", 0)
     execution_time = result_data.get("executionTime", 0)
 
-    submission = await lab_service.submit(
+    submission = await lab_service.submit_executable(
         lab_id=lab_id,
         user_id=user.id,
         code=body.code,
@@ -181,6 +190,68 @@ async def submit_lab(
     ).model_dump()
 
 
+@router.post("/{lab_id}/submit-deliverable")
+@limiter.limit("5/minute")
+async def submit_deliverable(
+    request: Request,
+    lab_id: str,
+    body: SubmitDeliverableRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    lab_service = LabService(db)
+    lab = await lab_service.get_by_id(lab_id)
+
+    if lab.lab_type != "DELIVERABLE":
+        raise HTTPException(
+            status_code=400,
+            detail="Este lab es ejecutable. Usa POST /labs/{lab_id}/submit",
+        )
+
+    mod = (await db.execute(select(Module).where(Module.id == lab.module_id))).scalar_one_or_none()
+    if mod:
+        await verify_enrollment_or_staff(db, user.id, mod.course_id, user.role)
+
+    submission = await lab_service.submit_deliverable(
+        lab_id=lab_id,
+        user_id=user.id,
+        response_text=body.response_text,
+    )
+
+    return ApiResponse(
+        success=True,
+        data={
+            "submissionId": submission.id,
+            "passed": None,
+            "message": "Entrega enviada. El instructor revisara tu respuesta.",
+        },
+    ).model_dump()
+
+
+@router.put("/submissions/{submission_id}/grade")
+async def grade_submission(
+    submission_id: str,
+    body: GradeSubmissionRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if user.role not in (UserRole.ADMIN, UserRole.INSTRUCTOR):
+        raise HTTPException(status_code=403, detail="Solo instructores pueden calificar submissions")
+
+    lab_service = LabService(db)
+    submission = await lab_service.grade_submission(
+        submission_id=submission_id,
+        grader_id=user.id,
+        passed=body.passed,
+        feedback=body.feedback,
+        score=body.score,
+    )
+    return ApiResponse(
+        success=True,
+        data=SubmissionResponse.model_validate(submission).model_dump(),
+    ).model_dump()
+
+
 @router.post("/{lab_id}/complete")
 @limiter.limit("5/minute")
 async def complete_lab_manual(
@@ -191,13 +262,20 @@ async def complete_lab_manual(
 ):
     lab_service = LabService(db)
     lab = await lab_service.get_by_id(lab_id)
+
+    if lab.lab_type == "EXECUTABLE":
+        raise HTTPException(
+            status_code=400,
+            detail="Los labs ejecutables se completan automaticamente al pasar todos los tests.",
+        )
+
     mod = (await db.execute(select(Module).where(Module.id == lab.module_id))).scalar_one_or_none()
     if mod:
         await verify_enrollment_or_staff(db, user.id, mod.course_id, user.role)
 
     existing = await lab_service.get_submissions(lab_id, user_id=user.id)
     if any(s.passed for s in existing):
-        return ApiResponse(success=True, data={"passed": True, "manual": True, "message": "Lab ya completado"}).model_dump()
+        return ApiResponse(success=True, data={"passed": True, "message": "Lab ya completado"}).model_dump()
 
     submission = await lab_service.submit(
         lab_id=lab_id,
@@ -223,6 +301,8 @@ async def get_submissions(
     db: AsyncSession = Depends(get_db),
 ):
     service = LabService(db)
-    submissions = await service.get_submissions(lab_id, user_id=user.id)
+    # Instructors/admins see all submissions; students only their own
+    user_filter = user.id if user.role == UserRole.STUDENT else None
+    submissions = await service.get_submissions(lab_id, user_id=user_filter)
     data = [SubmissionResponse.model_validate(s).model_dump() for s in submissions]
     return ApiResponse(success=True, data=data).model_dump()

@@ -23,6 +23,11 @@ class ProjectStatus(str, enum.Enum):
     REJECTED = "REJECTED"
 
 
+class LabType(str, enum.Enum):
+    EXECUTABLE = "EXECUTABLE"
+    DELIVERABLE = "DELIVERABLE"
+
+
 class Quiz(Base):
     __tablename__ = "quizzes"
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_gen_id)
@@ -76,10 +81,15 @@ class Lab(Base):
     title: Mapped[str] = mapped_column(String(500), nullable=False)
     description: Mapped[str] = mapped_column(Text, default="", nullable=False)
     language: Mapped[str] = mapped_column(String(30), default="python", nullable=False)
+    lab_type: Mapped[str] = mapped_column(String(20), default="EXECUTABLE", nullable=False)
     starter_code: Mapped[str] = mapped_column(Text, default="", nullable=False)
     solution: Mapped[str] = mapped_column(Text, default="", nullable=False)
-    tests: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    tests: Mapped[list | None] = mapped_column(JSON, nullable=True)
     hints: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    # DELIVERABLE-only fields
+    response_instructions: Mapped[str | None] = mapped_column(Text, nullable=True)
+    file_required: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    allowed_file_types: Mapped[str | None] = mapped_column(String(200), nullable=True)
     module: Mapped["Module"] = relationship(back_populates="labs")  # type: ignore[name-defined]
     submissions: Mapped[list["LabSubmission"]] = relationship(back_populates="lab", cascade="all, delete-orphan")
     __table_args__ = (Index("ix_labs_module_id", "module_id"),)
@@ -92,7 +102,7 @@ class LabSubmission(Base):
     lab_id: Mapped[str] = mapped_column(String(32), ForeignKey("labs.id", ondelete="CASCADE"), nullable=False)
     code: Mapped[str] = mapped_column(Text, nullable=False)
     language: Mapped[str] = mapped_column(String(30), nullable=False)
-    passed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    passed: Mapped[bool | None] = mapped_column(Boolean, default=None, nullable=True)
     stdout: Mapped[str | None] = mapped_column(Text, nullable=True)
     stderr: Mapped[str | None] = mapped_column(Text, nullable=True)
     exit_code: Mapped[int | None] = mapped_column(Integer, nullable=True)
@@ -100,7 +110,13 @@ class LabSubmission(Base):
     feedback: Mapped[str | None] = mapped_column(Text, nullable=True)
     attempts: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
     submitted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
-    lab: Mapped[Lab] = relationship(back_populates="submissions")
+    # DELIVERABLE-only fields
+    response_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    file_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    score: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    graded_by: Mapped[str | None] = mapped_column(String(32), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    graded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    lab: Mapped[Lab] = relationship(back_populates="submissions", foreign_keys=[lab_id])
     __table_args__ = (Index("ix_lab_submissions_user_id", "user_id"), Index("ix_lab_submissions_lab_id", "lab_id"))
 
 

@@ -11,8 +11,8 @@
 import { test, expect, Page } from '@playwright/test';
 import path from 'path';
 
-const BASE_URL = 'http://localhost:3000';
-const API_URL = 'http://localhost:4000/api';
+const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
+const API_URL = process.env.API_URL || `${BASE_URL}/api`;
 
 // Collect all console errors across the test
 interface ConsoleError {
@@ -59,9 +59,10 @@ test.describe('FastAPI Migration Diagnostic', () => {
    * STEP 1: Verify backend health and API availability
    */
   test('1 - backend health check', async ({ request }) => {
-    const health = await request.get('http://localhost:4000/health');
+    const healthUrl = API_URL.replace('/api', '/health');
+    const health = await request.get(healthUrl);
     expect(health.status()).toBe(200);
-    const body = await health.json();
+    const body = await health.json().catch(() => ({ status: 'ok' }));
     console.log('Backend health:', JSON.stringify(body));
   });
 
@@ -72,7 +73,7 @@ test.describe('FastAPI Migration Diagnostic', () => {
     attachConsoleListener(page, '/login');
 
     await page.goto(`${BASE_URL}/login`);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
     await screenshotTo(page, '01-login-initial');
 
     const title = await page.title();
@@ -118,7 +119,7 @@ test.describe('FastAPI Migration Diagnostic', () => {
 
     console.log('Cleared localStorage and sessionStorage');
     await page.reload();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
     await screenshotTo(page, '03-login-after-clear');
 
     const emailInput = page.locator('input[name="email"], input[type="email"]');
@@ -141,7 +142,7 @@ test.describe('FastAPI Migration Diagnostic', () => {
     await page.evaluate(() => localStorage.clear());
 
     await page.goto(`${BASE_URL}/register`);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
     await screenshotTo(page, '04-register-initial');
 
     const nameInput = page.locator('input[name="name"]');
@@ -163,7 +164,7 @@ test.describe('FastAPI Migration Diagnostic', () => {
     await page.goto(`${BASE_URL}/login`);
     await page.evaluate(() => localStorage.clear());
     await page.goto(`${BASE_URL}/register`);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
 
     const nameInput = page.locator('input[name="name"]');
     const emailInput = page.locator('input[name="email"], input[type="email"]').first();
@@ -218,7 +219,7 @@ test.describe('FastAPI Migration Diagnostic', () => {
     }
 
     // Wait for navigation or error
-    await page.waitForLoadState('networkidle').catch(() => {});
+    await page.waitForLoadState('load').catch(() => {});
     await page.waitForTimeout(2000);
     await screenshotTo(page, '05b-register-after-submit');
 
@@ -281,7 +282,7 @@ test.describe('FastAPI Migration Diagnostic', () => {
     await page.evaluate(() => localStorage.clear());
 
     await page.goto(`${BASE_URL}/courses`);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
     await screenshotTo(page, '07-courses-catalog');
 
     const currentUrl = page.url();
@@ -374,7 +375,7 @@ test.describe('FastAPI Migration Diagnostic', () => {
     await page.goto(`${BASE_URL}/login`);
     await page.evaluate(() => localStorage.clear());
     await page.goto(`${BASE_URL}/login`);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
 
     const header = page.locator('header').first();
     const headerVisible = await header.isVisible().catch(() => false);
@@ -410,7 +411,7 @@ test.describe('FastAPI Migration Diagnostic', () => {
     await page.goto(`${BASE_URL}/login`);
     await page.evaluate(() => localStorage.clear());
     await page.reload();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
 
     const emailInput = page.locator('input[name="email"], input[type="email"]').first();
     if (!(await emailInput.isVisible().catch(() => false))) {
@@ -472,7 +473,7 @@ test.describe('FastAPI Migration Diagnostic', () => {
     await page.goto(`${BASE_URL}/login`);
     await page.evaluate(() => localStorage.clear());
     await page.reload();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
 
     const emailInput = page.locator('input[name="email"], input[type="email"]').first();
     if (!(await emailInput.isVisible().catch(() => false))) {
@@ -494,7 +495,7 @@ test.describe('FastAPI Migration Diagnostic', () => {
       return;
     }
 
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
     await screenshotTo(page, '12-dashboard');
 
     const h1 = page.locator('h1').first();

@@ -22,9 +22,10 @@ const api: AxiosInstance = axios.create({
  * Request interceptor: attach X-Request-ID for log correlation
  */
 api.interceptors.request.use((config) => {
-  const requestId = typeof crypto?.randomUUID === 'function'
-    ? crypto.randomUUID()
-    : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  const requestId =
+    typeof crypto?.randomUUID === 'function'
+      ? crypto.randomUUID()
+      : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
   config.headers['X-Request-ID'] = requestId;
   Sentry.addBreadcrumb({
     category: 'api',
@@ -48,7 +49,12 @@ api.interceptors.response.use(
   async (error: AxiosError<ApiError>) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // No reintentar refresh para endpoints de auth (login/register/refresh)
+    const isAuthEndpoint = originalRequest.url?.includes('/auth/login') ||
+      originalRequest.url?.includes('/auth/register') ||
+      originalRequest.url?.includes('/auth/refresh');
+
+    if (error.response?.status === 401 && !originalRequest._retry && !isAuthEndpoint) {
       originalRequest._retry = true;
 
       try {

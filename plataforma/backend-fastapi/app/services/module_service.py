@@ -47,7 +47,7 @@ class ModuleService:
     async def update(self, module_id: str, data: dict) -> Module:
         module = await self.get_by_id(module_id)
         for key, value in data.items():
-            if value is not None and hasattr(module, key):
+            if hasattr(module, key):
                 setattr(module, key, value)
         await self.db.flush()
         return module

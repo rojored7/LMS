@@ -64,7 +64,14 @@ const LessonFormModal: React.FC<LessonFormModalProps> = ({ isOpen, onClose, onSa
     setSaving(true);
     setError('');
     try {
-      await onSave({ title: title.trim(), content, type, order, estimatedTime, videoUrl: videoUrl.trim() || null });
+      await onSave({
+        title: title.trim(),
+        content,
+        type,
+        order,
+        estimatedTime,
+        videoUrl: videoUrl.trim() || null,
+      });
       onClose();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Error al guardar');
@@ -150,7 +157,9 @@ const LessonFormModal: React.FC<LessonFormModalProps> = ({ isOpen, onClose, onSa
               placeholder="https://www.youtube.com/watch?v=..."
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
             />
-            <p className="mt-1 text-xs text-gray-500">Soporta: YouTube, Vimeo, Loom, Google Drive</p>
+            <p className="mt-1 text-xs text-gray-500">
+              Soporta: YouTube, Vimeo, Loom, Google Drive
+            </p>
           </div>
         )}
         <div>

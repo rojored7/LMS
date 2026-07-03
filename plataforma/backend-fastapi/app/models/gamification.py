@@ -97,3 +97,22 @@ class Notification(Base):
         Index("ix_notifications_user_read", "user_id", "read"),
         Index("ix_notifications_created_at", "created_at"),
     )
+
+
+class XpTransaction(Base):
+    __tablename__ = "xp_transactions"
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_gen_id)
+    user_id: Mapped[str] = mapped_column(String(32), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    amount: Mapped[int] = mapped_column(Integer, nullable=False)
+    reason: Mapped[str] = mapped_column(String(500), nullable=False)
+    source: Mapped[str] = mapped_column(String(50), nullable=False)
+    admin_id: Mapped[str | None] = mapped_column(String(32), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    reference_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+
+    user: Mapped["User"] = relationship(back_populates="xp_transactions", foreign_keys=[user_id])
+
+    __table_args__ = (
+        Index("ix_xp_transactions_user_created", "user_id", "created_at"),
+        Index("ix_xp_transactions_created_at", "created_at"),
+    )

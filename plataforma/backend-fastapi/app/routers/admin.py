@@ -11,6 +11,7 @@ from app.middleware.auth import require_admin
 from app.models.user import User, UserRole
 from app.schemas.admin import AdminEnrollmentResponse, AdminUserWithEnrollments
 from app.schemas.common import ApiResponse, PaginationMeta
+from app.schemas.gamification import LeaderboardEntry, XpAdjustRequest, XpTransactionResponse
 from app.schemas.user import UserResponse
 from app.services.admin_service import AdminService
 from app.services.course_service import CourseService
@@ -27,7 +28,7 @@ class RoleUpdateRequest(BaseModel):
 
 
 class BulkRoleRequest(BaseModel):
-    user_ids: list[str]
+    user_ids: list[str] = Field(max_length=100)
     role: UserRole
 
 
@@ -70,6 +71,31 @@ async def list_users(
     ).model_dump()
 
 
+@router.get("/users/leaderboard")
+async def get_leaderboard(
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    service = AdminService(db)
+    users_list, total = await service.get_leaderboard(page=page, limit=limit)
+    offset = (page - 1) * limit
+    data = [
+        LeaderboardEntry(
+            id=u.id, name=u.name, email=u.email, avatar=u.avatar,
+            xp=u.xp or 0, role=u.role.value if isinstance(u.role, enum.Enum) else str(u.role),
+            rank=offset + idx + 1,
+        ).model_dump()
+        for idx, u in enumerate(users_list)
+    ]
+    pages = math.ceil(total / limit) if limit > 0 else 1
+    return ApiResponse(
+        success=True, data=data,
+        meta=PaginationMeta(total=total, page=page, limit=limit, pages=pages),
+    ).model_dump()
+
+
 @router.get("/users/{user_id}")
 async def get_user(
     user_id: str,
@@ -92,6 +118,41 @@ async def update_user_role(
     updated = await service.update_user_role(user_id, body.role.value, admin.role)
     logger.info("admin_role_updated", target_user_id=user_id, new_role=body.role.value, admin_id=admin.id)
     return ApiResponse(success=True, data=_serialize_user(updated)).model_dump()
+
+
+@router.put("/users/{user_id}/xp")
+async def adjust_user_xp(
+    user_id: str,
+    body: XpAdjustRequest,
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    service = AdminService(db)
+    tx = await service.adjust_user_xp(user_id, body.amount, body.reason, admin.id)
+    user_service = UserService(db)
+    user = await user_service.get_user_by_id(user_id)
+    return ApiResponse(success=True, data={
+        "user": _serialize_user(user),
+        "transaction": XpTransactionResponse.model_validate(tx).model_dump(),
+    }).model_dump()
+
+
+@router.get("/users/{user_id}/xp-history")
+async def get_user_xp_history(
+    user_id: str,
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    service = AdminService(db)
+    transactions, total = await service.get_user_xp_history(user_id, page=page, limit=limit)
+    data = [XpTransactionResponse.model_validate(t).model_dump() for t in transactions]
+    pages = math.ceil(total / limit) if limit > 0 else 1
+    return ApiResponse(
+        success=True, data=data,
+        meta=PaginationMeta(total=total, page=page, limit=limit, pages=pages),
+    ).model_dump()
 
 
 @router.delete("/users/{user_id}")

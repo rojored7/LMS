@@ -3,8 +3,16 @@
  * Displays test execution results for labs
  */
 
-import { LabTestResult } from '../../services/api/lab.service';
 import { CheckCircleIcon, XCircleIcon, ClockIcon } from '@heroicons/react/24/solid';
+
+interface LabTestResult {
+  passed: boolean;
+  testCase: string;
+  executionTime: number;
+  expectedOutput: string;
+  output: string;
+  error?: string;
+}
 
 interface TestResultsProps {
   results: LabTestResult[];

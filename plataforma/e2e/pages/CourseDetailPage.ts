@@ -8,7 +8,7 @@ export class CourseDetailPage {
 
   async navigate(slug: string) {
     await this.page.goto(`${BASE_URL}/courses/${slug}`);
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForLoadState('load');
   }
 
   async enroll() {
@@ -19,7 +19,7 @@ export class CourseDetailPage {
 
   async continueLearning() {
     await this.page.locator(SELECTORS.courses.continueButton).click();
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForLoadState('load');
   }
 
   async getModuleCount() {

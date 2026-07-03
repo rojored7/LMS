@@ -1,4 +1,4 @@
-.PHONY: help start stop restart logs clean seed test status build deploy
+.PHONY: help start stop restart logs clean seed test status build deploy test-e2e test-e2e-ui test-e2e-report
 
 # ===== COLORES PARA OUTPUT =====
 GREEN  := $(shell echo "\033[0;32m")
@@ -26,6 +26,9 @@ help:
 	@echo "  $(YELLOW)make test$(RESET)         - Tests backend (pytest)"
 	@echo "  $(YELLOW)make test-cov$(RESET)     - Tests con coverage"
 	@echo "  $(YELLOW)make test-frontend$(RESET) - Tests del frontend"
+	@echo "  $(YELLOW)make test-e2e$(RESET)      - Tests E2E con Playwright (todos los specs)"
+	@echo "  $(YELLOW)make test-e2e-ui$(RESET)   - Tests E2E en modo visual interactivo"
+	@echo "  $(YELLOW)make test-e2e-report$(RESET) - Abrir reporte HTML del ultimo run"
 	@echo ""
 	@echo "$(GREEN)Base de datos:$(RESET)"
 	@echo "  $(YELLOW)make migrate$(RESET)      - Ejecuta migraciones Alembic"
@@ -83,6 +86,15 @@ test-cov:
 
 test-frontend:
 	docker-compose exec frontend npm run test -- --watchAll=false
+
+test-e2e:
+	npx playwright test --reporter=list
+
+test-e2e-ui:
+	npx playwright test --ui
+
+test-e2e-report:
+	npx playwright show-report
 
 # ===== BASE DE DATOS (Alembic) =====
 

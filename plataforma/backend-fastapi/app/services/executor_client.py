@@ -41,7 +41,7 @@ class ExecutorClient:
         self,
         code: str,
         language: str = "python",
-        test_code: str | None = None,
+        tests: list | None = None,
         timeout: int | None = None,
     ) -> dict:
         timeout_seconds = timeout or self.timeout
@@ -50,8 +50,8 @@ class ExecutorClient:
             "language": language,
             "timeout": timeout_seconds * 1000,
         }
-        if test_code:
-            payload["testCode"] = test_code
+        if tests:
+            payload["tests"] = tests
 
         last_error: Exception | None = None
         for attempt in range(_MAX_RETRIES + 1):

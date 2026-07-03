@@ -18,6 +18,7 @@ export { Forbidden } from './Forbidden'; // HU-003: Sistema de Roles (RBAC)
 export { UsersList } from './UsersList';
 export { UserProgressDetail } from './UserProgressDetail';
 export { TrainingProfiles } from './TrainingProfiles';
+export { default as AdminGamification } from './AdminGamification';
 
 // Project Pages
 export { ProjectSubmission } from './ProjectSubmission';

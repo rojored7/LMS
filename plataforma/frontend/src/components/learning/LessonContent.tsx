@@ -77,7 +77,7 @@ export const LessonContent: React.FC<LessonContentProps> = ({ lesson, courseId }
   };
 
   return (
-    <div className="bg-white">
+    <div className="bg-white" data-testid="lesson-content">
       {/* Lesson Header */}
       <div className="border-b border-gray-200 bg-gray-50 px-6 py-4">
         <div className="flex items-start justify-between">

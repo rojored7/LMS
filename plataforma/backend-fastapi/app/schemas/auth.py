@@ -6,6 +6,11 @@ from app.schemas.common import CamelModel
 from app.utils.validators import validate_password_strength
 
 
+class LdapLoginRequest(BaseModel):
+    username: str = Field(min_length=1, max_length=255)
+    password: str = Field(min_length=1, max_length=128)
+
+
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str = Field(min_length=6, max_length=128)
@@ -67,4 +72,5 @@ class AuthUserResponse(CamelModel):
     theme: str = "system"
     locale: str = "es"
     training_profile_id: str | None = None
+    auth_provider: str = "local"
     created_at: datetime | None = None

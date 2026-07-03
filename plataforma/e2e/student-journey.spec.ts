@@ -3,8 +3,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 const STUDENT_EMAIL = 'student@ciber.com';
-const STUDENT_PASSWORD = 'Student1234!';
-const BASE_URL = 'http://localhost:3000';
+const STUDENT_PASSWORD = 'Student123!';
+const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 const SCREENSHOT_DIR = '/tmp/e2e-screenshots';
 
 function ensureDir(dir: string) {
@@ -43,7 +43,7 @@ test.describe('Student Journey E2E', () => {
 
   test('Step 2: Login page renders correctly', async ({ page }) => {
     await page.goto(`${BASE_URL}/login`);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
     const result = await captureAndReport(page, 'e2e-student-01-login', 'Step 2 Login');
     console.log(`[STEP 2] URL: ${result.url} | Title: ${result.title} | Console errors: ${consoleErrors.length}`);
     if (consoleErrors.length > 0) console.log(`[STEP 2] Errors: ${consoleErrors.join('; ')}`);
@@ -56,7 +56,7 @@ test.describe('Student Journey E2E', () => {
 
   test('Step 3: Fill and submit login form, verify dashboard', async ({ page }) => {
     await page.goto(`${BASE_URL}/login`);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
 
     // Fill email
     const emailInput = page.locator('input[type="email"], input[name="email"]').first();
@@ -97,7 +97,7 @@ test.describe('Student Journey E2E', () => {
   test('Step 4: Course catalog page', async ({ page }) => {
     // Login first
     await page.goto(`${BASE_URL}/login`);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
     await page.locator('input[type="email"], input[name="email"]').first().fill(STUDENT_EMAIL);
     await page.locator('input[type="password"], input[name="password"]').first().fill(STUDENT_PASSWORD);
     await page.locator('button[type="submit"]').first().click();
@@ -105,7 +105,7 @@ test.describe('Student Journey E2E', () => {
 
     // Navigate to courses
     await page.goto(`${BASE_URL}/courses`);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
     await page.waitForTimeout(2000);
 
     const result = await captureAndReport(page, 'e2e-student-03-courses', 'Step 4 Courses');
@@ -121,7 +121,7 @@ test.describe('Student Journey E2E', () => {
   test('Step 5: Course detail page', async ({ page }) => {
     // Login first
     await page.goto(`${BASE_URL}/login`);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
     await page.locator('input[type="email"], input[name="email"]').first().fill(STUDENT_EMAIL);
     await page.locator('input[type="password"], input[name="password"]').first().fill(STUDENT_PASSWORD);
     await page.locator('button[type="submit"]').first().click();
@@ -129,7 +129,7 @@ test.describe('Student Journey E2E', () => {
 
     // Navigate to courses then click first course
     await page.goto(`${BASE_URL}/courses`);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
     await page.waitForTimeout(2000);
 
     // Try to click on first course card or link
@@ -161,14 +161,14 @@ test.describe('Student Journey E2E', () => {
 
   test('Step 6: Profile page', async ({ page }) => {
     await page.goto(`${BASE_URL}/login`);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
     await page.locator('input[type="email"], input[name="email"]').first().fill(STUDENT_EMAIL);
     await page.locator('input[type="password"], input[name="password"]').first().fill(STUDENT_PASSWORD);
     await page.locator('button[type="submit"]').first().click();
     await page.waitForTimeout(3000);
 
     await page.goto(`${BASE_URL}/profile`);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
     await page.waitForTimeout(2000);
 
     const result = await captureAndReport(page, 'e2e-student-05-profile', 'Step 6 Profile');
@@ -183,14 +183,14 @@ test.describe('Student Journey E2E', () => {
 
   test('Step 7: Notifications page', async ({ page }) => {
     await page.goto(`${BASE_URL}/login`);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
     await page.locator('input[type="email"], input[name="email"]').first().fill(STUDENT_EMAIL);
     await page.locator('input[type="password"], input[name="password"]').first().fill(STUDENT_PASSWORD);
     await page.locator('button[type="submit"]').first().click();
     await page.waitForTimeout(3000);
 
     await page.goto(`${BASE_URL}/notifications`);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
     await page.waitForTimeout(2000);
 
     const result = await captureAndReport(page, 'e2e-student-06-notifications', 'Step 7 Notifications');
