@@ -37,7 +37,7 @@ test.describe('HU-008: Ver Progreso Detallado de Usuario', () => {
     await viewButton.click();
 
     // Verificar que navegamos a la página de detalle
-    await page.waitForURL(/\/admin\/users\/[^?#]+/, { timeout: 10000 });
+    await page.waitForURL(/\/admin\/users\/[^?#]+/, { timeout: 30000 });
 
     // Verificar que estamos en la página correcta
     await expect(page.locator('h1, h2').filter({ hasText: /progreso|detalle.*usuario|user.*progress/i }).first()).toBeVisible();
@@ -54,7 +54,7 @@ test.describe('HU-008: Ver Progreso Detallado de Usuario', () => {
     await viewButton.click();
 
     // Esperar página de detalle
-    await page.waitForURL(/\/admin\/users\/[^?#]+/, { timeout: 10000 });
+    await page.waitForURL(/\/admin\/users\/[^?#]+/, { timeout: 30000 });
 
     // Verificar info del usuario: h1 con nombre, p con email
     await expect(page.locator('h1').first()).toBeVisible({ timeout: 8000 });
@@ -73,7 +73,7 @@ test.describe('HU-008: Ver Progreso Detallado de Usuario', () => {
     const viewButton = userWithCourses.locator('button, a').filter({ hasText: /ver|detalle|view/i }).first();
     await viewButton.click();
 
-    await page.waitForURL(/\/admin\/users\/[^?#]+/, { timeout: 10000 });
+    await page.waitForURL(/\/admin\/users\/[^?#]+/, { timeout: 30000 });
 
     // Buscar seccion de progreso por curso (h2 "Progreso por Curso")
     const coursesSection = page.locator('div').filter({ hasText: /Progreso por Curso|cursos.*inscritos/i }).first();
@@ -102,7 +102,7 @@ test.describe('HU-008: Ver Progreso Detallado de Usuario', () => {
     const viewButton = studentRow.locator('button, a').filter({ hasText: /ver|detalle|view/i }).first();
     await viewButton.click();
 
-    await page.waitForURL(/\/admin\/users\/[^?#]+/, { timeout: 10000 });
+    await page.waitForURL(/\/admin\/users\/[^?#]+/, { timeout: 30000 });
 
     // Buscar sección de progreso detallado
     const progressSection = page.locator('section, div').filter({ hasText: /progreso.*detallado|detailed.*progress|módulos/i }).first();
@@ -137,7 +137,7 @@ test.describe('HU-008: Ver Progreso Detallado de Usuario', () => {
     const viewButton = studentRow.locator('button, a').filter({ hasText: /ver|detalle|view/i }).first();
     await viewButton.click();
 
-    await page.waitForURL(/\/admin\/users\/[^?#]+/, { timeout: 10000 });
+    await page.waitForURL(/\/admin\/users\/[^?#]+/, { timeout: 30000 });
 
     // Buscar sección de quizzes
     const quizSection = page.locator('section, div').filter({ hasText: /quiz|evaluaci|examen|prueba/i }).first();
@@ -170,7 +170,7 @@ test.describe('HU-008: Ver Progreso Detallado de Usuario', () => {
     const viewButton = studentRow.locator('button, a').filter({ hasText: /ver|detalle|view/i }).first();
     await viewButton.click();
 
-    await page.waitForURL(/\/admin\/users\/[^?#]+/, { timeout: 10000 });
+    await page.waitForURL(/\/admin\/users\/[^?#]+/, { timeout: 30000 });
 
     // Buscar sección de laboratorios
     const labSection = page.locator('section, div').filter({ hasText: /laboratorio|lab|práctica/i }).first();
@@ -209,7 +209,7 @@ test.describe('HU-008: Ver Progreso Detallado de Usuario', () => {
     const viewButton = studentRow.locator('button, a').filter({ hasText: /ver|detalle|view/i }).first();
     await viewButton.click();
 
-    await page.waitForURL(/\/admin\/users\/[^?#]+/, { timeout: 10000 });
+    await page.waitForURL(/\/admin\/users\/[^?#]+/, { timeout: 30000 });
 
     // Buscar tabs o secciones navegables
     const tabs = page.locator('[role="tab"], .tab, .nav-tab, button[class*="tab"]');
@@ -246,7 +246,7 @@ test.describe('HU-008: Ver Progreso Detallado de Usuario', () => {
     const viewButton = studentRow.locator('button, a').filter({ hasText: /ver|detalle|view/i }).first();
     await viewButton.click();
 
-    await page.waitForURL(/\/admin\/users\/[^?#]+/, { timeout: 10000 });
+    await page.waitForURL(/\/admin\/users\/[^?#]+/, { timeout: 30000 });
 
     // Buscar controles de filtro
     const filterControls = page.locator('input[type="search"], select[name*="filter"], .filter-control');

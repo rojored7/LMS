@@ -35,10 +35,14 @@ setup('authenticate admin', async ({ page }) => {
 
 setup('authenticate instructor', async ({ page }) => {
   fs.mkdirSync(path.dirname(AUTH_FILES.instructor), { recursive: true });
+  // Esperar entre logins para respetar rate limit de Nginx (5r/min = 1 cada 12s)
+  await page.waitForTimeout(13000);
   await loginAndSave(page, 'instructor@test.com', 'Test123!', AUTH_FILES.instructor, /\/(instructor|admin|dashboard|courses)/);
 });
 
 setup('authenticate student', async ({ page }) => {
   fs.mkdirSync(path.dirname(AUTH_FILES.student), { recursive: true });
+  // Esperar entre logins para respetar rate limit de Nginx (5r/min = 1 cada 12s)
+  await page.waitForTimeout(13000);
   await loginAndSave(page, 'student@ciber.com', 'Student123!', AUTH_FILES.student, /\/(dashboard|courses)/);
 });

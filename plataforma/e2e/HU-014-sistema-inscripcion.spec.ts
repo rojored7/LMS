@@ -38,7 +38,7 @@ test.describe('HU-014: Sistema de Inscripción', () => {
     await firstCourse.locator('[data-testid="enroll-button"], [data-testid="continue-button"]').first().click();
 
     // Esperar pagina de detalle
-    await page.waitForURL(/\/courses\/[^/]+/, { timeout: 10000 });
+    await page.waitForURL(/\/courses\/[^/]+/, { timeout: 30000 });
     expect(page.url()).toMatch(/\/courses\//);
 
     // La pagina de detalle debe tener contenido

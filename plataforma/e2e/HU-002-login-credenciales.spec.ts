@@ -37,7 +37,7 @@ test.describe('HU-002: Login con Credenciales', () => {
       url.pathname.includes('/dashboard') ||
       url.pathname.includes('/courses') ||
       url.pathname === '/',
-      { timeout: 10000 }
+      { timeout: 30000 }
     );
 
     // Verificar que no estamos en login
@@ -88,7 +88,7 @@ test.describe('HU-002: Login con Credenciales', () => {
     await page.click('button[type="submit"]');
 
     // Esperar redirección
-    await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 10000 });
+    await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 30000 });
 
     // Los tokens se almacenan en HttpOnly cookies (no en localStorage)
     // Verificar que la sesión es válida haciendo una petición autenticada
@@ -109,7 +109,7 @@ test.describe('HU-002: Login con Credenciales', () => {
     await page.click('button[type="submit"]');
 
     // Esperar redirección al dashboard
-    await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 10000 });
+    await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 30000 });
     const dashboardUrl = page.url();
 
     // Recargar la página
@@ -141,7 +141,7 @@ test.describe('HU-002: Login con Credenciales', () => {
       await page.click('button[type="submit"]');
 
       // Esperar redirección
-      await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 10000 });
+      await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 30000 });
 
       // Verificar que se estableció algún tipo de cookie o localStorage persistente
       const cookies = await page.context().cookies();
@@ -261,7 +261,7 @@ test.describe('HU-002: Login con Credenciales', () => {
     await page.click('button[type="submit"]');
 
     // Esperar dashboard
-    await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 10000 });
+    await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 30000 });
 
     // El dropdown del usuario está en el header: botón que contiene span.hidden.sm:inline
     const userMenuButton = page.locator('header button').filter({

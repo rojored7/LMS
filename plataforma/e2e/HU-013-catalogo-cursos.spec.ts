@@ -118,7 +118,7 @@ test.describe('HU-013: Catálogo de Cursos Filtrado', () => {
     await actionButton.first().click();
 
     // Debe navegar a la pagina de detalles del curso
-    await page.waitForURL(/\/courses\/[^/]+/, { timeout: 10000 });
+    await page.waitForURL(/\/courses\/[^/]+/, { timeout: 30000 });
     expect(page.url()).toMatch(/\/courses\//);
   });
 });

@@ -41,7 +41,7 @@ test.describe('HU-001: Registro de Usuario', () => {
       url.pathname.includes('/dashboard') ||
       url.pathname.includes('/login') ||
       url.pathname.includes('/courses'),
-      { timeout: 10000 }
+      { timeout: 30000 }
     );
 
     // Si redirigió a login, intentar hacer login
@@ -54,12 +54,12 @@ test.describe('HU-001: Registro de Usuario', () => {
       await page.waitForURL((url) =>
         url.pathname.includes('/dashboard') ||
         url.pathname.includes('/courses'),
-        { timeout: 10000 }
+        { timeout: 30000 }
       );
     }
 
     // Verificar que estamos en el dashboard
-    await expect(page.locator('text=/dashboard|mis cursos|cursos disponibles/i').first()).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('text=/dashboard|mis cursos|cursos disponibles/i').first()).toBeVisible({ timeout: 30000 });
   });
 
   test('AC2: Validación de formato de email', async ({ page }) => {
@@ -72,7 +72,7 @@ test.describe('HU-001: Registro de Usuario', () => {
     await page.click('button[type="submit"]');
 
     // Verificar mensaje de error
-    await expect(page.locator('text=/email.*inválido|formato.*email|email.*válido/i').first()).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('text=/email.*inválido|formato.*email|email.*válido/i').first()).toBeVisible({ timeout: 10000 });
 
     // Verificar que seguimos en la página de registro
     expect(page.url()).toContain('/register');
@@ -94,7 +94,7 @@ test.describe('HU-001: Registro de Usuario', () => {
       await page.click('button[type="submit"]');
     }
 
-    await expect(shortPasswordError.first()).toBeVisible({ timeout: 5000 });
+    await expect(shortPasswordError.first()).toBeVisible({ timeout: 10000 });
 
     // Test 2: Contraseña sin números
     await page.fill('[name="password"]', 'OnlyLetters');
@@ -133,7 +133,7 @@ test.describe('HU-001: Registro de Usuario', () => {
     // Esperar a que complete el registro
     await page.waitForURL((url) =>
       !url.pathname.includes('/register'),
-      { timeout: 10000 }
+      { timeout: 30000 }
     );
 
     // Volver a la página de registro
@@ -148,7 +148,7 @@ test.describe('HU-001: Registro de Usuario', () => {
     await page.click('button[type="submit"]');
 
     // Verificar mensaje de error
-    await expect(page.locator('text=/email.*ya.*registrado|email.*existe|already.*registered/i').first()).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('text=/email.*ya.*registrado|email.*existe|already.*registered/i').first()).toBeVisible({ timeout: 10000 });
 
     // Verificar que seguimos en la página de registro
     expect(page.url()).toContain('/register');
@@ -170,7 +170,7 @@ test.describe('HU-001: Registro de Usuario', () => {
     // Esperar redirección
     await page.waitForURL((url) =>
       !url.pathname.includes('/register'),
-      { timeout: 10000 }
+      { timeout: 30000 }
     );
 
     // Si redirigió a login, hacer login
@@ -178,7 +178,7 @@ test.describe('HU-001: Registro de Usuario', () => {
       await page.fill('[name="email"]', email);
       await page.fill('[name="password"]', password);
       await page.click('button[type="submit"]');
-      await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 10000 });
+      await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 30000 });
     }
 
     // Obtener token del localStorage o hacer petición API para verificar rol
@@ -208,7 +208,7 @@ test.describe('HU-001: Registro de Usuario', () => {
         url.pathname.includes('/forbidden') ||
         url.pathname.includes('/401') ||
         url.pathname.includes('/403'),
-        { timeout: 5000 }
+        { timeout: 10000 }
       );
     }
   });
@@ -228,7 +228,7 @@ test.describe('HU-001: Registro de Usuario', () => {
     // Esperar redirección fuera de register (toast puede aparecer antes de navegar)
     await page.waitForURL((url) =>
       !url.pathname.includes('/register'),
-      { timeout: 10000 }
+      { timeout: 30000 }
     );
 
     // Verificar que el usuario puede acceder al dashboard
@@ -242,7 +242,7 @@ test.describe('HU-001: Registro de Usuario', () => {
     await expect(page).toHaveURL((url) =>
       url.pathname.includes('/dashboard') ||
       url.pathname.includes('/courses'),
-      { timeout: 10000 }
+      { timeout: 30000 }
     );
   });
 
@@ -261,7 +261,7 @@ test.describe('HU-001: Registro de Usuario', () => {
       await page.click('button[type="submit"]');
     }
 
-    await expect(mismatchError.first()).toBeVisible({ timeout: 5000 });
+    await expect(mismatchError.first()).toBeVisible({ timeout: 10000 });
     expect(page.url()).toContain('/register');
   });
 
@@ -273,7 +273,7 @@ test.describe('HU-001: Registro de Usuario', () => {
     await page.click('button[type="submit"]');
 
     // Esperar a que react-hook-form muestre mensajes de validacion
-    await expect(page.locator('text=/requerido|obligatorio|required|caracteres|contraseña/i').first()).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('text=/requerido|obligatorio|required|caracteres|contraseña/i').first()).toBeVisible({ timeout: 10000 });
 
     // Verificar que seguimos en registro
     expect(page.url()).toContain('/register');

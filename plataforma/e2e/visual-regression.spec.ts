@@ -8,7 +8,13 @@ import { AUTH_FILES } from './helpers/auth';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 
+// Visual regression only runs on localhost (snapshots differ per environment/data)
+const isLocalhost = !process.env.BASE_URL || process.env.BASE_URL.includes('localhost');
+const skipOnNonLocal = !isLocalhost;
+
 test.describe('Visual Regression - Paginas Publicas', () => {
+  test.skip(skipOnNonLocal, 'Visual regression solo se ejecuta en localhost');
+
   test('Landing page', async ({ page }) => {
     await page.goto(BASE_URL);
     await page.waitForLoadState('load');
@@ -51,6 +57,7 @@ test.describe('Visual Regression - Paginas Publicas', () => {
 });
 
 test.describe('Visual Regression - Dashboard Student', () => {
+  test.skip(skipOnNonLocal, 'Visual regression solo se ejecuta en localhost');
   test.use({ storageState: AUTH_FILES.student });
 
   test('Student dashboard', async ({ page }) => {
@@ -110,6 +117,7 @@ test.describe('Visual Regression - Dashboard Student', () => {
 });
 
 test.describe('Visual Regression - Learning Experience', () => {
+  test.skip(skipOnNonLocal, 'Visual regression solo se ejecuta en localhost');
   test.use({ storageState: AUTH_FILES.student });
 
   test('Lesson viewer', async ({ page }) => {
@@ -159,6 +167,7 @@ test.describe('Visual Regression - Learning Experience', () => {
 });
 
 test.describe('Visual Regression - Admin Panel', () => {
+  test.skip(skipOnNonLocal, 'Visual regression solo se ejecuta en localhost');
   test.use({ storageState: AUTH_FILES.admin });
 
   test('Admin dashboard', async ({ page }) => {
@@ -209,6 +218,8 @@ test.describe('Visual Regression - Admin Panel', () => {
 });
 
 test.describe('Visual Regression - Responsive Design', () => {
+  test.skip(skipOnNonLocal, 'Visual regression solo se ejecuta en localhost');
+
   const viewports = [
     { name: 'mobile', width: 375, height: 667 },
     { name: 'tablet', width: 768, height: 1024 },
@@ -246,6 +257,7 @@ test.describe('Visual Regression - Responsive Design', () => {
 
 // Apply storageState for responsive dashboard tests
 test.describe('Visual Regression - Responsive Dashboard', () => {
+  test.skip(skipOnNonLocal, 'Visual regression solo se ejecuta en localhost');
   test.use({ storageState: AUTH_FILES.student });
 
   const viewports = [
@@ -269,6 +281,7 @@ test.describe('Visual Regression - Responsive Dashboard', () => {
 });
 
 test.describe('Visual Regression - Dark Mode', () => {
+  test.skip(skipOnNonLocal, 'Visual regression solo se ejecuta en localhost');
   test.use({ storageState: AUTH_FILES.student });
 
   test('Dashboard in dark mode', async ({ page }) => {
@@ -292,6 +305,8 @@ test.describe('Visual Regression - Dark Mode', () => {
 });
 
 test.describe('Visual Regression - Error States', () => {
+  test.skip(skipOnNonLocal, 'Visual regression solo se ejecuta en localhost');
+
   test('404 Not Found page', async ({ page }) => {
     await page.goto(`${BASE_URL}/non-existent-page-404`);
     await page.waitForLoadState('load');

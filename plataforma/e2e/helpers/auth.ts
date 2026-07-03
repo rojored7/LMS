@@ -34,7 +34,7 @@ export async function loginAsAdmin(page: Page) {
   await page.fill('[name="email"]', TEST_CREDENTIALS.admin.email);
   await page.fill('[name="password"]', TEST_CREDENTIALS.admin.password);
   await page.click('button[type="submit"]');
-  await page.waitForURL(/.*admin|dashboard/, { timeout: 10000 });
+  await page.waitForURL(/.*admin|dashboard/, { timeout: 30000 });
 }
 
 /**
@@ -59,7 +59,7 @@ export async function loginAsInstructor(page: Page) {
   await page.fill('[name="email"]', TEST_CREDENTIALS.instructor.email);
   await page.fill('[name="password"]', TEST_CREDENTIALS.instructor.password);
   await page.click('button[type="submit"]');
-  await page.waitForURL(/\/(instructor|admin|dashboard|courses)/, { timeout: 10000 });
+  await page.waitForURL(/\/(instructor|admin|dashboard|courses)/, { timeout: 30000 });
 }
 
 /**
@@ -97,7 +97,7 @@ export async function registerAndLogin(page: Page, userType: 'STUDENT' | 'INSTRU
   await page.fill('[name="email"]', creds.email);
   await page.fill('[name="password"]', creds.password);
   await page.click('button[type="submit"]');
-  await page.waitForURL(/\/(dashboard|courses)/, { timeout: 15000 });
+  await page.waitForURL(/\/(dashboard|courses)/, { timeout: 30000 });
 
   return { email: creds.email, password: creds.password, name: userType === 'INSTRUCTOR' ? 'Instructor Test' : 'Estudiante Demo' };
 }

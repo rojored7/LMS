@@ -68,7 +68,7 @@ export const test = base.extend<AuthFixtures>({
     await page.fill('[name="email"]', email);
     await page.fill('[name="password"]', password);
     await page.click('button[type="submit"]');
-    await page.waitForURL(/.*dashboard|courses/, { timeout: 10000 });
+    await page.waitForURL(/.*dashboard|courses/, { timeout: 30000 });
 
     await use(page);
     await context.close();

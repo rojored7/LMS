@@ -9,7 +9,8 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  // En produccion (BASE_URL externo) limitar workers para respetar rate limits de Nginx
+  workers: process.env.CI ? 1 : (process.env.BASE_URL && !process.env.BASE_URL.includes('localhost') ? 2 : undefined),
   reporter: [
     ['html'],
     ['list'],
@@ -23,9 +24,9 @@ export default defineConfig({
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
 
-    // Timeouts aumentados para operaciones de red
-    actionTimeout: 15000,
-    navigationTimeout: 30000,
+    // Timeouts aumentados para operaciones de red y produccion
+    actionTimeout: 20000,
+    navigationTimeout: 45000,
   },
 
   projects: [
