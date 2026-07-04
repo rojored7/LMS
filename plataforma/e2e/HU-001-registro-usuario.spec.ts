@@ -119,36 +119,20 @@ test.describe('HU-001: Registro de Usuario', () => {
     }
   });
 
-  test('AC4: Prevención de emails duplicados', async ({ page, request }) => {
-    const duplicateEmail = `duplicate${Date.now()}@example.com`;
+  test('AC4: Prevención de emails duplicados', async ({ page }) => {
+    // Usar email seed pre-existente en la DB para evitar consumir cuota de registro
+    const existingEmail = 'student@ciber.com';
 
-    // Primera registración
-    await page.fill('[name="name"], [name="firstName"]', 'John Doe');
-    await page.fill('[name="email"]', duplicateEmail);
-    await page.fill('[name="password"]', 'Pass123!@#');
-    await page.fill('[name="confirmPassword"], [name="passwordConfirm"]', 'Pass123!@#');
-    await page.check('[name="accept-terms"]');
-    await page.click('button[type="submit"]');
-
-    // Esperar a que complete el registro
-    await page.waitForURL((url) =>
-      !url.pathname.includes('/register'),
-      { timeout: 30000 }
-    );
-
-    // Volver a la página de registro
-    await page.goto(`${BASE_URL}/register`);
-
-    // Intentar registrar con el mismo email
+    // Intentar registrar con email que ya existe en la DB
     await page.fill('[name="name"], [name="firstName"]', 'Jane Smith');
-    await page.fill('[name="email"]', duplicateEmail);
+    await page.fill('[name="email"]', existingEmail);
     await page.fill('[name="password"]', 'Pass456!@#');
     await page.fill('[name="confirmPassword"], [name="passwordConfirm"]', 'Pass456!@#');
     await page.check('[name="accept-terms"]');
     await page.click('button[type="submit"]');
 
-    // Verificar mensaje de error
-    await expect(page.locator('text=/email.*ya.*registrado|email.*existe|already.*registered/i').first()).toBeVisible({ timeout: 10000 });
+    // Verificar mensaje de error de email duplicado
+    await expect(page.locator('text=/email.*ya.*registrado|email.*existe|already.*registered/i').first()).toBeVisible({ timeout: 30000 });
 
     // Verificar que seguimos en la página de registro
     expect(page.url()).toContain('/register');

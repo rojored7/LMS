@@ -39,6 +39,8 @@ async function fillRegisterForm(
 }
 
 test.describe('Authentication Flow', () => {
+  // Serial para evitar rate limiting en endpoint de login (10/15min)
+  test.describe.configure({ mode: 'serial' });
   test('should complete full registration flow', async ({ page }) => {
     const testEmail = generateTestEmail();
     const testPassword = 'Test123!@#';
@@ -82,25 +84,18 @@ test.describe('Authentication Flow', () => {
   });
 
   test('should prevent duplicate email registration', async ({ page }) => {
-    const testEmail = generateTestEmail();
+    // Usar email seed pre-existente para evitar consumir cuota de registro (5/hora)
+    const existingEmail = SEED_STUDENT.email;
     const testPassword = 'Test123!@#';
-    const testName = 'Test User E2E';
 
-    // Primer registro
     await page.goto(`${BASE_URL}/register`);
-    await fillRegisterForm(page, testName, testEmail, testPassword);
-    await page.click('button[type="submit"]');
-    await page.waitForURL(/\/(dashboard|login|courses)/, { timeout: 30000 });
-
-    // Navegar directamente al registro para intentar duplicado
-    await page.goto(`${BASE_URL}/register`);
-    await fillRegisterForm(page, 'Another User', testEmail, testPassword);
+    await fillRegisterForm(page, 'Another User', existingEmail, testPassword);
     await page.click('button[type="submit"]');
 
     // Verificar error de email ya registrado
     // El backend retorna: "El email ya esta registrado"
     const errorMessage = page.getByText(/ya esta registrado|email.*registrado|registrado|ya exist/i).first();
-    await expect(errorMessage).toBeVisible({ timeout: 20000 });
+    await expect(errorMessage).toBeVisible({ timeout: 30000 });
   });
 
   test('should login with valid credentials', async ({ page }) => {

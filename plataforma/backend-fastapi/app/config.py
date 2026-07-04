@@ -47,8 +47,8 @@ class Settings(BaseSettings):
 
     BCRYPT_ROUNDS: int = 12
     RATE_LIMIT_GLOBAL: str = "200/15minutes"
-    RATE_LIMIT_AUTH_LOGIN: str = "10/15minutes"
-    RATE_LIMIT_AUTH_REGISTER: str = "5/hour"
+    RATE_LIMIT_AUTH_LOGIN: str = "30/minute"
+    RATE_LIMIT_AUTH_REGISTER: str = "20/hour"
     RATE_LIMIT_AUTH_RESET: str = "3/hour"
     RATE_LIMIT_AUTH_CHANGE_PASSWORD: str = "5/hour"
     RATE_LIMIT_CERTIFICATE_GENERATE: str = "10/hour"

@@ -6,13 +6,13 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { registerAndLogin } from './helpers/auth';
 import { AUTH_FILES } from './helpers/auth';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 const API_URL = process.env.API_URL || `${BASE_URL}/api`;
 
-test.describe('HU-004: Middleware JWT valida tokens correctamente', () => {
+// Tests que NO requieren autenticacion previa
+test.describe('HU-004: Middleware JWT - Acceso sin autenticacion', () => {
   test('Rutas protegidas requieren autenticación', async ({ page }) => {
     // Sin autenticacion, acceder a rutas protegidas redirige a /login
     const protectedRoutes = [
@@ -27,11 +27,25 @@ test.describe('HU-004: Middleware JWT valida tokens correctamente', () => {
     }
   });
 
-  test('Token válido permite acceso a rutas protegidas', async ({ page }) => {
-    // Login con usuario seed (HttpOnly cookies se setean automaticamente)
-    await registerAndLogin(page);
+  test('Token inválido en API retorna error 401', async ({ page }) => {
+    // Hacer peticion API con token invalido en el header
+    const response = await page.request.get(`${API_URL}/users/profile`, {
+      headers: {
+        'Authorization': 'Bearer invalid-token-12345'
+      }
+    }).catch((err) => err.response);
 
-    // Ahora puede acceder a rutas protegidas
+    // Debe retornar 401 Unauthorized
+    expect(response.status()).toBe(401);
+  });
+});
+
+// Tests que usan storageState para evitar login fresco (no consumen rate limit)
+test.describe('HU-004: Middleware JWT valida tokens correctamente', () => {
+  test.use({ storageState: AUTH_FILES.student });
+
+  test('Token válido permite acceso a rutas protegidas', async ({ page }) => {
+    // storageState ya tiene la sesion - acceder directamente a rutas protegidas
     await page.goto(`${BASE_URL}/profile`);
     await expect(page).not.toHaveURL(/.*login/);
     await expect(
@@ -43,9 +57,6 @@ test.describe('HU-004: Middleware JWT valida tokens correctamente', () => {
   });
 
   test('Sesion activa persiste al navegar entre rutas', async ({ page }) => {
-    // Login y navegar entre rutas protegidas
-    await registerAndLogin(page);
-
     // Navegar entre multiples rutas para verificar que la sesion persiste
     await page.goto(`${BASE_URL}/profile`);
     await expect(page).not.toHaveURL(/.*login/);
@@ -58,15 +69,11 @@ test.describe('HU-004: Middleware JWT valida tokens correctamente', () => {
   });
 
   test('Logout elimina sesión y revoca acceso', async ({ page }) => {
-    // Login
-    await registerAndLogin(page);
-
-    // Verificar acceso a ruta protegida
+    // storageState carga sesion activa - verificar acceso
     await page.goto(`${BASE_URL}/profile`);
     await expect(page).not.toHaveURL(/.*login/);
 
     // Logout via Header dropdown
-    // El dropdown se abre con el ultimo boton del header
     const headerButtons = page.locator('header button');
     const count = await headerButtons.count();
     if (count > 0) {
@@ -85,40 +92,20 @@ test.describe('HU-004: Middleware JWT valida tokens correctamente', () => {
   });
 
   test('Refresh token mantiene sesión activa', async ({ page }) => {
-    // Login con usuario seed
-    await registerAndLogin(page);
-
-    // Navegar a cursos (hace requests al API)
+    // storageState mantiene sesion - navegar entre rutas
     await page.goto(`${BASE_URL}/courses`);
     await page.waitForLoadState('load');
 
-    // Navegar a otra ruta protegida - la sesion debe seguir activa
     await page.goto(`${BASE_URL}/profile`);
     await expect(page).not.toHaveURL(/.*login/);
   });
 
   test('Peticiones API con cookies HttpOnly funcionan correctamente', async ({ page }) => {
-    // Login para obtener cookies
-    await registerAndLogin(page);
-
     // Las cookies HttpOnly se envian automaticamente en requests (withCredentials: true)
-    // Verificar que el perfil del usuario carga (requiere auth)
     await page.goto(`${BASE_URL}/profile`);
     await page.waitForLoadState('load');
 
     // La pagina debe mostrar datos del usuario (no redirigir a login)
     await expect(page).not.toHaveURL(/.*login/);
-  });
-
-  test('Token inválido en API retorna error 401', async ({ page }) => {
-    // Hacer peticion API con token invalido en el header
-    const response = await page.request.get(`${API_URL}/users/profile`, {
-      headers: {
-        'Authorization': 'Bearer invalid-token-12345'
-      }
-    }).catch((err) => err.response);
-
-    // Debe retornar 401 Unauthorized
-    expect(response.status()).toBe(401);
   });
 });

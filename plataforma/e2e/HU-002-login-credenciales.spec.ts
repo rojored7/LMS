@@ -19,6 +19,8 @@ const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 const API_URL = process.env.API_URL || `${BASE_URL}/api`;
 
 test.describe('HU-002: Login con Credenciales', () => {
+  // Serial: este test hace login en cada caso - evitar rate limit (10/15min por IP)
+  test.describe.configure({ mode: 'serial' });
   // Usar cuenta seed para evitar dependencia de registro (rate limiting)
   const testUser = TEST_CREDENTIALS.student;
 
