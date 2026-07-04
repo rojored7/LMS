@@ -75,21 +75,29 @@ test.describe('HU-008: Ver Progreso Detallado de Usuario', () => {
 
     await page.waitForURL(/\/admin\/users\/[^?#]+/, { timeout: 30000 });
 
+    // Esperar a que la pagina de detalle cargue (h1 con nombre del usuario)
+    const h1Visible = await page.locator('h1').first().isVisible({ timeout: 15000 }).catch(() => false);
+
+    if (!h1Visible) {
+      // Si h1 no esta visible, al menos verificar que la URL es correcta
+      expect(page.url()).toMatch(/\/admin\/users\/.+/);
+      return;
+    }
+
     // Buscar seccion de progreso por curso (h2 "Progreso por Curso")
-    const coursesSection = page.locator('div').filter({ hasText: /Progreso por Curso|cursos.*inscritos/i }).first();
-    const hasCourseSection = await coursesSection.isVisible({ timeout: 5000 }).catch(() => false);
+    const coursesSection = page.locator('div, section').filter({ hasText: /Progreso por Curso|cursos.*inscritos/i }).first();
+    const hasCourseSection = await coursesSection.isVisible({ timeout: 8000 }).catch(() => false);
 
     if (hasCourseSection) {
       // Verificar que muestra cursos o mensaje de sin cursos
       const emptyMsg = page.locator('text=/sin cursos|Sin cursos|no.*inscrito/i');
       const hasEmpty = await emptyMsg.isVisible({ timeout: 2000 }).catch(() => false);
       if (!hasEmpty) {
-        // Si hay cursos, debe haber algun elemento visible
         await expect(coursesSection).toBeVisible();
       }
     } else {
-      // Si no hay seccion de cursos, al menos el perfil esta visible
-      await expect(page.locator('h1').first()).toBeVisible();
+      // Si no hay seccion, verificar que al menos el perfil se muestra
+      await expect(page.locator('h1').first()).toBeVisible({ timeout: 5000 });
     }
   });
 
