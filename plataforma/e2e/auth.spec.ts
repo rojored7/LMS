@@ -4,6 +4,7 @@
  */
 
 import { test, expect } from '@playwright/test';
+import { AUTH_FILES } from './helpers/auth';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 const API_URL = process.env.API_URL || `${BASE_URL}/api`;
@@ -178,21 +179,6 @@ test.describe('Authentication Flow', () => {
     await page.waitForURL(/\/login/, { timeout: 30000 });
   });
 
-  test('should maintain session after page refresh', async ({ page }) => {
-    // Login via UI con usuario seed
-    await loginViaUI(page, SEED_STUDENT.email, SEED_STUDENT.password);
-
-    // Recargar la pagina
-    await page.reload();
-
-    // Verificar que el usuario sigue logueado (no redirige a login)
-    await page.waitForTimeout(1500);
-    expect(page.url()).not.toContain('/login');
-
-    // Verificar que sigue en el dashboard o cursos
-    expect(page.url()).toMatch(/\/(dashboard|courses)/);
-  });
-
   test('should redirect to login when accessing protected route without auth', async ({ page }) => {
     // Intentar acceder a ruta protegida sin autenticacion
     await page.goto(`${BASE_URL}/courses/enrolled`);
@@ -228,14 +214,33 @@ test.describe('Authentication Flow', () => {
 });
 
 test.describe('Session Persistence', () => {
+  test.use({ storageState: AUTH_FILES.student });
+
+  test('should maintain session after page refresh', async ({ page }) => {
+    // storageState provee sesion activa - verificar que persiste al recargar
+    await page.goto(`${BASE_URL}/dashboard`);
+    await page.waitForLoadState('load');
+    await page.waitForTimeout(1000);
+
+    expect(page.url()).not.toContain('/login');
+    expect(page.url()).toMatch(/\/(dashboard|courses)/);
+
+    // Recargar la pagina
+    await page.reload();
+    await page.waitForLoadState('load');
+
+    // Verificar que el usuario sigue logueado (no redirige a login)
+    await page.waitForTimeout(1500);
+    expect(page.url()).not.toContain('/login');
+    expect(page.url()).toMatch(/\/(dashboard|courses)/);
+  });
+
   test('should persist session across browser tabs', async ({ context }) => {
-    // Abrir primera pestana y hacer login
+    // Con storageState, la primera pagina ya tiene sesion activa
     const page1 = await context.newPage();
-    await page1.goto(`${BASE_URL}/login`);
-    await page1.fill('input[name="email"]', SEED_STUDENT.email);
-    await page1.fill('input[name="password"]', SEED_STUDENT.password);
-    await page1.click('button[type="submit"]');
-    await page1.waitForURL(/\/(dashboard|courses)/, { timeout: 30000 });
+    await page1.goto(`${BASE_URL}/dashboard`);
+    await page1.waitForLoadState('load');
+    await page1.waitForTimeout(500);
 
     // Verificar que el usuario esta logueado en pagina 1
     expect(page1.url()).not.toContain('/login');

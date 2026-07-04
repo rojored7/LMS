@@ -41,6 +41,8 @@ test.describe('HU-004: Middleware JWT - Acceso sin autenticacion', () => {
 });
 
 // Tests que usan storageState para evitar login fresco (no consumen rate limit)
+// NOTA: NO incluye el test de logout porque logout blacklistea el token compartido en Redis,
+//       lo que invalidaria todos los demas tests que usan el mismo student.json storageState.
 test.describe('HU-004: Middleware JWT valida tokens correctamente', () => {
   test.use({ storageState: AUTH_FILES.student });
 
@@ -68,8 +70,39 @@ test.describe('HU-004: Middleware JWT valida tokens correctamente', () => {
     await expect(page).not.toHaveURL(/.*login/);
   });
 
+  test('Refresh token mantiene sesión activa', async ({ page }) => {
+    // storageState mantiene sesion - navegar entre rutas
+    await page.goto(`${BASE_URL}/courses`);
+    await page.waitForLoadState('load');
+
+    await page.goto(`${BASE_URL}/profile`);
+    await expect(page).not.toHaveURL(/.*login/);
+  });
+
+  test('Peticiones API con cookies HttpOnly funcionan correctamente', async ({ page }) => {
+    // Las cookies HttpOnly se envian automaticamente en requests (withCredentials: true)
+    await page.goto(`${BASE_URL}/profile`);
+    await page.waitForLoadState('load');
+
+    // La pagina debe mostrar datos del usuario (no redirigir a login)
+    await expect(page).not.toHaveURL(/.*login/);
+  });
+});
+
+// Test de logout en describe separado SIN storageState compartido.
+// Hace login fresco para que solo ese token sea blacklisteado al hacer logout,
+// sin afectar el student.json compartido que usan los demas tests.
+test.describe('HU-004: Logout revoca acceso correctamente', () => {
   test('Logout elimina sesión y revoca acceso', async ({ page }) => {
-    // storageState carga sesion activa - verificar acceso
+    // Fresh login - crea token propio que no afecta a otros tests
+    await page.goto(`${BASE_URL}/login`);
+    await page.waitForSelector('input[name="email"]', { timeout: 15000 });
+    await page.fill('input[name="email"]', 'student@ciber.com');
+    await page.fill('input[name="password"]', 'Student123!');
+    await page.click('button[type="submit"]');
+    await page.waitForURL(/\/(dashboard|courses)/, { timeout: 30000 });
+
+    // Verificar que tenemos sesion activa
     await page.goto(`${BASE_URL}/profile`);
     await expect(page).not.toHaveURL(/.*login/);
 
@@ -89,23 +122,5 @@ test.describe('HU-004: Middleware JWT valida tokens correctamente', () => {
     // Despues de logout, ruta protegida debe redirigir a login
     await page.goto(`${BASE_URL}/profile`);
     await expect(page).toHaveURL(/.*login/, { timeout: 20000 });
-  });
-
-  test('Refresh token mantiene sesión activa', async ({ page }) => {
-    // storageState mantiene sesion - navegar entre rutas
-    await page.goto(`${BASE_URL}/courses`);
-    await page.waitForLoadState('load');
-
-    await page.goto(`${BASE_URL}/profile`);
-    await expect(page).not.toHaveURL(/.*login/);
-  });
-
-  test('Peticiones API con cookies HttpOnly funcionan correctamente', async ({ page }) => {
-    // Las cookies HttpOnly se envian automaticamente en requests (withCredentials: true)
-    await page.goto(`${BASE_URL}/profile`);
-    await page.waitForLoadState('load');
-
-    // La pagina debe mostrar datos del usuario (no redirigir a login)
-    await expect(page).not.toHaveURL(/.*login/);
   });
 });
