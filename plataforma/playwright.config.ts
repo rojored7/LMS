@@ -5,21 +5,23 @@ const AUTH_DIR = path.join(__dirname, 'e2e/.auth');
 
 export default defineConfig({
   testDir: './e2e',
-  fullyParallel: false,
-  forbidOnly: false,
-  retries: 2,
-  workers: 1,
+  fullyParallel: true,
+  forbidOnly: !!process.env.CI,
+  retries: process.env.CI ? 2 : 0,
+  workers: process.env.CI ? 1 : undefined,
   reporter: [
     ['list'],
     ['html', { open: 'never', outputFolder: 'playwright-report' }],
   ],
+
+  timeout: 90000, // 90s por test (produccion con red mas lenta)
 
   use: {
     baseURL: process.env.BASE_URL || 'http://localhost:3000',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     video: 'off',
-    actionTimeout: 15000,
+    actionTimeout: 20000,
     navigationTimeout: 45000,
     launchOptions: {
       args: ['--disable-web-security', '--no-sandbox'],
