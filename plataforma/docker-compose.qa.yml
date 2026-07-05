@@ -6,7 +6,7 @@ services:
   # ===== POSTGRESQL DATABASE =====
   postgres:
     image: postgres:15-alpine
-    container_name: ciber-postgres-prod
+    container_name: ciber-postgres-qa
     environment:
       POSTGRES_DB: ${DB_NAME}
       POSTGRES_USER: ${DB_USER}
@@ -36,7 +36,7 @@ services:
   # ===== REDIS CACHE =====
   redis:
     image: redis:7-alpine
-    container_name: ciber-redis-prod
+    container_name: ciber-redis-qa
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
     volumes:
       - redis_data:/data
@@ -63,7 +63,7 @@ services:
       context: ./backend-fastapi
       dockerfile: Dockerfile
       target: production
-    container_name: ciber-backend-prod
+    container_name: ciber-backend-qa
     environment:
       APP_ENV: production
       PORT: 4000
@@ -125,7 +125,7 @@ services:
       context: ./executor
       dockerfile: Dockerfile
       target: production
-    container_name: ciber-executor-prod
+    container_name: ciber-executor-qa
     environment:
       NODE_ENV: production
       PORT: 5000
@@ -177,7 +177,7 @@ services:
         VITE_API_URL: "/api"
         VITE_EXECUTOR_URL: "/executor"
         VITE_ENV: "production"
-    container_name: ciber-frontend-prod
+    container_name: ciber-frontend-qa
     environment:
       NODE_ENV: production
     networks:
@@ -194,12 +194,12 @@ services:
     build:
       context: ./nginx
       dockerfile: Dockerfile
-    container_name: ciber-nginx-prod
+    container_name: ciber-nginx-qa
     ports:
       - "${NGINX_HTTP_PORT:-80}:80"
       - "${NGINX_HTTPS_PORT:-443}:443"
     volumes:
-      - ./nginx/nginx.prod.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/upstream.conf:/etc/nginx/conf.d/upstream.conf:ro
       - ./nginx/ssl:/etc/nginx/ssl:ro
       - nginx_logs:/var/log/nginx

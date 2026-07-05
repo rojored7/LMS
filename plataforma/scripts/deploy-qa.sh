@@ -1,13 +1,13 @@
 #!/bin/bash
 # ===========================================
-# Deploy to PROD (192.168.200.98) - HTTPS
+# Deploy to QA (192.168.200.21) - ONE COMMAND
 # ===========================================
-# Builds locally, uploads images + SSL certs, deploys on remote server.
+# Builds locally, uploads images, deploys on remote server.
 # Handles Windows Git Bash path conversion issues.
 #
 # Usage:
-#   ./scripts/deploy-prod.sh
-#   SERVER=192.168.200.98 USER_SSH=itac ./scripts/deploy-prod.sh
+#   ./scripts/deploy-qa.sh
+#   SERVER=10.0.0.5 USER_SSH=deploy ./scripts/deploy-qa.sh
 #
 # Requirements: docker, python3 with paramiko
 # ===========================================
@@ -26,11 +26,11 @@ err()  { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
 info() { echo -e "${CYAN}[>>]${NC} $1"; }
 
 # --- Config ---
-SERVER="${SERVER:-192.168.200.98}"
+SERVER="${SERVER:-192.168.200.21}"
 USER_SSH="${USER_SSH:-itac}"
-PASS_SSH="${PASS_SSH:?ERROR: PASS_SSH es requerido. Uso: PASS_SSH=xxx ./scripts/deploy-prod.sh}"
+PASS_SSH="${PASS_SSH:?ERROR: PASS_SSH es requerido. Uso: PASS_SSH=xxx ./scripts/deploy-qa.sh}"
 REMOTE_DIR="/home/${USER_SSH}/LMS/plataforma"
-COMPOSE_FILE="docker-compose.prod.yml"
+COMPOSE_FILE="docker-compose.qa.yml"
 
 # Detect temp dir (Windows vs Linux)
 if [ -n "$TEMP" ]; then
@@ -41,7 +41,7 @@ fi
 
 echo ""
 echo "=========================================="
-echo "  PROD Deploy (HTTPS)"
+echo "  QA Deploy"
 echo "=========================================="
 echo ""
 info "Server: ${SERVER}"
@@ -88,7 +88,7 @@ log "Images saved: ${SIZE}"
 info "Deploying to ${SERVER}..."
 
 python -c "
-import paramiko, os, sys, time, platform
+import paramiko, os, sys, time, json
 
 SERVER = '${SERVER}'
 USER = '${USER_SSH}'
@@ -99,6 +99,7 @@ COMPOSE = '${COMPOSE_FILE}'
 
 print('Connecting...')
 ssh = paramiko.SSHClient()
+# TODO: Reemplazar AutoAddPolicy con RejectPolicy + known_hosts para produccion
 ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 ssh.connect(SERVER, username=USER, password=PASS, timeout=15)
 sftp = ssh.open_sftp()
@@ -146,35 +147,6 @@ def run(cmd, timeout=120):
     stdin, stdout, stderr = ssh.exec_command(cmd, timeout=timeout)
     return stdout.read().decode('utf-8', errors='replace')
 
-# Upload nginx.prod.conf
-print('Uploading nginx prod config...')
-sftp2 = ssh.open_sftp()
-nginx_local = os.path.join(os.getcwd(), 'nginx', 'nginx.prod.conf')
-if os.path.exists(nginx_local):
-    run(f'mkdir -p {REMOTE_DIR}/nginx')
-    sftp2.put(nginx_local, f'{REMOTE_DIR}/nginx/nginx.prod.conf')
-    print('nginx.prod.conf uploaded')
-
-# Upload SSL certs
-if platform.system() == 'Windows':
-    cert_local = r'C:\Users\Itac\Downloads\capacitaciones.itac.com.co.crt'
-    key_local  = r'C:\Users\Itac\Downloads\capacitaciones.itac.com.co.key'
-else:
-    downloads = os.path.expanduser('~/Downloads')
-    cert_local = os.path.join(downloads, 'capacitaciones.itac.com.co.crt')
-    key_local  = os.path.join(downloads, 'capacitaciones.itac.com.co.key')
-
-if os.path.exists(cert_local) and os.path.exists(key_local):
-    run(f'mkdir -p {REMOTE_DIR}/nginx/ssl && chmod 700 {REMOTE_DIR}/nginx/ssl')
-    sftp2.put(cert_local, f'{REMOTE_DIR}/nginx/ssl/cert.pem')
-    sftp2.put(key_local,  f'{REMOTE_DIR}/nginx/ssl/key.pem')
-    run(f'chmod 600 {REMOTE_DIR}/nginx/ssl/cert.pem {REMOTE_DIR}/nginx/ssl/key.pem')
-    print('SSL certs uploaded')
-else:
-    print(f'WARNING: SSL certs no encontrados. Subir manualmente a {REMOTE_DIR}/nginx/ssl/')
-
-sftp2.close()
-
 # Load images
 print('Loading Docker images...')
 run('gunzip -c /tmp/prod-images.tar.gz | docker load', timeout=180)
@@ -193,7 +165,7 @@ time.sleep(20)
 
 # Apply migrations
 print('Applying migrations...')
-out = run(f'docker exec ciber-backend-prod alembic upgrade head 2>&1')
+out = run(f'docker exec ciber-backend-qa alembic upgrade head 2>&1')
 print(f'  Migration: {out.strip()[-200:]}')
 if 'error' in out.lower() or 'exception' in out.lower():
     print('  ERROR: Migration failed - check logs and apply manually')
@@ -206,25 +178,30 @@ print()
 print('=== Services ===')
 print(out)
 
-# Final health check via HTTPS
-out = run('curl -sk https://localhost/health 2>/dev/null')
-if 'healthy' in out:
+# Validate frontend JS
+out = run(f'curl -s http://localhost:8080/ 2>/dev/null | grep -o \"index-[^\\\"]*\\.js\" | head -1')
+js_file = out.strip()
+if js_file:
+    out = run(f'curl -s http://localhost:8080/assets/{js_file} 2>/dev/null | grep -o \"C:/Program\" | head -1')
+    if 'C:/Program' in out:
+        print('WARNING: Frontend JS has corrupted Windows path!')
+    else:
+        print(f'Frontend JS OK: {js_file}')
+
+# Final health check
+out = run('curl -sf http://localhost:4000/health 2>/dev/null')
+if 'ok' in out:
     print('Backend: healthy')
 else:
-    # Fallback a puerto directo
-    out = run('curl -sf http://localhost:4000/health 2>/dev/null')
-    if 'ok' in out:
-        print('Backend: healthy')
-    else:
-        print('Backend: UNHEALTHY - verificar logs')
+    print('Backend: UNHEALTHY')
 
 print()
 print('Deploy complete!')
 ssh.close()
 " 2>&1 || err "Deploy failed"
 
-log "PROD deploy complete"
+log "QA deploy complete"
 echo ""
 echo "=========================================="
-echo -e "  ${GREEN}Deploy PROD successful${NC}"
+echo -e "  ${GREEN}Deploy QA successful${NC}"
 echo "=========================================="

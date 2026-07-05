@@ -130,6 +130,9 @@ import-course-dry:
 deploy:
 	./scripts/deploy.sh docker-compose.yml
 
+deploy-qa:
+	./scripts/deploy-qa.sh
+
 deploy-prod:
 	./scripts/deploy-prod.sh
 
