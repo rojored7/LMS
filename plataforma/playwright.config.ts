@@ -23,6 +23,7 @@ export default defineConfig({
     video: 'off',
     actionTimeout: 20000,
     navigationTimeout: 45000,
+    ignoreHTTPSErrors: true,
     launchOptions: {
       args: ['--disable-web-security', '--no-sandbox'],
     },
