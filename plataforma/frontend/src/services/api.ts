@@ -50,7 +50,8 @@ api.interceptors.response.use(
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
     // No reintentar refresh para endpoints de auth (login/register/refresh)
-    const isAuthEndpoint = originalRequest.url?.includes('/auth/login') ||
+    const isAuthEndpoint =
+      originalRequest.url?.includes('/auth/login') ||
       originalRequest.url?.includes('/auth/register') ||
       originalRequest.url?.includes('/auth/refresh');
 
