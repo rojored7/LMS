@@ -42,7 +42,7 @@ async def seed():
                     role=UserRole.ADMIN,
                 )
                 db.add(admin)
-                logger.info("admin_user_created", email="admin@ciber.local")
+                logger.info("admin_user_created", email=admin_email)
             else:
                 logger.info("admin_user_exists")
 
