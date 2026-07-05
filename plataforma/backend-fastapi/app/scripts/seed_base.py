@@ -26,16 +26,19 @@ async def seed():
             "Defina esta variable de entorno antes de ejecutar el seed."
         )
 
+    admin_email = os.environ.get("ADMIN_SEED_EMAIL", "admin@ciber.local")
+    admin_name = os.environ.get("ADMIN_SEED_NAME", "Administrador")
+
     session_factory = get_session_factory()
     async with session_factory() as db:
         try:
-            result = await db.execute(select(User).where(User.email == "admin@ciber.local"))
+            result = await db.execute(select(User).where(User.email == admin_email))
             admin = result.scalar_one_or_none()
             if not admin:
                 admin = User(
-                    email="admin@ciber.local",
+                    email=admin_email,
                     password_hash=hash_password(admin_password),
-                    name="Administrador",
+                    name=admin_name,
                     role=UserRole.ADMIN,
                 )
                 db.add(admin)
