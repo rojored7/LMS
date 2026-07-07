@@ -149,13 +149,15 @@ class AuthService:
         await self.db.flush()
         logger.info("password_reset_completed", user_id=user.id)
 
-    async def change_password(self, user: User, current_password: str, new_password: str) -> None:
+    async def change_password(self, user: User, current_password: str, new_password: str, current_access_token: str | None = None) -> None:
         if user.auth_provider != "local" or not user.password_hash:
             raise ValidationError("No se puede cambiar la contrasena para usuarios externos")
         if not verify_password(current_password, user.password_hash):
             raise ValidationError("Contrasena actual incorrecta")
         user.password_hash = hash_password(new_password)
         await self.token_service.invalidate_all_user_tokens(user.id)
+        if current_access_token:
+            await self.token_service.blacklist_token(current_access_token)
         await self.db.flush()
         logger.info("password_changed", user_id=user.id)
 

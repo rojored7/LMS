@@ -195,8 +195,11 @@ async def change_password(
     db: AsyncSession = Depends(get_db),
     token_service: TokenService = Depends(get_token_service),
 ):
+    auth_header = request.headers.get("Authorization", "")
+    current_token = auth_header.removeprefix("Bearer ").strip() or None
+
     service = AuthService(db, token_service)
-    await service.change_password(user, body.current_password, body.new_password)
+    await service.change_password(user, body.current_password, body.new_password, current_access_token=current_token)
     return ApiResponse(success=True, data={"message": "Contrasena cambiada exitosamente"}).model_dump()
 
 

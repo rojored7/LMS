@@ -212,3 +212,39 @@ async def test_change_password_wrong_current(db_session: AsyncSession) -> None:
 
     with pytest.raises(ValidationError, match="Contrasena actual incorrecta"):
         await svc.change_password(user, "WrongCurrent!", "NewPass!")
+
+
+# ---------------------------------------------------------------------------
+# SEC-007-A: blacklist del access token al cambiar contrasena
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_change_password_blacklists_current_access_token(db_session: AsyncSession) -> None:
+    """Si se pasa current_access_token, debe ser blacklisteado."""
+    ts = _make_token_service()
+    svc = AuthService(db_session, ts)
+
+    user = User(email="blk1@test.com", password_hash=hash_password("Old1!"), name="BL", role=UserRole.STUDENT)
+    db_session.add(user)
+    await db_session.flush()
+
+    await svc.change_password(user, "Old1!", "New_Secure99!", current_access_token="tok123")
+
+    ts.blacklist_token.assert_awaited_once_with("tok123")
+    ts.invalidate_all_user_tokens.assert_awaited_once_with(user.id)
+
+
+@pytest.mark.asyncio
+async def test_change_password_without_token_skips_blacklist(db_session: AsyncSession) -> None:
+    """Sin current_access_token no se llama a blacklist_token."""
+    ts = _make_token_service()
+    svc = AuthService(db_session, ts)
+
+    user = User(email="blk2@test.com", password_hash=hash_password("Old2!"), name="BL2", role=UserRole.STUDENT)
+    db_session.add(user)
+    await db_session.flush()
+
+    await svc.change_password(user, "Old2!", "New_Secure99!")
+
+    ts.blacklist_token.assert_not_awaited()
+    ts.invalidate_all_user_tokens.assert_awaited_once_with(user.id)
