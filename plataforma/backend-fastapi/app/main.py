@@ -17,7 +17,7 @@ from app.database import check_database_connection
 from app.middleware.correlation import CorrelationIdMiddleware
 from app.middleware.error_handler import register_exception_handlers
 from app.middleware.rate_limit import limiter
-from app.redis import check_redis_connection, close_redis
+from app.redis import check_redis_connection, close_redis, redis_client
 from app.utils.logger import setup_logging
 
 settings = get_settings()
@@ -67,6 +67,7 @@ async def lifespan(app: FastAPI):
         logger.info("redis_connected")
     else:
         logger.warning("redis_connection_failed")
+    app.state.redis = redis_client
 
     logger.info("server_starting", port=settings.PORT, env=settings.APP_ENV)
     yield
