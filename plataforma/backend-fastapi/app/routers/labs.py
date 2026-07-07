@@ -42,8 +42,9 @@ async def list_labs(
     db: AsyncSession = Depends(get_db),
 ):
     mod = (await db.execute(select(Module).where(Module.id == module_id))).scalar_one_or_none()
-    if mod:
-        await verify_enrollment_or_staff(db, user.id, mod.course_id, user.role)
+    if mod is None:
+        raise HTTPException(status_code=404, detail="Modulo no encontrado")
+    await verify_enrollment_or_staff(db, user.id, mod.course_id, user.role)
     service = LabService(db)
     labs = await service.list_by_module(module_id)
     schema = LabResponse if user.role in (UserRole.ADMIN, UserRole.INSTRUCTOR) else LabResponseStudent
@@ -60,8 +61,9 @@ async def get_lab(
     service = LabService(db)
     lab = await service.get_by_id(lab_id)
     mod = (await db.execute(select(Module).where(Module.id == lab.module_id))).scalar_one_or_none()
-    if mod:
-        await verify_enrollment_or_staff(db, user.id, mod.course_id, user.role)
+    if mod is None:
+        raise HTTPException(status_code=404, detail="Modulo no encontrado")
+    await verify_enrollment_or_staff(db, user.id, mod.course_id, user.role)
     schema = LabResponse if user.role in (UserRole.ADMIN, UserRole.INSTRUCTOR) else LabResponseStudent
     return ApiResponse(success=True, data=schema.model_validate(lab).model_dump()).model_dump()
 
@@ -125,8 +127,9 @@ async def submit_lab(
     lab_service = LabService(db)
     lab = await lab_service.get_by_id(lab_id)
     mod = (await db.execute(select(Module).where(Module.id == lab.module_id))).scalar_one_or_none()
-    if mod:
-        await verify_enrollment_or_staff(db, user.id, mod.course_id, user.role)
+    if mod is None:
+        raise HTTPException(status_code=404, detail="Modulo no encontrado")
+    await verify_enrollment_or_staff(db, user.id, mod.course_id, user.role)
 
     if lab.lab_type == "DELIVERABLE":
         raise HTTPException(
@@ -209,8 +212,9 @@ async def submit_deliverable(
         )
 
     mod = (await db.execute(select(Module).where(Module.id == lab.module_id))).scalar_one_or_none()
-    if mod:
-        await verify_enrollment_or_staff(db, user.id, mod.course_id, user.role)
+    if mod is None:
+        raise HTTPException(status_code=404, detail="Modulo no encontrado")
+    await verify_enrollment_or_staff(db, user.id, mod.course_id, user.role)
 
     submission = await lab_service.submit_deliverable(
         lab_id=lab_id,
@@ -263,6 +267,12 @@ async def complete_lab_manual(
     lab_service = LabService(db)
     lab = await lab_service.get_by_id(lab_id)
 
+    if user.role == UserRole.STUDENT:
+        raise HTTPException(
+            status_code=403,
+            detail="Solo instructores y admins pueden completar labs manualmente",
+        )
+
     if lab.lab_type == "EXECUTABLE":
         raise HTTPException(
             status_code=400,
@@ -270,8 +280,9 @@ async def complete_lab_manual(
         )
 
     mod = (await db.execute(select(Module).where(Module.id == lab.module_id))).scalar_one_or_none()
-    if mod:
-        await verify_enrollment_or_staff(db, user.id, mod.course_id, user.role)
+    if mod is None:
+        raise HTTPException(status_code=404, detail="Modulo no encontrado")
+    await verify_enrollment_or_staff(db, user.id, mod.course_id, user.role)
 
     existing = await lab_service.get_submissions(lab_id, user_id=user.id)
     if any(s.passed for s in existing):
