@@ -9,10 +9,21 @@ from app.schemas.common import CamelModel
 
 ALLOWED_AVATAR_DOMAINS = {"localhost", "127.0.0.1", "res.cloudinary.com", "i.imgur.com", "avatars.githubusercontent.com"}
 
+_NAME_FORBIDDEN = re.compile(r'[<>&"\']')
+
 
 class UserProfileUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=2, max_length=100)
     avatar: AnyHttpUrl | None = None
+
+    @field_validator("name")
+    @classmethod
+    def sanitize_name(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+        if _NAME_FORBIDDEN.search(v):
+            raise ValueError("El nombre contiene caracteres no permitidos")
+        return v.strip()
 
     @field_validator("avatar")
     @classmethod

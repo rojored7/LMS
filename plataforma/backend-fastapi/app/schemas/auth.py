@@ -1,9 +1,12 @@
+import re
 from datetime import datetime
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
 from app.schemas.common import CamelModel
 from app.utils.validators import validate_password_strength
+
+_NAME_FORBIDDEN = re.compile(r'[<>&"\']')
 
 
 class LdapLoginRequest(BaseModel):
@@ -20,6 +23,13 @@ class RegisterRequest(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8, max_length=128)
     name: str = Field(min_length=2, max_length=255)
+
+    @field_validator("name")
+    @classmethod
+    def sanitize_name(cls, v: str) -> str:
+        if _NAME_FORBIDDEN.search(v):
+            raise ValueError("El nombre contiene caracteres no permitidos")
+        return v.strip()
 
     @field_validator("password")
     @classmethod

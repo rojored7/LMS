@@ -1,5 +1,6 @@
 import os
 from collections.abc import AsyncGenerator
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -21,6 +22,17 @@ from app.middleware.rate_limit import limiter  # noqa: E402
 
 # Disable rate limiting in tests
 limiter.enabled = False
+
+
+@pytest.fixture(autouse=True)
+def mock_redis():
+    """Mock Redis globally so tests don't need a running Redis instance."""
+    mock = AsyncMock()
+    mock.get = AsyncMock(return_value=None)
+    mock.setex = AsyncMock(return_value=True)
+    mock.delete = AsyncMock(return_value=1)
+    with patch("app.middleware.auth.redis_client", mock):
+        yield mock
 
 test_engine = create_async_engine("sqlite+aiosqlite://", echo=False)
 test_session = async_sessionmaker(test_engine, class_=AsyncSession, expire_on_commit=False)
