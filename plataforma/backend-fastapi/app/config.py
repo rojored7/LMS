@@ -46,6 +46,7 @@ class Settings(BaseSettings):
     MAX_SESSIONS_PER_USER: int = 5
 
     BCRYPT_ROUNDS: int = 12
+    TRUSTED_PROXY_CIDRS: str = "172.28.0.0/16,172.29.0.0/16,172.30.0.0/16"
     RATE_LIMIT_GLOBAL: str = "200/15minutes"
     RATE_LIMIT_AUTH_LOGIN: str = "30/minute"
     RATE_LIMIT_AUTH_REGISTER: str = "20/hour"
