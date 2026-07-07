@@ -50,7 +50,7 @@ async def _handle_webhook(request: Request, db: AsyncSession) -> dict:
 @limiter.limit("10/minute")
 async def glitchtip_webhook_auth(secret: str, request: Request, db: AsyncSession = Depends(get_db)):
     """Webhook receiver with URL-based secret authentication."""
-    if settings.GLITCHTIP_WEBHOOK_SECRET and secret != settings.GLITCHTIP_WEBHOOK_SECRET:
+    if not settings.GLITCHTIP_WEBHOOK_SECRET or secret != settings.GLITCHTIP_WEBHOOK_SECRET:
         raise HTTPException(status_code=401, detail="Invalid webhook secret")
     try:
         data = await _handle_webhook(request, db)

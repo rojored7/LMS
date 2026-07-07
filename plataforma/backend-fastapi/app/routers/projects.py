@@ -171,6 +171,8 @@ async def submit_project(
     db: AsyncSession = Depends(get_db),
 ):
     service = ProjectService(db)
+    project = await service.get_by_id(project_id)
+    await verify_enrollment_or_staff(db, user.id, project.course_id, user.role)
     submission = await service.submit(project_id, user.id, content=body.content, files=body.files)
     return ApiResponse(
         success=True,

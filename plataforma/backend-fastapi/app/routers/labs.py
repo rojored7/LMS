@@ -267,7 +267,7 @@ async def complete_lab_manual(
     lab_service = LabService(db)
     lab = await lab_service.get_by_id(lab_id)
 
-    if user.role == UserRole.STUDENT:
+    if user.role not in (UserRole.ADMIN, UserRole.INSTRUCTOR):
         raise HTTPException(
             status_code=403,
             detail="Solo instructores y admins pueden completar labs manualmente",
