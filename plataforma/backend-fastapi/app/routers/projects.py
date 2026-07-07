@@ -7,6 +7,7 @@ from app.middleware.auth import get_current_user, require_instructor
 from app.models.user import User
 from app.schemas.common import ApiResponse
 from app.services.project_service import ProjectService
+from app.utils.enrollment_check import verify_enrollment_or_staff
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
 
@@ -40,8 +41,10 @@ class ReviewRequest(BaseModel):
 @router.get("/course/{course_id}")
 async def list_projects(
     course_id: str,
+    user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    await verify_enrollment_or_staff(db, user.id, course_id, user.role)
     service = ProjectService(db)
     projects = await service.list_by_course(course_id)
     data = [
@@ -106,10 +109,12 @@ async def get_my_submissions(
 @router.get("/{project_id}")
 async def get_project(
     project_id: str,
+    user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     service = ProjectService(db)
     project = await service.get_by_id(project_id)
+    await verify_enrollment_or_staff(db, user.id, project.course_id, user.role)
     return ApiResponse(
         success=True,
         data={
