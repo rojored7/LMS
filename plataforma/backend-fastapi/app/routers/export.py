@@ -1,3 +1,5 @@
+import re
+
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,6 +16,7 @@ _CSV_HEADERS = {
     "Content-Disposition": "attachment",
     "Cache-Control": "no-store",
 }
+_SAFE_FILENAME_RE = re.compile(r"[^a-zA-Z0-9_-]")
 
 
 @router.get("/enrollments")
@@ -26,7 +29,8 @@ async def export_enrollments(
 ) -> StreamingResponse:
     service = ExportService(db)
     csv_data = await service.export_enrollments_csv(course_id=course_id)
-    filename = f"inscripciones_{course_id or 'todos'}.csv"
+    safe_id = _SAFE_FILENAME_RE.sub("_", course_id) if course_id else "todos"
+    filename = f"inscripciones_{safe_id}.csv"
     return StreamingResponse(
         iter([csv_data]),
         media_type="text/csv",
@@ -44,7 +48,8 @@ async def export_progress(
 ) -> StreamingResponse:
     service = ExportService(db)
     csv_data = await service.export_progress_csv(course_id=course_id)
-    filename = f"progreso_{course_id}.csv"
+    safe_id = _SAFE_FILENAME_RE.sub("_", course_id)
+    filename = f"progreso_{safe_id}.csv"
     return StreamingResponse(
         iter([csv_data]),
         media_type="text/csv",

@@ -60,17 +60,6 @@ async def glitchtip_webhook_auth(secret: str, request: Request, db: AsyncSession
         return ApiResponse(success=False, data={"error": "processing failed"}).model_dump()
 
 
-@router.post("/webhook/glitchtip")
-@limiter.limit("10/minute")
-async def glitchtip_webhook(request: Request, db: AsyncSession = Depends(get_db)):
-    """Webhook receiver for internal network (no auth)."""
-    try:
-        data = await _handle_webhook(request, db)
-        return ApiResponse(success=True, data=data).model_dump()
-    except Exception as e:
-        logger.error("webhook_processing_failed", error=str(e))
-        return ApiResponse(success=False, data={"error": "processing failed"}).model_dump()
-
 
 @router.get("")
 async def list_incidents(_user: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
