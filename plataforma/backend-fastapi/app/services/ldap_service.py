@@ -1,7 +1,9 @@
+import asyncio
 import json
 from datetime import datetime, timedelta, timezone
 
 import structlog
+from ldap3.utils.conv import escape_filter_chars
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -125,7 +127,8 @@ class LdapService:
         if not settings.LDAP_ENABLED:
             raise ValidationError("LDAP no esta habilitado")
 
-        ldap_result = self._bind_user(username, password)
+        safe_username = escape_filter_chars(username)
+        ldap_result = await asyncio.to_thread(self._bind_user, safe_username, password)
         if not ldap_result:
             raise AuthenticationError("Credenciales LDAP invalidas")
 
