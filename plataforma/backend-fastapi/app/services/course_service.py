@@ -10,6 +10,7 @@ from app.middleware.error_handler import ConflictError, NotFoundError
 from app.models.course import Course, CourseLevel, Module, Lesson
 from app.models.progress import Enrollment
 from app.utils.course_scoring import calculate_course_score
+from app.utils.query_utils import escape_like
 
 logger = structlog.get_logger()
 
@@ -25,8 +26,9 @@ class CourseService:
             query = query.where(Course.level == level)
             count_query = count_query.where(Course.level == level)
         if search:
-            query = query.where(Course.title.ilike(f"%{search}%"))
-            count_query = count_query.where(Course.title.ilike(f"%{search}%"))
+            safe_search = escape_like(search)
+            query = query.where(Course.title.ilike(f"%{safe_search}%", escape="\\"))
+            count_query = count_query.where(Course.title.ilike(f"%{safe_search}%", escape="\\"))
         total = (await self.db.execute(count_query)).scalar() or 0
         offset = (page - 1) * limit
         result = await self.db.execute(query.offset(offset).limit(limit).order_by(Course.created_at.desc()))

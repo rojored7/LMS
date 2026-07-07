@@ -5,6 +5,7 @@ import structlog
 from app.middleware.error_handler import AuthorizationError, NotFoundError
 from app.models.user import User, UserRole
 from app.utils.security import hash_password, verify_password
+from app.utils.query_utils import escape_like
 
 logger = structlog.get_logger()
 
@@ -21,7 +22,8 @@ class UserService:
             query = query.where(User.role == role)
             count_query = count_query.where(User.role == role)
         if search:
-            filter_cond = User.name.ilike(f"%{search}%") | User.email.ilike(f"%{search}%")
+            safe_search = escape_like(search)
+            filter_cond = User.name.ilike(f"%{safe_search}%", escape="\\") | User.email.ilike(f"%{safe_search}%", escape="\\")
             query = query.where(filter_cond)
             count_query = count_query.where(filter_cond)
 
