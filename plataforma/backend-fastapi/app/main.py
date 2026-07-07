@@ -4,7 +4,6 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
@@ -148,18 +147,17 @@ from app.routers import (
     projects,
     quizzes,
     training_profiles,
+    uploads,
     users,
 )
 
-# Static files for uploads (certificates, lesson attachments, etc.)
+# Ensure upload subdirectories exist
 _uploads_dir = os.environ.get("UPLOADS_DIR", "/app/uploads")
 for _subdir in ("certificates", "lessons"):
     try:
         os.makedirs(os.path.join(_uploads_dir, _subdir), exist_ok=True)
     except OSError:
         pass  # Volume may already exist with different ownership
-if os.path.isdir(_uploads_dir):
-    app.mount("/api/uploads", StaticFiles(directory=_uploads_dir), name="uploads")
 
 app.include_router(auth.router)
 app.include_router(users.router)
@@ -181,6 +179,7 @@ app.include_router(export.router)
 app.include_router(course_management.router)
 app.include_router(incidents.router)
 app.include_router(instructor.router)
+app.include_router(uploads.router)
 
 
 @app.get("/health")
