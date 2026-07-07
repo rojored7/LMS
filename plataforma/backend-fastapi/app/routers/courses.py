@@ -102,5 +102,9 @@ async def get_course_modules(course_id: str, user: User | None = Depends(get_opt
 @router.get("/{course_id}/modules/{module_id}/lessons")
 async def get_module_lessons(course_id: str, module_id: str, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)) -> dict:
     service = CourseService(db)
+    if user.role == UserRole.STUDENT:
+        enrolled = await service.is_user_enrolled(user.id, course_id)
+        if not enrolled:
+            raise AuthorizationError("Debes estar inscrito en este curso para ver su contenido")
     lessons = await service.get_module_lessons(module_id, course_id=course_id)
     return {"success": True, "data": [LessonResponse.model_validate(l).model_dump() for l in lessons]}
