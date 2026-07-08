@@ -9,7 +9,7 @@ import structlog
 from app.database import get_db
 from app.middleware.auth import require_admin
 from app.models.user import User, UserRole
-from app.schemas.admin import AdminEnrollmentResponse, AdminUserWithEnrollments
+from app.schemas.admin import AdminEnrollmentResponse, AdminUserWithEnrollments, LdapConfigUpdate, LdapConfigResponse, LdapTestRequest, LdapTestResponse
 from app.schemas.common import ApiResponse, PaginationMeta
 from app.schemas.gamification import LeaderboardEntry, XpAdjustRequest, XpTransactionResponse
 from app.schemas.user import UserResponse
@@ -239,3 +239,47 @@ async def remove_enrollment(
     course_service = CourseService(db)
     await course_service.delete_enrollment_by_id(enrollment_id)
     return ApiResponse(success=True, data={"message": "Inscripcion eliminada"}).model_dump()
+
+
+# --- LDAP Configuration ---
+
+@router.get("/ldap/config")
+async def get_ldap_config(
+    _admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.services.ldap_config_service import LdapConfigService
+    config = await LdapConfigService().get_config(db)
+    response = LdapConfigResponse(
+        **{k: v for k, v in config.items() if k not in ("bind_password", "updated_at")},
+        bind_password_set=bool(config.get("bind_password")),
+        updated_at=config.get("updated_at"),
+    )
+    return ApiResponse(success=True, data=response.model_dump()).model_dump()
+
+
+@router.put("/ldap/config")
+async def update_ldap_config(
+    body: LdapConfigUpdate,
+    _admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.services.ldap_config_service import LdapConfigService
+    saved = await LdapConfigService().save_config(db, body.model_dump(by_alias=False))
+    response = LdapConfigResponse(
+        **{k: v for k, v in saved.items() if k not in ("bind_password", "updated_at")},
+        bind_password_set=bool(saved.get("bind_password")),
+        updated_at=saved.get("updated_at"),
+    )
+    return ApiResponse(success=True, data=response.model_dump()).model_dump()
+
+
+@router.post("/ldap/test")
+async def test_ldap_connection(
+    body: LdapTestRequest,
+    _admin: User = Depends(require_admin),
+):
+    import asyncio
+    from app.services.ldap_config_service import LdapConfigService
+    result = await asyncio.to_thread(LdapConfigService().test_connection, body.model_dump(by_alias=False))
+    return ApiResponse(success=True, data=LdapTestResponse(**result).model_dump()).model_dump()

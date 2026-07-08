@@ -44,6 +44,7 @@ import InstructorDashboard from './pages/InstructorDashboard';
 import InstructorStudents from './pages/InstructorStudents';
 import InstructorGradebook from './pages/InstructorGradebook';
 import InstructorAnalytics from './pages/InstructorAnalytics';
+import AdminLdapConfig from './pages/AdminLdapConfig';
 import { ROUTES } from './utils/constants';
 import { UserRole } from './types';
 import { useAuth } from './hooks/useAuth';
@@ -297,6 +298,17 @@ function App() {
                     <ProtectedRoute requiredRoles={[UserRole.ADMIN]}>
                       <DashboardLayout>
                         <AdminGamification />
+                      </DashboardLayout>
+                    </ProtectedRoute>
+                  }
+                />
+
+                <Route
+                  path={ROUTES.ADMIN_LDAP}
+                  element={
+                    <ProtectedRoute requiredRoles={[UserRole.ADMIN]}>
+                      <DashboardLayout>
+                        <AdminLdapConfig />
                       </DashboardLayout>
                     </ProtectedRoute>
                   }

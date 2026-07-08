@@ -49,6 +49,7 @@ export const ROUTES = {
   COURSES: '/courses',
   COURSE_DETAIL: '/courses/:id',
   ADMIN: '/admin',
+  ADMIN_LDAP: '/admin/ldap',
   INSTRUCTOR: '/instructor',
   FORBIDDEN: '/403', // HU-003: Página de acceso denegado
   NOT_FOUND: '/404',

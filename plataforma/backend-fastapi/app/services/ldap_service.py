@@ -13,11 +13,10 @@ from app.models.user import RefreshToken, User, UserRole
 from app.services.token_service import TokenService
 
 logger = structlog.get_logger()
-settings = get_settings()
 
 
 class LdapService:
-    def _get_connection(self):
+    def _get_connection(self, config: dict):
         try:
             import ldap3
         except ImportError:
@@ -26,41 +25,39 @@ class LdapService:
             )
 
         server = ldap3.Server(
-            settings.LDAP_SERVER_URL,
-            use_ssl=settings.LDAP_USE_SSL,
-            connect_timeout=settings.LDAP_TIMEOUT,
+            config["server_url"],
+            use_ssl=config.get("use_ssl", False),
+            connect_timeout=config.get("timeout", 10),
         )
         return server
 
-    def _bind_user(self, username: str, password: str) -> dict | None:
+    def _bind_user(self, username: str, password: str, config: dict) -> dict | None:
         import ldap3
         from ldap3.core.exceptions import LDAPBindError, LDAPException
 
-        server = self._get_connection()
+        server = self._get_connection(config)
 
-        # Bind con credenciales de servicio para buscar al usuario
         try:
             conn = ldap3.Connection(
                 server,
-                user=settings.LDAP_BIND_DN,
-                password=settings.LDAP_BIND_PASSWORD,
+                user=config.get("bind_dn", ""),
+                password=config.get("bind_password", ""),
                 auto_bind=True,
-                receive_timeout=settings.LDAP_TIMEOUT,
+                receive_timeout=config.get("timeout", 10),
             )
         except LDAPException as e:
             logger.error("ldap_service_bind_failed", error=str(e))
             raise AuthenticationError("No se pudo conectar al servidor LDAP")
 
-        # Buscar usuario
-        search_filter = settings.LDAP_USER_SEARCH_FILTER.replace("{username}", username)
+        search_filter = config.get("search_filter", "(sAMAccountName={username})").replace("{username}", username)
+        email_attr = config.get("email_attr", "mail")
+        name_attr = config.get("name_attr", "cn")
+        group_attr = config.get("group_attr", "memberOf")
+
         conn.search(
-            search_base=settings.LDAP_BASE_DN,
+            search_base=config.get("base_dn", ""),
             search_filter=search_filter,
-            attributes=[
-                settings.LDAP_EMAIL_ATTR,
-                settings.LDAP_NAME_ATTR,
-                settings.LDAP_GROUP_ATTR,
-            ],
+            attributes=[email_attr, name_attr, group_attr],
         )
 
         if not conn.entries:
@@ -71,14 +68,13 @@ class LdapService:
         user_dn = entry.entry_dn
         conn.unbind()
 
-        # Bind con credenciales del usuario para verificar password
         try:
             user_conn = ldap3.Connection(
                 server,
                 user=user_dn,
                 password=password,
                 auto_bind=True,
-                receive_timeout=settings.LDAP_TIMEOUT,
+                receive_timeout=config.get("timeout", 10),
             )
             user_conn.unbind()
         except LDAPBindError:
@@ -87,12 +83,11 @@ class LdapService:
             logger.error("ldap_user_bind_failed", error=str(e))
             raise AuthenticationError("Error al autenticar con LDAP")
 
-        # Extraer atributos
-        email = str(entry[settings.LDAP_EMAIL_ATTR]) if settings.LDAP_EMAIL_ATTR in entry else None
-        name = str(entry[settings.LDAP_NAME_ATTR]) if settings.LDAP_NAME_ATTR in entry else username
+        email = str(entry[email_attr]) if email_attr in entry else None
+        name = str(entry[name_attr]) if name_attr in entry else username
         groups = []
-        if settings.LDAP_GROUP_ATTR in entry:
-            groups = list(entry[settings.LDAP_GROUP_ATTR])
+        if group_attr in entry:
+            groups = list(entry[group_attr])
 
         return {
             "dn": user_dn,
@@ -101,9 +96,9 @@ class LdapService:
             "groups": groups,
         }
 
-    def _map_role(self, groups: list[str]) -> UserRole:
+    def _map_role(self, groups: list[str], config: dict) -> UserRole:
         try:
-            mapping = json.loads(settings.LDAP_ROLE_MAPPING)
+            mapping = json.loads(config.get("role_mapping", "{}"))
         except (json.JSONDecodeError, TypeError):
             return UserRole.STUDENT
 
@@ -124,11 +119,15 @@ class LdapService:
         db: AsyncSession,
         token_service: TokenService,
     ) -> dict:
+        settings = get_settings()
         if not settings.LDAP_ENABLED:
             raise ValidationError("LDAP no esta habilitado")
 
+        from app.services.ldap_config_service import LdapConfigService
+        config = await LdapConfigService().get_config(db)
+
         safe_username = escape_filter_chars(username)
-        ldap_result = await asyncio.to_thread(self._bind_user, safe_username, password)
+        ldap_result = await asyncio.to_thread(self._bind_user, safe_username, password, config)
         if not ldap_result:
             raise AuthenticationError("Credenciales LDAP invalidas")
 
@@ -137,16 +136,14 @@ class LdapService:
             raise AuthenticationError("El usuario LDAP no tiene email configurado")
 
         ldap_dn = ldap_result["dn"]
-        role = self._map_role(ldap_result["groups"])
+        role = self._map_role(ldap_result["groups"], config)
 
-        # Buscar usuario existente por external_id (LDAP DN)
         result = await db.execute(
             select(User).where(User.auth_provider == "ldap", User.external_id == ldap_dn)
         )
         user = result.scalar_one_or_none()
 
         if not user:
-            # Buscar por email
             result = await db.execute(select(User).where(User.email == email))
             user = result.scalar_one_or_none()
 
@@ -173,18 +170,15 @@ class LdapService:
                 await db.flush()
                 logger.info("ldap_user_created", user_id=user.id)
 
-        # Actualizar nombre y rol desde LDAP en cada login
         user.name = ldap_result["name"]
         user.role = role
         user.last_login_at = datetime.now(timezone.utc)
 
-        # Generar tokens
         access_token = token_service.create_access_token(user.id, user.email, user.role.value)
         refresh_token_value = token_service.create_refresh_token(user.id)
 
         now = datetime.now(timezone.utc)
 
-        # Limpiar sesiones excedentes
         result = await db.execute(
             select(RefreshToken)
             .where(RefreshToken.user_id == user.id)

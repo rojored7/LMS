@@ -16,6 +16,7 @@ from app.models.progress import Enrollment, UserProgress  # noqa: F401
 from app.models.assessment import Quiz, Question, Lab, LabSubmission, Project, ProjectSubmission  # noqa: F401
 from app.models.gamification import Badge, UserBadge, Certificate, Notification  # noqa: F401
 from app.models.content import Translation, ChatMessage, ScormPackage, AuditLog  # noqa: F401
+from app.models.admin_config import LdapConfiguration  # noqa: F401
 
 config = context.config
 

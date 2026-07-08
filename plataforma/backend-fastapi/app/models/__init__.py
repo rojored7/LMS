@@ -4,3 +4,4 @@ from app.models.assessment import Quiz, Question, QuestionType, Lab, LabSubmissi
 from app.models.progress import Enrollment, UserProgress
 from app.models.gamification import Badge, UserBadge, Certificate, Notification, NotificationType, XpTransaction
 from app.models.content import Translation, ChatMessage, ScormPackage, AuditLog, Attachment
+from app.models.admin_config import LdapConfiguration
