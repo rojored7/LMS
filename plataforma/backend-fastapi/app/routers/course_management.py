@@ -97,7 +97,7 @@ def _parse_course_dir(course_dir: Path):
 @router.post("/import/validate")
 async def validate_import(
     courseZip: UploadFile = File(...),
-    _user: User = Depends(require_instructor_only),
+    _user: User = Depends(require_instructor),
 ) -> dict:
     tmp_dir = None
     try:
@@ -131,7 +131,7 @@ async def validate_import(
 @router.post("/import")
 async def import_course_zip(
     courseZip: UploadFile = File(...),
-    _user: User = Depends(require_instructor_only),
+    _user: User = Depends(require_instructor),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     tmp_dir = None
