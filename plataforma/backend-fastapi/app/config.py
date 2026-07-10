@@ -30,8 +30,8 @@ class Settings(BaseSettings):
     CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost"]
 
     DATABASE_URL: str
-    DB_POOL_SIZE: int = 10
-    DB_MAX_OVERFLOW: int = 20
+    DB_POOL_SIZE: int = 5
+    DB_MAX_OVERFLOW: int = 10
     DB_POOL_RECYCLE: int = 3600
     DB_POOL_TIMEOUT: int = 30
     REDIS_URL: str = "redis://localhost:6379/0"
@@ -47,7 +47,7 @@ class Settings(BaseSettings):
 
     BCRYPT_ROUNDS: int = 12
     TRUSTED_PROXY_CIDRS: str = "172.28.0.0/16,172.29.0.0/16,172.30.0.0/16"
-    RATE_LIMIT_GLOBAL: str = "200/15minutes"
+    RATE_LIMIT_GLOBAL: str = "500/15minutes"
     RATE_LIMIT_AUTH_LOGIN: str = "30/minute"
     RATE_LIMIT_AUTH_REGISTER: str = "20/hour"
     RATE_LIMIT_AUTH_RESET: str = "3/hour"

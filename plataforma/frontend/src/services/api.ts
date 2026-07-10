@@ -58,6 +58,16 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry && !isAuthEndpoint) {
       originalRequest._retry = true;
 
+      // Sesion invalidada por cambio de password en otro dispositivo
+      const errorCode = (error.response?.data as any)?.error?.code;
+      if (errorCode === 'SESSION_INVALIDATED') {
+        refreshTokenPromise = null;
+        localStorage.removeItem('auth-storage');
+        localStorage.setItem('session-expired', 'password_changed');
+        window.location.href = '/login?reason=password_changed';
+        return Promise.reject(error);
+      }
+
       try {
         if (!refreshTokenPromise) {
           refreshTokenPromise = (async () => {

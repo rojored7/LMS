@@ -10,18 +10,32 @@ import { validator } from './validator';
  */
 export class DockerExecutor {
   private docker: Docker;
+  private activeSandboxes = 0;
+  private readonly maxConcurrentSandboxes: number;
 
   constructor() {
     this.docker = new Docker({
       socketPath: config.DOCKER_SOCKET_PATH,
     });
-    logger.info('Docker executor initialized');
+    this.maxConcurrentSandboxes = config.MAX_CONCURRENT_SANDBOXES;
+    logger.info('Docker executor initialized', {
+      maxConcurrentSandboxes: this.maxConcurrentSandboxes,
+    });
+  }
+
+  getActiveSandboxes(): number {
+    return this.activeSandboxes;
   }
 
   /**
    * Main execution method
    */
   async executeCode(params: ExecuteRequest): Promise<ExecutionResult> {
+    if (this.activeSandboxes >= this.maxConcurrentSandboxes) {
+      throw new Error('EXECUTOR_SATURADO: capacidad maxima alcanzada');
+    }
+
+    this.activeSandboxes++;
     const startTime = Date.now();
     const timeout = params.timeout || config.SANDBOX_TIMEOUT;
 
@@ -29,6 +43,7 @@ export class DockerExecutor {
       language: params.language,
       timeout,
       hasTests: !!params.tests,
+      activeSandboxes: this.activeSandboxes,
     });
 
     let container: Docker.Container | null = null;
@@ -104,6 +119,7 @@ export class DockerExecutor {
         error: errorMessage,
       };
     } finally {
+      this.activeSandboxes--;
       // 6. Cleanup - ALWAYS executed
       if (container) {
         await this.cleanup(container);

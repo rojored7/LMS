@@ -156,10 +156,61 @@ class AuthService:
             raise ValidationError("Contrasena actual incorrecta")
         user.password_hash = hash_password(new_password)
         await self.token_service.invalidate_all_user_tokens(user.id)
+        # Eliminar todos los refresh tokens para forzar re-autenticacion en todos los dispositivos
+        await self.db.execute(delete(RefreshToken).where(RefreshToken.user_id == user.id))
         if current_access_token:
             await self.token_service.blacklist_token(current_access_token)
         await self.db.flush()
         logger.info("password_changed", user_id=user.id)
+        try:
+            from app.services.email_service import send_password_changed_email
+            await send_password_changed_email(user.email, user.name)
+        except Exception:
+            pass
+
+    async def get_active_sessions(self, user_id: str) -> list[dict]:
+        result = await self.db.execute(
+            select(RefreshToken)
+            .where(RefreshToken.user_id == user_id)
+            .order_by(RefreshToken.last_activity_at.desc())
+        )
+        sessions = list(result.scalars().all())
+        now = datetime.now(timezone.utc)
+        return [
+            {
+                "id": s.id,
+                "session_started_at": s.session_started_at.isoformat(),
+                "last_activity_at": s.last_activity_at.isoformat(),
+                "expires_at": s.expires_at.isoformat(),
+                "is_expired": s.expires_at < now,
+            }
+            for s in sessions
+        ]
+
+    async def close_session(self, user_id: str, session_id: str) -> None:
+        result = await self.db.execute(
+            select(RefreshToken).where(RefreshToken.id == session_id, RefreshToken.user_id == user_id)
+        )
+        session = result.scalar_one_or_none()
+        if not session:
+            raise NotFoundError("Sesion no encontrada")
+        await self.db.delete(session)
+        await self.db.flush()
+        logger.info("session_closed", user_id=user_id, session_id=session_id)
+
+    async def close_all_other_sessions(self, user_id: str, current_refresh_token: str) -> int:
+        result = await self.db.execute(
+            select(RefreshToken).where(
+                RefreshToken.user_id == user_id,
+                RefreshToken.token != current_refresh_token,
+            )
+        )
+        sessions = list(result.scalars().all())
+        for s in sessions:
+            await self.db.delete(s)
+        await self.db.flush()
+        logger.info("other_sessions_closed", user_id=user_id, count=len(sessions))
+        return len(sessions)
 
     async def _generate_tokens(self, user: User, session_started_at: datetime | None = None) -> dict:
         access_token = self.token_service.create_access_token(user.id, user.email, user.role.value)

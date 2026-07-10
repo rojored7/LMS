@@ -45,6 +45,7 @@ import InstructorStudents from './pages/InstructorStudents';
 import InstructorGradebook from './pages/InstructorGradebook';
 import InstructorAnalytics from './pages/InstructorAnalytics';
 import AdminLdapConfig from './pages/AdminLdapConfig';
+import AnalyticsDashboard from './pages/AnalyticsDashboard';
 import { ROUTES } from './utils/constants';
 import { UserRole } from './types';
 import { useAuth } from './hooks/useAuth';
@@ -309,6 +310,17 @@ function App() {
                     <ProtectedRoute requiredRoles={[UserRole.ADMIN]}>
                       <DashboardLayout>
                         <AdminLdapConfig />
+                      </DashboardLayout>
+                    </ProtectedRoute>
+                  }
+                />
+
+                <Route
+                  path="/admin/analytics"
+                  element={
+                    <ProtectedRoute requiredRoles={[UserRole.ADMIN]}>
+                      <DashboardLayout>
+                        <AnalyticsDashboard />
                       </DashboardLayout>
                     </ProtectedRoute>
                   }

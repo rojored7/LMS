@@ -85,6 +85,37 @@ export async function loginLdap(username: string, password: string): Promise<Aut
   return (envelope as any).data;
 }
 
+export interface Session {
+  id: string;
+  session_started_at: string;
+  last_activity_at: string;
+  expires_at: string;
+  is_expired: boolean;
+}
+
+/**
+ * Get active sessions for the current user
+ */
+export async function getSessions(): Promise<Session[]> {
+  const envelope = await api.get('/auth/sessions');
+  return (envelope as any).data?.sessions ?? [];
+}
+
+/**
+ * Close a specific session by id
+ */
+export async function closeSession(sessionId: string): Promise<void> {
+  await api.delete(`/auth/sessions/${sessionId}`);
+}
+
+/**
+ * Close all sessions except the current one
+ */
+export async function closeAllOtherSessions(): Promise<{ count: number }> {
+  const envelope = await api.delete('/auth/sessions');
+  return (envelope as any).data;
+}
+
 const authService = {
   login,
   register,
@@ -96,6 +127,9 @@ const authService = {
   getCurrentUser,
   getAuthProviders,
   loginLdap,
+  getSessions,
+  closeSession,
+  closeAllOtherSessions,
 };
 
 export default authService;

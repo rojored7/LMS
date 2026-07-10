@@ -45,8 +45,7 @@ export interface LdapTestResult {
 }
 
 const ldapConfigService = {
-  getConfig: (): Promise<ApiResponse<LdapConfig>> =>
-    api.get('/admin/ldap/config'),
+  getConfig: (): Promise<ApiResponse<LdapConfig>> => api.get('/admin/ldap/config'),
 
   saveConfig: (data: LdapConfigUpdate): Promise<ApiResponse<LdapConfig>> =>
     api.put('/admin/ldap/config', data),

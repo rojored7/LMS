@@ -74,13 +74,16 @@ class ExecutorClient:
                 }
             except httpx.HTTPStatusError as e:
                 logger.error("executor_http_error", status=e.response.status_code, detail=str(e))
-                return {
+                result: dict = {
                     "success": False,
                     "executor_error": True,
                     "error": f"Error del ejecutor: {e.response.status_code}",
                     "stdout": "",
                     "stderr": "",
                 }
+                if e.response.status_code == 503:
+                    result["saturation_error"] = True
+                return result
             except (httpx.ConnectError, httpx.ConnectTimeout) as e:
                 last_error = e
                 if attempt < _MAX_RETRIES:

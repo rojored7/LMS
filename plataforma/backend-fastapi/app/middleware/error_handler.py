@@ -14,8 +14,8 @@ class AppError(Exception):
 
 
 class AuthenticationError(AppError):
-    def __init__(self, message: str = "No autenticado"):
-        super().__init__(message=message, code="UNAUTHORIZED", status_code=401)
+    def __init__(self, message: str = "No autenticado", code: str = "UNAUTHORIZED"):
+        super().__init__(message=message, code=code, status_code=401)
 
 
 class AuthorizationError(AppError):

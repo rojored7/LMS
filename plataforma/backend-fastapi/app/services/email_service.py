@@ -38,6 +38,31 @@ async def send_password_reset_email(to_email: str, reset_url: str) -> None:
         logger.error("password_reset_email_failed", error=str(e))
 
 
+async def send_password_changed_email(to_email: str, name: str) -> None:
+    if not settings.SMTP_HOST or not settings.SMTP_USER or not settings.SMTP_PASS:
+        logger.warning("smtp_not_configured", action="password_changed_email_skipped")
+        return
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = "Tu contrasena fue cambiada - Plataforma Ciberseguridad"
+    msg["From"] = settings.SMTP_FROM or settings.SMTP_USER
+    msg["To"] = to_email
+
+    html = f"""\
+<html><body>
+<p>Hola {name},</p>
+<p>Tu contrasena fue cambiada exitosamente. Todas tus sesiones activas han sido cerradas.</p>
+<p>Si no realizaste este cambio, contacta al administrador inmediatamente.</p>
+</body></html>"""
+    msg.attach(MIMEText(html, "html"))
+
+    try:
+        await asyncio.to_thread(_send_smtp, msg)
+        logger.info("password_changed_email_sent", email=to_email)
+    except Exception as e:
+        logger.error("password_changed_email_failed", error=str(e))
+
+
 def _send_smtp(msg: MIMEMultipart) -> None:
     port = settings.SMTP_PORT or 587
     with smtplib.SMTP(settings.SMTP_HOST, port) as server:

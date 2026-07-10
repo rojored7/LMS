@@ -23,7 +23,7 @@ app.use(express.json({ limit: '1mb' }));
 
 // Shared secret authentication - protege /execute de acceso no autorizado
 app.use((req: Request, res: Response, next: NextFunction) => {
-  if (req.path === '/health' || req.path === '/languages') {
+  if (req.path === '/health' || req.path === '/languages' || req.path === '/status') {
     return next();
   }
   const secret = String(req.headers['x-executor-secret'] || '');
@@ -120,8 +120,17 @@ app.post('/execute', rateLimitMiddleware, async (req: Request, res: Response): P
     });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Execution endpoint error', { error: errorMessage });
 
+    if (errorMessage.startsWith('EXECUTOR_SATURADO')) {
+      res.status(503).setHeader('Retry-After', '30').json({
+        success: false,
+        error: 'Executor en alta demanda. Intente de nuevo en 30 segundos.',
+        retryAfter: 30,
+      });
+      return;
+    }
+
+    logger.error('Execution endpoint error', { error: errorMessage });
     res.status(500).json({
       success: false,
       error: 'Execution failed',
@@ -154,6 +163,20 @@ app.get('/health', async (_req: Request, res: Response) => {
       error: 'Health check failed',
     });
   }
+});
+
+/**
+ * GET /status
+ * Returns executor concurrency status
+ */
+app.get('/status', (_req: Request, res: Response) => {
+  const activeSandboxes = dockerExecutor.getActiveSandboxes();
+  const maxConcurrent = config.MAX_CONCURRENT_SANDBOXES;
+  res.json({
+    activeSandboxes,
+    maxConcurrent,
+    available: maxConcurrent - activeSandboxes,
+  });
 });
 
 /**

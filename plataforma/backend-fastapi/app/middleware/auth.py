@@ -1,3 +1,4 @@
+import json
 from fastapi import Depends, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,6 +10,8 @@ from app.middleware.error_handler import AuthenticationError, AuthorizationError
 from app.models.user import User, UserRole
 from app.redis import redis_client
 from app.services.token_service import TokenService
+
+_USER_CACHE_TTL = 300
 
 logger = structlog.get_logger()
 settings = get_settings()
@@ -41,11 +44,44 @@ async def _validate_token(token: str, token_service: TokenService, db: AsyncSess
         raise AuthenticationError("Token con datos incompletos")
     iat = payload.get("iat")
     if iat and await token_service.are_user_tokens_invalidated(user_id, int(iat)):
-        raise AuthenticationError("Sesion invalidada. Inicie sesion nuevamente")
+        raise AuthenticationError("Sesion invalidada. Inicie sesion nuevamente", code="SESSION_INVALIDATED")
+
+    cache_key = f"user_cache:{user_id}"
+    cached_raw = await redis_client.get(cache_key)
+    if cached_raw:
+        data = json.loads(cached_raw)
+        user = User()
+        user.id = data["id"]
+        user.email = data["email"]
+        user.name = data["name"]
+        user.role = UserRole(data["role"])
+        user.xp = data.get("xp", 0)
+        user.training_profile_id = data.get("training_profile_id")
+        try:
+            import sentry_sdk
+            sentry_sdk.set_user({"id": user.id, "email": user.email, "role": user.role.value})
+        except Exception:
+            pass
+        return user
+
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
     if user is None:
         raise AuthenticationError("Usuario no encontrado")
+
+    await redis_client.setex(
+        cache_key,
+        _USER_CACHE_TTL,
+        json.dumps({
+            "id": user.id,
+            "email": user.email,
+            "name": user.name,
+            "role": user.role.value,
+            "xp": user.xp,
+            "training_profile_id": user.training_profile_id,
+        }),
+    )
+
     # Set user context in Sentry for error tracking
     try:
         import sentry_sdk

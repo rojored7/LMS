@@ -1,100 +1,79 @@
 /**
  * Analytics Hook
- * HU-038: Fetch and manage analytics data
+ * Consume los endpoints reales del backend via analyticsService
  */
 
-import { useState, useEffect } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import analyticsService from '../services/api/analytics.service';
 
-export interface AnalyticsMetric {
-  id: string;
-  name: string;
-  value: number | string;
-  change: number;
-  changeType: 'increase' | 'decrease' | 'neutral';
-  period: string;
-}
+export { type AnalyticsFilter } from '../services/api/analytics.service';
 
-export interface ChartData {
-  labels: string[];
-  datasets: {
-    label: string;
-    data: number[];
-    backgroundColor?: string;
-    borderColor?: string;
-  }[];
-}
-
-export interface AnalyticsFilter {
-  startDate?: Date;
-  endDate?: Date;
-  metric?: string;
-  groupBy?: 'day' | 'week' | 'month' | 'year';
-  courseId?: string;
-  userId?: string;
-}
-
-export function useAnalytics(filter?: AnalyticsFilter) {
-  const [selectedMetrics, setSelectedMetrics] = useState<string[]>(['all']);
-
-  // Fetch overview metrics
-  const { data: metrics, isLoading: metricsLoading } = useQuery({
-    queryKey: ['analytics', 'metrics', filter],
-    queryFn: () => analyticsService.getMetrics(filter),
-    staleTime: 5 * 60 * 1000 // 5 minutes
+export function useAnalytics(days = 30) {
+  const {
+    data: stats,
+    isLoading: statsLoading,
+    refetch: refetchStats,
+  } = useQuery({
+    queryKey: ['analytics', 'stats'],
+    queryFn: () => analyticsService.getStats(),
+    staleTime: 5 * 60 * 1000,
   });
 
-  // Fetch user growth data
-  const { data: userGrowth, isLoading: userGrowthLoading } = useQuery({
-    queryKey: ['analytics', 'userGrowth', filter],
-    queryFn: () => analyticsService.getUserGrowth(filter),
-    staleTime: 5 * 60 * 1000
+  const { data: enrollmentTrends, isLoading: trendsLoading } = useQuery({
+    queryKey: ['analytics', 'enrollment-trends', days],
+    queryFn: () => analyticsService.getEnrollmentTrends(days),
+    staleTime: 5 * 60 * 1000,
   });
 
-  // Fetch course statistics
   const { data: courseStats, isLoading: courseStatsLoading } = useQuery({
-    queryKey: ['analytics', 'courseStats', filter],
-    queryFn: () => analyticsService.getCourseStats(filter),
-    staleTime: 5 * 60 * 1000
+    queryKey: ['analytics', 'courses'],
+    queryFn: () => analyticsService.getCourseStats(),
+    staleTime: 5 * 60 * 1000,
   });
 
-  // Fetch engagement data
-  const { data: engagement, isLoading: engagementLoading } = useQuery({
-    queryKey: ['analytics', 'engagement', filter],
-    queryFn: () => analyticsService.getEngagement(filter),
-    staleTime: 5 * 60 * 1000
+  const { data: userActivity, isLoading: activityLoading } = useQuery({
+    queryKey: ['analytics', 'user-activity', days],
+    queryFn: () => analyticsService.getUserActivity(days),
+    staleTime: 5 * 60 * 1000,
   });
 
-  // Export analytics data
-  const exportMutation = useMutation({
-    mutationFn: ({ format, data }: { format: string; data: any }) =>
-      analyticsService.exportData(format, data),
-    onSuccess: (blob, { format }) => {
-      // Create download link
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `analytics-${new Date().toISOString()}.${format}`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
-    }
+  const { data: userDistribution, isLoading: distributionLoading } = useQuery({
+    queryKey: ['analytics', 'user-distribution'],
+    queryFn: () => analyticsService.getUserDistribution(),
+    staleTime: 5 * 60 * 1000,
   });
 
-  const isLoading = metricsLoading || userGrowthLoading || courseStatsLoading || engagementLoading;
+  const { data: recentActivity, isLoading: recentLoading } = useQuery({
+    queryKey: ['analytics', 'recent-activity'],
+    queryFn: () => analyticsService.getRecentActivity(20),
+    staleTime: 2 * 60 * 1000,
+  });
+
+  const { data: comparativeStats, isLoading: comparativeLoading } = useQuery({
+    queryKey: ['analytics', 'comparative-stats', days],
+    queryFn: () => analyticsService.getComparativeStats(days),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const isLoading =
+    statsLoading ||
+    trendsLoading ||
+    courseStatsLoading ||
+    activityLoading ||
+    distributionLoading ||
+    recentLoading ||
+    comparativeLoading;
 
   return {
-    metrics,
-    userGrowth,
+    stats,
+    enrollmentTrends,
     courseStats,
-    engagement,
+    userActivity,
+    userDistribution,
+    recentActivity,
+    comparativeStats,
     isLoading,
-    selectedMetrics,
-    setSelectedMetrics,
-    exportData: exportMutation.mutate,
-    isExporting: exportMutation.isPending
+    refetch: refetchStats,
   };
 }
 

@@ -208,6 +208,42 @@ async def get_me(user: User = Depends(get_current_user)):
     return ApiResponse(success=True, data=AuthUserResponse.model_validate(user).model_dump()).model_dump()
 
 
+@router.get("/sessions")
+async def get_sessions(
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    token_service: TokenService = Depends(get_token_service),
+):
+    service = AuthService(db, token_service)
+    sessions = await service.get_active_sessions(user.id)
+    return ApiResponse(success=True, data={"sessions": sessions}).model_dump()
+
+
+@router.delete("/sessions/{session_id}")
+async def close_session(
+    session_id: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    token_service: TokenService = Depends(get_token_service),
+):
+    service = AuthService(db, token_service)
+    await service.close_session(user.id, session_id)
+    return ApiResponse(success=True, data={"message": "Sesion cerrada"}).model_dump()
+
+
+@router.delete("/sessions")
+async def close_all_other_sessions(
+    request: Request,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    token_service: TokenService = Depends(get_token_service),
+):
+    current_refresh = request.cookies.get(f"{settings.COOKIE_PREFIX}refresh_token", "")
+    service = AuthService(db, token_service)
+    count = await service.close_all_other_sessions(user.id, current_refresh)
+    return ApiResponse(success=True, data={"message": f"{count} sesiones cerradas"}).model_dump()
+
+
 # ---------------------------------------------------------------------------
 # OAuth 2.0
 # ---------------------------------------------------------------------------

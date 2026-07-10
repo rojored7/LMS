@@ -19,6 +19,7 @@ const configSchema = z.object({
     .transform((val) => val === 'true')
     .default('true'),
   SANDBOX_IMAGE: z.string().default('ciber-sandbox:latest'),
+  MAX_CONCURRENT_SANDBOXES: z.string().transform(Number).default('4'),
 
   // Redis Configuration
   REDIS_URL: z.string(),
@@ -28,7 +29,7 @@ const configSchema = z.object({
   RATE_LIMIT_MAX_REQUESTS: z
     .string()
     .transform(Number)
-    .default('5')
+    .default('10')
     .refine((n) => n <= 50, 'RATE_LIMIT_MAX_REQUESTS no debe exceder 50'),
 
   // Docker Configuration

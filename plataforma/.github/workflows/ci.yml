@@ -5,7 +5,7 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main]
-  workflow_dispatch:  # Permite trigger manual
+  workflow_dispatch:
 
 jobs:
   lint-and-typecheck:
@@ -16,28 +16,44 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '20'
           cache: 'npm'
           cache-dependency-path: |
-            plataforma/backend/package-lock.json
+            plataforma/executor/package-lock.json
             plataforma/frontend/package-lock.json
 
       - name: Backend - Install Dependencies
         run: |
-          cd plataforma/backend
+          cd plataforma/backend-fastapi
+          pip install -e ".[dev]"
+
+      - name: Backend - Lint (ruff)
+        run: |
+          cd plataforma/backend-fastapi
+          ruff check .
+
+      - name: Executor - Install Dependencies
+        run: |
+          cd plataforma/executor
           npm ci
 
-      - name: Backend - Lint
+      - name: Executor - Lint
         run: |
-          cd plataforma/backend
+          cd plataforma/executor
           npm run lint
 
-      - name: Backend - Type Check
+      - name: Executor - Type Check
         run: |
-          cd plataforma/backend
+          cd plataforma/executor
           npm run type-check
 
       - name: Frontend - Install Dependencies
@@ -56,7 +72,7 @@ jobs:
           npm run type-check
 
   backend-tests:
-    name: Backend Tests
+    name: Backend Tests (FastAPI + pytest)
     runs-on: ubuntu-latest
 
     services:
@@ -64,7 +80,7 @@ jobs:
         image: postgres:15
         env:
           POSTGRES_USER: test_user
-          POSTGRES_PASSWORD: test_password
+          POSTGRES_PASSWORD: test_password_for_ci_minimum_32_chars
           POSTGRES_DB: test_db
         options: >-
           --health-cmd pg_isready
@@ -88,43 +104,45 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
+      - name: Setup Python
+        uses: actions/setup-python@v4
         with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: plataforma/backend/package-lock.json
+          python-version: '3.12'
+          cache: 'pip'
 
       - name: Install Dependencies
         run: |
-          cd plataforma/backend
-          npm ci
+          cd plataforma/backend-fastapi
+          pip install -e ".[dev]"
 
       - name: Run Migrations
         env:
-          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
-        run: |
-          cd plataforma/backend
-          npx prisma migrate deploy
-          npx prisma generate
-
-      - name: Run Unit Tests
-        env:
-          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
-          REDIS_URL: redis://localhost:6379
+          DATABASE_URL: postgresql+asyncpg://test_user:test_password_for_ci_minimum_32_chars@localhost:5432/test_db
           JWT_SECRET: test-secret-for-ci-pipeline-minimum-32-characters-long
-          JWT_REFRESH_SECRET: test-refresh-secret-for-ci-minimum-32-chars
-          JWT_EXPIRES_IN: 15m
-          JWT_REFRESH_EXPIRES_IN: 7d
-          NODE_ENV: test
+          JWT_REFRESH_SECRET: test-refresh-secret-for-ci-minimum-32-chars-long
+          REDIS_URL: redis://localhost:6379
+          EXECUTOR_SECRET: test-executor-secret-16ch
+          APP_ENV: test
         run: |
-          cd plataforma/backend
-          npm test -- --coverage --maxWorkers=2
+          cd plataforma/backend-fastapi
+          alembic upgrade head
+
+      - name: Run Tests
+        env:
+          DATABASE_URL: postgresql+asyncpg://test_user:test_password_for_ci_minimum_32_chars@localhost:5432/test_db
+          JWT_SECRET: test-secret-for-ci-pipeline-minimum-32-characters-long
+          JWT_REFRESH_SECRET: test-refresh-secret-for-ci-minimum-32-chars-long
+          REDIS_URL: redis://localhost:6379
+          EXECUTOR_SECRET: test-executor-secret-16ch
+          APP_ENV: test
+        run: |
+          cd plataforma/backend-fastapi
+          pytest tests/ --cov=app --cov-report=xml --cov-report=term-missing -q --tb=short
 
       - name: Upload Backend Coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
-          files: ./plataforma/backend/coverage/lcov.info
+          files: ./plataforma/backend-fastapi/coverage.xml
           flags: backend
           name: backend-coverage
           fail_ci_if_error: false
@@ -176,48 +194,27 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install Docker Compose
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y docker-compose
-
       - name: Start Services
         run: |
           cd plataforma
-          docker-compose -f docker-compose.test.yml up -d
+          docker compose -f docker-compose.test.yml up -d
 
-      - name: Wait for Services to be Ready
+      - name: Wait for Services
         run: |
-          echo "Waiting for services to start..."
-          sleep 30
-
-          # Wait for backend
           for i in {1..30}; do
-            if curl -f http://localhost:4000/health; then
-              echo "✓ Backend is ready"
+            if curl -sf http://localhost:4000/health; then
+              echo "Backend ready"
               break
             fi
-            if [ $i -eq 30 ]; then
-              echo "✗ Backend failed to start"
-              docker-compose -f plataforma/docker-compose.test.yml logs backend
-              exit 1
-            fi
-            echo "Waiting for backend... ($i/30)"
+            [ $i -eq 30 ] && { echo "Backend failed to start"; docker compose -f plataforma/docker-compose.test.yml logs backend; exit 1; }
             sleep 2
           done
-
-          # Wait for frontend
           for i in {1..30}; do
-            if curl -f http://localhost:3000; then
-              echo "✓ Frontend is ready"
+            if curl -sf http://localhost:3000; then
+              echo "Frontend ready"
               break
             fi
-            if [ $i -eq 30 ]; then
-              echo "✗ Frontend failed to start"
-              docker-compose -f plataforma/docker-compose.test.yml logs frontend
-              exit 1
-            fi
-            echo "Waiting for frontend... ($i/30)"
+            [ $i -eq 30 ] && { echo "Frontend failed to start"; exit 1; }
             sleep 2
           done
 
@@ -244,17 +241,7 @@ jobs:
         if: always()
         run: |
           cd plataforma
-          docker-compose -f docker-compose.test.yml down -v
-
-      - name: Show Logs on Failure
-        if: failure()
-        run: |
-          echo "=== Backend Logs ==="
-          docker-compose -f plataforma/docker-compose.test.yml logs backend
-          echo "=== Frontend Logs ==="
-          docker-compose -f plataforma/docker-compose.test.yml logs frontend
-          echo "=== Postgres Logs ==="
-          docker-compose -f plataforma/docker-compose.test.yml logs postgres
+          docker compose -f docker-compose.test.yml down -v
 
   security-scan:
     name: Security Scan
@@ -264,14 +251,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '20'
-
-      - name: Backend npm audit
+      - name: Executor npm audit
         run: |
-          cd plataforma/backend
+          cd plataforma/executor
           npm audit --audit-level=high || true
 
       - name: Frontend npm audit
@@ -304,42 +286,19 @@ jobs:
       - name: Check all jobs status
         run: |
           if [[ "${{ needs.lint-and-typecheck.result }}" != "success" ]]; then
-            echo "✗ Lint and type check failed"
+            echo "Lint and type check failed"
             exit 1
           fi
-
           if [[ "${{ needs.backend-tests.result }}" != "success" ]]; then
-            echo "✗ Backend tests failed"
+            echo "Backend tests failed"
             exit 1
           fi
-
           if [[ "${{ needs.frontend-tests.result }}" != "success" ]]; then
-            echo "✗ Frontend tests failed"
+            echo "Frontend tests failed"
             exit 1
           fi
-
           if [[ "${{ needs.e2e-tests.result }}" != "success" ]]; then
-            echo "✗ E2E tests failed"
+            echo "E2E tests failed"
             exit 1
           fi
-
-          if [[ "${{ needs.security-scan.result }}" != "success" ]]; then
-            echo "⚠ Security scan had issues (non-blocking)"
-          fi
-
-          echo "✓ All critical tests passed!"
-
-      - name: Success notification
-        if: success()
-        run: |
-          echo "════════════════════════════════════════════════════"
-          echo "✓ CI Pipeline Passed Successfully"
-          echo "════════════════════════════════════════════════════"
-          echo "Lint & Type Check: ✓"
-          echo "Backend Tests (44 tests): ✓"
-          echo "Frontend Tests (5 tests): ✓"
-          echo "E2E Tests (15 tests): ✓"
-          echo "Security Scan: ✓"
-          echo "════════════════════════════════════════════════════"
-          echo "Ready for deployment to production!"
-          echo "════════════════════════════════════════════════════"
+          echo "All critical tests passed!"

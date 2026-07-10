@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -151,6 +152,20 @@ async def submit_lab(
         language=lab.language,
         tests=tests,
     )
+
+    if exec_result.get("saturation_error"):
+        return JSONResponse(
+            status_code=503,
+            headers={"Retry-After": "30"},
+            content=ApiResponse(
+                success=False,
+                data={
+                    "executorError": True,
+                    "saturationError": True,
+                    "error": "Laboratorio no disponible por alta demanda. Intente de nuevo en 30 segundos.",
+                },
+            ).model_dump(),
+        )
 
     if exec_result.get("executor_error"):
         return ApiResponse(

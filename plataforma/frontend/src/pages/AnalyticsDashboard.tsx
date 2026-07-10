@@ -3,7 +3,7 @@
  * HU-038: Comprehensive analytics with charts and metrics
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   TrendingUp,
@@ -11,23 +11,20 @@ import {
   Users,
   BookOpen,
   Award,
-  Clock,
   Activity,
   BarChart3,
   PieChart,
   LineChart,
-  Calendar,
   Download,
-  Filter,
-  RefreshCw
+  RefreshCw,
 } from 'lucide-react';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
 import { useAnalytics } from '../hooks/useAnalytics';
+import { exportEnrollments, exportCourseStats } from '../services/api/export.service';
 import { cn } from '../utils/cn';
 
-// Import chart components (we'll use recharts)
 import {
   LineChart as RechartsLineChart,
   Line,
@@ -44,11 +41,6 @@ import {
   ResponsiveContainer,
   AreaChart,
   Area,
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-  Radar
 } from 'recharts';
 
 interface MetricCard {
@@ -60,124 +52,110 @@ interface MetricCard {
   color: string;
 }
 
-interface DateRange {
-  start: Date;
-  end: Date;
-  label: string;
-}
-
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
 
 export const AnalyticsDashboard: React.FC = () => {
   const { t } = useTranslation();
-  const [dateRange, setDateRange] = useState<DateRange>({
-    start: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
-    end: new Date(),
-    label: 'Last 30 days'
-  });
-  const [selectedMetric, setSelectedMetric] = useState<string>('all');
+  const [days, setDays] = useState(30);
   const [isExporting, setIsExporting] = useState(false);
 
-  // Mock data - replace with real API calls
+  const {
+    stats,
+    enrollmentTrends,
+    courseStats,
+    userActivity,
+    userDistribution,
+    recentActivity,
+    comparativeStats,
+    isLoading,
+    refetch,
+  } = useAnalytics(days);
+
   const metrics: MetricCard[] = [
     {
-      title: t('analytics.totalUsers'),
-      value: '12,543',
-      change: 12.5,
-      changeLabel: 'vs last period',
+      title: t('analytics.totalUsers', 'Total usuarios'),
+      value: stats?.total_users ?? '-',
+      change: comparativeStats?.changes.new_users_pct ?? 0,
+      changeLabel: 'vs periodo anterior',
       icon: <Users className="w-5 h-5" />,
-      color: 'blue'
+      color: 'blue',
     },
     {
-      title: t('analytics.activeCourses'),
-      value: '48',
-      change: 8.3,
-      changeLabel: 'vs last period',
+      title: t('analytics.activeCourses', 'Cursos publicados'),
+      value: stats?.total_courses ?? '-',
+      change: 0,
+      changeLabel: '',
       icon: <BookOpen className="w-5 h-5" />,
-      color: 'green'
+      color: 'green',
     },
     {
-      title: t('analytics.completionRate'),
-      value: '78.4%',
-      change: -2.1,
-      changeLabel: 'vs last period',
+      title: t('analytics.completionRate', 'Tasa de completacion'),
+      value: stats ? `${stats.completion_rate.toFixed(1)}%` : '-',
+      change: 0,
+      changeLabel: '',
       icon: <Award className="w-5 h-5" />,
-      color: 'yellow'
+      color: 'yellow',
     },
     {
-      title: t('analytics.avgStudyTime'),
-      value: '4.2h',
-      change: 15.7,
-      changeLabel: 'vs last period',
-      icon: <Clock className="w-5 h-5" />,
-      color: 'purple'
-    }
+      title: t('analytics.totalEnrollments', 'Inscripciones'),
+      value: stats?.total_enrollments ?? '-',
+      change: comparativeStats?.changes.enrollments_pct ?? 0,
+      changeLabel: 'vs periodo anterior',
+      icon: <Activity className="w-5 h-5" />,
+      color: 'purple',
+    },
   ];
 
-  // Mock chart data
-  const userGrowthData = [
-    { month: 'Jan', users: 4000, activeUsers: 2400 },
-    { month: 'Feb', users: 4500, activeUsers: 2800 },
-    { month: 'Mar', users: 5200, activeUsers: 3200 },
-    { month: 'Apr', users: 6100, activeUsers: 3900 },
-    { month: 'May', users: 7300, activeUsers: 4600 },
-    { month: 'Jun', users: 8700, activeUsers: 5400 },
-    { month: 'Jul', users: 10200, activeUsers: 6800 },
-    { month: 'Aug', users: 11500, activeUsers: 7900 },
-    { month: 'Sep', users: 12543, activeUsers: 8734 }
-  ];
+  const userGrowthData = (userActivity ?? []).map((p) => ({
+    date: p.date.slice(0, 10),
+    nuevos: p.new_users,
+    activos: p.active_users,
+  }));
 
-  const coursePopularityData = [
-    { name: 'Cybersecurity Fundamentals', students: 3421, completion: 82 },
-    { name: 'Network Security', students: 2856, completion: 75 },
-    { name: 'Ethical Hacking', students: 2234, completion: 68 },
-    { name: 'Cloud Security', students: 1987, completion: 71 },
-    { name: 'Incident Response', students: 1543, completion: 85 }
-  ];
+  const coursePopularityData = (courseStats ?? []).slice(0, 5).map((c) => ({
+    name: c.title.length > 20 ? c.title.slice(0, 20) + '...' : c.title,
+    inscritos: c.enrollments,
+    completados: c.completions,
+  }));
 
-  const engagementData = [
-    { day: 'Mon', views: 4000, interactions: 2400, completions: 800 },
-    { day: 'Tue', views: 3800, interactions: 2200, completions: 750 },
-    { day: 'Wed', views: 4200, interactions: 2600, completions: 900 },
-    { day: 'Thu', views: 4500, interactions: 2800, completions: 950 },
-    { day: 'Fri', views: 3900, interactions: 2300, completions: 820 },
-    { day: 'Sat', views: 2800, interactions: 1800, completions: 600 },
-    { day: 'Sun', views: 2600, interactions: 1600, completions: 550 }
-  ];
+  const enrollmentChartData = (enrollmentTrends ?? []).map((p) => ({
+    date: p.date.slice(0, 10),
+    inscripciones: p.count,
+  }));
 
-  const skillDistributionData = [
-    { skill: 'Security', level: 85 },
-    { skill: 'Networking', level: 72 },
-    { skill: 'Programming', level: 68 },
-    { skill: 'Cloud', level: 75 },
-    { skill: 'Compliance', level: 60 },
-    { skill: 'Forensics', level: 55 }
-  ];
+  const distributionData = (userDistribution ?? []).map((d, i) => ({
+    name: d.role,
+    value: d.count,
+    color: COLORS[i % COLORS.length],
+  }));
 
-  const deviceUsageData = [
-    { name: 'Desktop', value: 45, color: '#3B82F6' },
-    { name: 'Mobile', value: 35, color: '#10B981' },
-    { name: 'Tablet', value: 20, color: '#F59E0B' }
-  ];
-
-  const handleExport = async (format: 'pdf' | 'excel' | 'csv') => {
+  const handleExport = async (type: 'enrollments' | 'courses') => {
     setIsExporting(true);
-    // Simulate export
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    setIsExporting(false);
-    // Show success toast
-  };
-
-  const handleRefresh = () => {
-    // Refresh data
+    try {
+      if (type === 'enrollments') {
+        await exportEnrollments();
+      } else {
+        await exportCourseStats();
+      }
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const dateRangeOptions = [
-    { label: 'Last 7 days', days: 7 },
-    { label: 'Last 30 days', days: 30 },
-    { label: 'Last 90 days', days: 90 },
-    { label: 'Last year', days: 365 }
+    { label: 'Ultimos 7 dias', days: 7 },
+    { label: 'Ultimos 30 dias', days: 30 },
+    { label: 'Ultimos 90 dias', days: 90 },
+    { label: 'Ultimo ano', days: 365 },
   ];
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <LoadingSpinner />
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -196,30 +174,18 @@ export const AnalyticsDashboard: React.FC = () => {
           {/* Date Range Selector */}
           <select
             className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
-            onChange={(e) => {
-              const days = parseInt(e.target.value);
-              setDateRange({
-                start: new Date(Date.now() - days * 24 * 60 * 60 * 1000),
-                end: new Date(),
-                label: e.target.options[e.target.selectedIndex].text
-              });
-            }}
+            value={days}
+            onChange={(e) => setDays(parseInt(e.target.value))}
           >
-            {dateRangeOptions.map(option => (
+            {dateRangeOptions.map((option) => (
               <option key={option.days} value={option.days}>
                 {option.label}
               </option>
             ))}
           </select>
 
-          {/* Filter Button */}
-          <Button variant="secondary" size="sm">
-            <Filter className="w-4 h-4 mr-2" />
-            {t('common.filter')}
-          </Button>
-
           {/* Refresh Button */}
-          <Button variant="secondary" size="sm" onClick={handleRefresh}>
+          <Button variant="secondary" size="sm" onClick={() => refetch()}>
             <RefreshCw className="w-4 h-4" />
           </Button>
 
@@ -227,26 +193,20 @@ export const AnalyticsDashboard: React.FC = () => {
           <div className="relative group">
             <Button variant="primary" size="sm" disabled={isExporting}>
               <Download className="w-4 h-4 mr-2" />
-              {t('common.export')}
+              {t('common.export', 'Exportar')}
             </Button>
-            <div className="absolute right-0 mt-2 w-40 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 invisible group-hover:visible z-10">
+            <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 invisible group-hover:visible z-10">
               <button
-                onClick={() => handleExport('pdf')}
+                onClick={() => handleExport('enrollments')}
                 className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 text-sm"
               >
-                Export as PDF
+                Inscripciones CSV
               </button>
               <button
-                onClick={() => handleExport('excel')}
+                onClick={() => handleExport('courses')}
                 className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 text-sm"
               >
-                Export as Excel
-              </button>
-              <button
-                onClick={() => handleExport('csv')}
-                className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 text-sm"
-              >
-                Export as CSV
+                Estadisticas cursos CSV
               </button>
             </div>
           </div>
@@ -259,9 +219,7 @@ export const AnalyticsDashboard: React.FC = () => {
           <Card key={index} className="p-6">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  {metric.title}
-                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{metric.title}</p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white mt-2">
                   {metric.value}
                 </p>
@@ -284,10 +242,12 @@ export const AnalyticsDashboard: React.FC = () => {
                   </span>
                 </div>
               </div>
-              <div className={cn(
-                'p-3 rounded-lg',
-                `bg-${metric.color}-100 dark:bg-${metric.color}-900/30`
-              )}>
+              <div
+                className={cn(
+                  'p-3 rounded-lg',
+                  `bg-${metric.color}-100 dark:bg-${metric.color}-900/30`
+                )}
+              >
                 {metric.icon}
               </div>
             </div>
@@ -308,28 +268,22 @@ export const AnalyticsDashboard: React.FC = () => {
           <ResponsiveContainer width="100%" height={300}>
             <AreaChart data={userGrowthData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-              <XAxis dataKey="month" stroke="#9CA3AF" />
+              <XAxis dataKey="date" stroke="#9CA3AF" tick={{ fontSize: 11 }} />
               <YAxis stroke="#9CA3AF" />
               <Tooltip
-                contentStyle={{
-                  backgroundColor: '#1F2937',
-                  border: 'none',
-                  borderRadius: '8px'
-                }}
+                contentStyle={{ backgroundColor: '#1F2937', border: 'none', borderRadius: '8px' }}
               />
               <Legend />
               <Area
                 type="monotone"
-                dataKey="users"
-                stackId="1"
+                dataKey="nuevos"
                 stroke="#3B82F6"
                 fill="#3B82F6"
                 fillOpacity={0.6}
               />
               <Area
                 type="monotone"
-                dataKey="activeUsers"
-                stackId="1"
+                dataKey="activos"
                 stroke="#10B981"
                 fill="#10B981"
                 fillOpacity={0.6}
@@ -350,17 +304,19 @@ export const AnalyticsDashboard: React.FC = () => {
             <RechartsBarChart data={coursePopularityData} layout="vertical">
               <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
               <XAxis type="number" stroke="#9CA3AF" />
-              <YAxis dataKey="name" type="category" stroke="#9CA3AF" width={120} />
+              <YAxis
+                dataKey="name"
+                type="category"
+                stroke="#9CA3AF"
+                width={130}
+                tick={{ fontSize: 11 }}
+              />
               <Tooltip
-                contentStyle={{
-                  backgroundColor: '#1F2937',
-                  border: 'none',
-                  borderRadius: '8px'
-                }}
+                contentStyle={{ backgroundColor: '#1F2937', border: 'none', borderRadius: '8px' }}
               />
               <Legend />
-              <Bar dataKey="students" fill="#3B82F6" />
-              <Bar dataKey="completion" fill="#10B981" />
+              <Bar dataKey="inscritos" fill="#3B82F6" />
+              <Bar dataKey="completados" fill="#10B981" />
             </RechartsBarChart>
           </ResponsiveContainer>
         </Card>
@@ -374,36 +330,15 @@ export const AnalyticsDashboard: React.FC = () => {
             <Activity className="w-5 h-5 text-gray-400" />
           </div>
           <ResponsiveContainer width="100%" height={300}>
-            <RechartsLineChart data={engagementData}>
+            <RechartsLineChart data={enrollmentChartData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-              <XAxis dataKey="day" stroke="#9CA3AF" />
+              <XAxis dataKey="date" stroke="#9CA3AF" tick={{ fontSize: 11 }} />
               <YAxis stroke="#9CA3AF" />
               <Tooltip
-                contentStyle={{
-                  backgroundColor: '#1F2937',
-                  border: 'none',
-                  borderRadius: '8px'
-                }}
+                contentStyle={{ backgroundColor: '#1F2937', border: 'none', borderRadius: '8px' }}
               />
               <Legend />
-              <Line
-                type="monotone"
-                dataKey="views"
-                stroke="#3B82F6"
-                strokeWidth={2}
-              />
-              <Line
-                type="monotone"
-                dataKey="interactions"
-                stroke="#10B981"
-                strokeWidth={2}
-              />
-              <Line
-                type="monotone"
-                dataKey="completions"
-                stroke="#F59E0B"
-                strokeWidth={2}
-              />
+              <Line type="monotone" dataKey="inscripciones" stroke="#3B82F6" strokeWidth={2} />
             </RechartsLineChart>
           </ResponsiveContainer>
         </Card>
@@ -419,16 +354,16 @@ export const AnalyticsDashboard: React.FC = () => {
           <ResponsiveContainer width="100%" height={300}>
             <RechartsPieChart>
               <Pie
-                data={deviceUsageData}
+                data={distributionData}
                 cx="50%"
                 cy="50%"
                 labelLine={false}
-                label={({ name, value }) => `${name}: ${value}%`}
+                label={({ name, value }) => `${name}: ${value}`}
                 outerRadius={80}
                 fill="#8884d8"
                 dataKey="value"
               >
-                {deviceUsageData.map((entry, index) => (
+                {distributionData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
               </Pie>
@@ -436,7 +371,7 @@ export const AnalyticsDashboard: React.FC = () => {
                 contentStyle={{
                   backgroundColor: '#1F2937',
                   border: 'none',
-                  borderRadius: '8px'
+                  borderRadius: '8px',
                 }}
               />
             </RechartsPieChart>
@@ -444,51 +379,31 @@ export const AnalyticsDashboard: React.FC = () => {
         </Card>
       </div>
 
-      {/* Skills Radar Chart */}
-      <Card className="p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-            {t('analytics.skillsDistribution', 'Skills Distribution')}
-          </h3>
-        </div>
-        <ResponsiveContainer width="100%" height={400}>
-          <RadarChart data={skillDistributionData}>
-            <PolarGrid stroke="#374151" />
-            <PolarAngleAxis dataKey="skill" stroke="#9CA3AF" />
-            <PolarRadiusAxis angle={90} domain={[0, 100]} stroke="#9CA3AF" />
-            <Radar
-              name="Average Level"
-              dataKey="level"
-              stroke="#3B82F6"
-              fill="#3B82F6"
-              fillOpacity={0.6}
-            />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: '#1F2937',
-                border: 'none',
-                borderRadius: '8px'
-              }}
-            />
-          </RadarChart>
-        </ResponsiveContainer>
-      </Card>
-
-      {/* Real-time Activity Feed */}
+      {/* Activity Feed */}
       <Card className="p-6">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-          {t('analytics.realtimeActivity', 'Real-time Activity')}
+          {t('analytics.recentActivity', 'Actividad reciente')}
         </h3>
         <div className="space-y-3">
-          {[1, 2, 3, 4, 5].map(i => (
-            <div key={i} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+          {(recentActivity ?? []).length === 0 && (
+            <p className="text-sm text-gray-500">Sin actividad reciente.</p>
+          )}
+          {(recentActivity ?? []).map((item, i) => (
+            <div
+              key={i}
+              className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
+            >
+              <div className="w-2 h-2 bg-green-500 rounded-full" />
               <div className="flex-1">
                 <p className="text-sm text-gray-700 dark:text-gray-300">
-                  User completed "Cybersecurity Fundamentals" module
+                  <span className="font-medium">{item.user_name}</span>
+                  {' — '}
+                  {item.action}
+                  {' — '}
+                  {item.course_title}
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                  2 minutes ago
+                  {new Date(item.created_at).toLocaleString('es-CO')}
                 </p>
               </div>
             </div>

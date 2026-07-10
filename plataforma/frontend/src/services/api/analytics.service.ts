@@ -1,139 +1,106 @@
 /**
  * Analytics Service
- * HU-038: API calls for analytics data
+ * Mapea exactamente los endpoints reales del backend /api/analytics/*
  */
 
 import api from '../api';
-import { AnalyticsFilter } from '../../hooks/useAnalytics';
+
+export interface AnalyticsStats {
+  total_users: number;
+  total_courses: number;
+  total_enrollments: number;
+  active_enrollments: number;
+  completion_rate: number;
+  avg_progress: number;
+}
+
+export interface EnrollmentTrendPoint {
+  date: string;
+  count: number;
+}
+
+export interface CourseStatItem {
+  id: string;
+  title: string;
+  slug: string;
+  enrollments: number;
+  completions: number;
+  avg_progress: number;
+  completion_rate: number;
+}
+
+export interface UserActivityPoint {
+  date: string;
+  active_users: number;
+  new_users: number;
+}
+
+export interface UserDistributionItem {
+  role: string;
+  count: number;
+}
+
+export interface RecentActivityItem {
+  user_id: string;
+  user_name: string;
+  course_id: string;
+  course_title: string;
+  action: string;
+  created_at: string;
+}
+
+export interface ComparativeStats {
+  current_period: {
+    enrollments: number;
+    completions: number;
+    new_users: number;
+  };
+  previous_period: {
+    enrollments: number;
+    completions: number;
+    new_users: number;
+  };
+  changes: {
+    enrollments_pct: number;
+    completions_pct: number;
+    new_users_pct: number;
+  };
+}
 
 class AnalyticsService {
-  private baseUrl = '/analytics';
-
-  /**
-   * Get overview metrics
-   */
-  async getMetrics(filter?: AnalyticsFilter) {
-    const response = await api.get(`${this.baseUrl}/metrics`, { params: filter });
-    return response.data;
+  async getStats(): Promise<AnalyticsStats> {
+    const envelope = await api.get('/analytics/stats');
+    return (envelope as any).data;
   }
 
-  /**
-   * Get user growth data
-   */
-  async getUserGrowth(filter?: AnalyticsFilter) {
-    const response = await api.get(`${this.baseUrl}/user-growth`, { params: filter });
-    return response.data;
+  async getEnrollmentTrends(days = 30): Promise<EnrollmentTrendPoint[]> {
+    const envelope = await api.get('/analytics/enrollment-trends', { params: { days } });
+    return (envelope as any).data;
   }
 
-  /**
-   * Get course statistics
-   */
-  async getCourseStats(filter?: AnalyticsFilter) {
-    const response = await api.get(`${this.baseUrl}/course-stats`, { params: filter });
-    return response.data;
+  async getCourseStats(): Promise<CourseStatItem[]> {
+    const envelope = await api.get('/analytics/courses');
+    return (envelope as any).data;
   }
 
-  /**
-   * Get engagement data
-   */
-  async getEngagement(filter?: AnalyticsFilter) {
-    const response = await api.get(`${this.baseUrl}/engagement`, { params: filter });
-    return response.data;
+  async getUserActivity(days = 30): Promise<UserActivityPoint[]> {
+    const envelope = await api.get('/analytics/user-activity', { params: { days } });
+    return (envelope as any).data;
   }
 
-  /**
-   * Get completion rates
-   */
-  async getCompletionRates(filter?: AnalyticsFilter) {
-    const response = await api.get(`${this.baseUrl}/completion-rates`, { params: filter });
-    return response.data;
+  async getUserDistribution(): Promise<UserDistributionItem[]> {
+    const envelope = await api.get('/analytics/user-distribution');
+    return (envelope as any).data;
   }
 
-  /**
-   * Get skill distribution
-   */
-  async getSkillDistribution(filter?: AnalyticsFilter) {
-    const response = await api.get(`${this.baseUrl}/skills`, { params: filter });
-    return response.data;
+  async getRecentActivity(limit = 20): Promise<RecentActivityItem[]> {
+    const envelope = await api.get('/analytics/recent-activity', { params: { limit } });
+    return (envelope as any).data;
   }
 
-  /**
-   * Get device usage statistics
-   */
-  async getDeviceUsage(filter?: AnalyticsFilter) {
-    const response = await api.get(`${this.baseUrl}/device-usage`, { params: filter });
-    return response.data;
-  }
-
-  /**
-   * Get real-time activity
-   */
-  async getRealTimeActivity(limit = 10) {
-    const response = await api.get(`${this.baseUrl}/activity`, { params: { limit } });
-    return response.data;
-  }
-
-  /**
-   * Export analytics data
-   */
-  async exportData(format: string, data: any) {
-    const response = await api.post(
-      `${this.baseUrl}/export`,
-      { data },
-      {
-        params: { format },
-        responseType: 'blob'
-      }
-    );
-    return response.data;
-  }
-
-  /**
-   * Get custom report
-   */
-  async getCustomReport(config: {
-    metrics: string[];
-    dimensions: string[];
-    filters: AnalyticsFilter;
-  }) {
-    const response = await api.post(`${this.baseUrl}/custom-report`, config);
-    return response.data;
-  }
-
-  /**
-   * Get learning path analytics
-   */
-  async getLearningPathAnalytics(pathId: string, filter?: AnalyticsFilter) {
-    const response = await api.get(`${this.baseUrl}/learning-paths/${pathId}`, {
-      params: filter
-    });
-    return response.data;
-  }
-
-  /**
-   * Get instructor analytics
-   */
-  async getInstructorAnalytics(instructorId: string, filter?: AnalyticsFilter) {
-    const response = await api.get(`${this.baseUrl}/instructors/${instructorId}`, {
-      params: filter
-    });
-    return response.data;
-  }
-
-  /**
-   * Get quiz performance analytics
-   */
-  async getQuizPerformance(filter?: AnalyticsFilter) {
-    const response = await api.get(`${this.baseUrl}/quiz-performance`, { params: filter });
-    return response.data;
-  }
-
-  /**
-   * Get revenue analytics (for paid courses)
-   */
-  async getRevenueAnalytics(filter?: AnalyticsFilter) {
-    const response = await api.get(`${this.baseUrl}/revenue`, { params: filter });
-    return response.data;
+  async getComparativeStats(days = 30): Promise<ComparativeStats> {
+    const envelope = await api.get('/analytics/comparative-stats', { params: { days } });
+    return (envelope as any).data;
   }
 }
 

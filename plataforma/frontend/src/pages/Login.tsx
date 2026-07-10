@@ -50,11 +50,18 @@ export const Login: React.FC = () => {
     const expired = localStorage.getItem('session-expired');
     if (expired) {
       localStorage.removeItem('session-expired');
-      toast.warning('Tu sesion ha expirado. Inicia sesion nuevamente.');
+      if (expired === 'password_changed') {
+        toast.warning('Tu sesion fue cerrada porque cambiaste tu contrasena en otro dispositivo.');
+      } else {
+        toast.warning('Tu sesion ha expirado. Inicia sesion nuevamente.');
+      }
     }
     const reason = searchParams.get('reason');
     if (reason === 'expired') {
       toast.warning('Tu sesion ha expirado. Inicia sesion nuevamente.');
+      window.history.replaceState({}, '', '/login');
+    } else if (reason === 'password_changed') {
+      toast.warning('Tu sesion fue cerrada porque cambiaste tu contrasena en otro dispositivo.');
       window.history.replaceState({}, '', '/login');
     }
     const oauthError = searchParams.get('error');

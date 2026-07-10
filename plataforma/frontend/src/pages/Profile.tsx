@@ -15,6 +15,7 @@ import userService from '../services/user.service';
 import { ROLE_LABELS } from '../utils/constants';
 import { formatDate } from '../utils/formatters';
 import api from '../services/api';
+import authService, { type Session } from '../services/auth.service';
 
 export const Profile: React.FC = () => {
   const { user, refreshUser } = useAuth();
@@ -120,6 +121,50 @@ export const Profile: React.FC = () => {
       toast.error(err?.error?.message || 'Error al importar badge');
     } finally {
       setImportLoading(false);
+    }
+  };
+
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [sessionsLoading, setSessionsLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setSessionsLoading(true);
+    authService
+      .getSessions()
+      .then((data) => {
+        if (!cancelled) setSessions(data);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setSessionsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleCloseSession = async (id: string) => {
+    try {
+      await authService.closeSession(id);
+      setSessions((prev) => prev.filter((s) => s.id !== id));
+      toast.success('Sesion cerrada');
+    } catch {
+      toast.error('Error al cerrar sesion');
+    }
+  };
+
+  const handleCloseAllOther = async () => {
+    try {
+      const result = await authService.closeAllOtherSessions();
+      toast.success(`${result.count ?? 0} sesiones cerradas`);
+      setSessionsLoading(true);
+      authService
+        .getSessions()
+        .then(setSessions)
+        .finally(() => setSessionsLoading(false));
+    } catch {
+      toast.error('Error al cerrar sesiones');
     }
   };
 
@@ -647,6 +692,63 @@ export const Profile: React.FC = () => {
               </Card>
             </div>
           )}
+        </div>
+
+        {/* Sesiones activas */}
+        <div className="mt-8">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900">Sesiones activas</h3>
+                {sessions.length > 1 && (
+                  <button
+                    onClick={handleCloseAllOther}
+                    className="text-sm text-red-500 hover:underline"
+                  >
+                    Cerrar todas las demas
+                  </button>
+                )}
+              </div>
+            </CardHeader>
+            <CardBody>
+              {sessionsLoading && <p className="text-sm text-gray-500">Cargando sesiones...</p>}
+              {!sessionsLoading && sessions.length === 0 && (
+                <p className="text-sm text-gray-500">No hay sesiones activas registradas.</p>
+              )}
+              <div className="space-y-3">
+                {sessions.map((session, idx) => (
+                  <div
+                    key={session.id}
+                    className="flex items-center justify-between p-3 border border-gray-200 rounded-lg"
+                  >
+                    <div>
+                      <p className="text-sm font-medium text-gray-800">
+                        {idx === 0 ? 'Esta sesion' : `Sesion ${idx + 1}`}
+                        {session.is_expired && (
+                          <span className="ml-2 text-xs text-red-500">(expirada)</span>
+                        )}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        Iniciada: {new Date(session.session_started_at).toLocaleString('es-CO')}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        Ultima actividad:{' '}
+                        {new Date(session.last_activity_at).toLocaleString('es-CO')}
+                      </p>
+                    </div>
+                    {idx !== 0 && (
+                      <button
+                        onClick={() => handleCloseSession(session.id)}
+                        className="text-sm text-red-500 hover:underline ml-4"
+                      >
+                        Cerrar
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </CardBody>
+          </Card>
         </div>
       </div>
     </div>

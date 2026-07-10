@@ -1,4 +1,4 @@
-.PHONY: help start stop restart logs clean seed test status build deploy test-e2e test-e2e-ui test-e2e-report
+.PHONY: help start stop restart logs clean seed test status build deploy test-e2e test-e2e-ui test-e2e-report up-dev up-qa up-prod down-dev migrate-dev migrate-qa migrate-prod seed-dev seed-qa build-sandbox logs-dev
 
 # ===== COLORES PARA OUTPUT =====
 GREEN  := $(shell echo "\033[0;32m")
@@ -135,6 +135,53 @@ deploy-qa:
 
 deploy-prod:
 	./scripts/deploy-prod.sh
+
+# ===== AMBIENTES POR ENV FILE =====
+
+build-sandbox:
+	docker build -f executor/Dockerfile.sandbox -t ciber-sandbox:latest executor/
+
+up-dev:
+	docker compose --env-file .env up -d
+
+down-dev:
+	docker compose --env-file .env down
+
+logs-dev:
+	docker compose --env-file .env logs -f --tail=50
+
+migrate-dev:
+	docker compose --env-file .env exec backend python -m alembic upgrade head
+
+seed-dev:
+	docker compose --env-file .env exec backend python -m app.scripts.seed_base
+
+test-dev:
+	docker compose --env-file .env exec backend python -m pytest tests/ -q --tb=short
+
+e2e-dev:
+	cd e2e && npx playwright test
+
+up-qa:
+	docker compose -f docker-compose.prod.yml --env-file .env.qa up -d
+
+down-qa:
+	docker compose -f docker-compose.prod.yml --env-file .env.qa down
+
+migrate-qa:
+	docker compose -f docker-compose.prod.yml --env-file .env.qa exec backend python -m alembic upgrade head
+
+seed-qa:
+	docker compose -f docker-compose.prod.yml --env-file .env.qa exec backend python -m app.scripts.seed_base
+
+up-prod:
+	docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
+
+down-prod:
+	docker compose -f docker-compose.prod.yml --env-file .env.prod down
+
+migrate-prod:
+	docker compose -f docker-compose.prod.yml --env-file .env.prod exec backend python -m alembic upgrade head
 
 validate:
 	./scripts/validate-parity.sh
