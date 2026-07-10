@@ -4,9 +4,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.database import get_db
-from app.middleware.auth import require_admin
 from app.middleware.rate_limit import limiter
 from app.models.user import User
+from app.permissions import Permission, require_permission
 from app.schemas.common import ApiResponse
 from app.services.incident_service import IncidentService
 
@@ -62,7 +62,7 @@ async def glitchtip_webhook_auth(secret: str, request: Request, db: AsyncSession
 
 
 @router.get("")
-async def list_incidents(_user: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
+async def list_incidents(_user: User = Depends(require_permission(Permission.INCIDENT_READ)), db: AsyncSession = Depends(get_db)):
     """List all incidents (admin only)."""
     service = IncidentService(db)
     incidents = await service.list_incidents()
@@ -70,7 +70,7 @@ async def list_incidents(_user: User = Depends(require_admin), db: AsyncSession 
 
 
 @router.get("/{incident_id}")
-async def get_incident(incident_id: str, _user: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
+async def get_incident(incident_id: str, _user: User = Depends(require_permission(Permission.INCIDENT_READ)), db: AsyncSession = Depends(get_db)):
     """Get full incident report (admin only)."""
     service = IncidentService(db)
     incident = await service.get_incident(incident_id)

@@ -31,7 +31,8 @@ def mock_redis():
     mock.get = AsyncMock(return_value=None)
     mock.setex = AsyncMock(return_value=True)
     mock.delete = AsyncMock(return_value=1)
-    with patch("app.middleware.auth.redis_client", mock):
+    with patch("app.middleware.auth.redis_client", mock), \
+         patch("app.permissions.redis_client", mock):
         yield mock
 
 test_engine = create_async_engine("sqlite+aiosqlite://", echo=False)

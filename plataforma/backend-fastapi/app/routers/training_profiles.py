@@ -4,8 +4,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime
 
 from app.database import get_db
-from app.middleware.auth import get_current_user, require_admin
+from app.middleware.auth import get_current_user
 from app.models.user import User
+from app.permissions import Permission, require_permission
 from app.schemas.common import ApiResponse, CamelModel
 from app.services.training_profile_service import TrainingProfileService
 
@@ -75,7 +76,7 @@ async def get_profile_by_slug(
 @router.post("")
 async def create_profile(
     body: TrainingProfileCreate,
-    user: User = Depends(require_admin),
+    user: User = Depends(require_permission(Permission.TRAINING_PROFILE_WRITE)),
     db: AsyncSession = Depends(get_db),
 ):
     service = TrainingProfileService(db)
@@ -87,7 +88,7 @@ async def create_profile(
 async def update_profile(
     profile_id: str,
     body: TrainingProfileUpdate,
-    user: User = Depends(require_admin),
+    user: User = Depends(require_permission(Permission.TRAINING_PROFILE_WRITE)),
     db: AsyncSession = Depends(get_db),
 ):
     service = TrainingProfileService(db)
@@ -98,7 +99,7 @@ async def update_profile(
 @router.delete("/{profile_id}")
 async def delete_profile(
     profile_id: str,
-    user: User = Depends(require_admin),
+    user: User = Depends(require_permission(Permission.TRAINING_PROFILE_WRITE)),
     db: AsyncSession = Depends(get_db),
 ):
     service = TrainingProfileService(db)
@@ -110,7 +111,7 @@ async def delete_profile(
 async def add_course_to_profile(
     profile_id: str,
     body: AddCourseRequest,
-    user: User = Depends(require_admin),
+    user: User = Depends(require_permission(Permission.TRAINING_PROFILE_WRITE)),
     db: AsyncSession = Depends(get_db),
 ):
     service = TrainingProfileService(db)
@@ -122,7 +123,7 @@ async def add_course_to_profile(
 async def remove_course_from_profile(
     profile_id: str,
     course_id: str,
-    user: User = Depends(require_admin),
+    user: User = Depends(require_permission(Permission.TRAINING_PROFILE_WRITE)),
     db: AsyncSession = Depends(get_db),
 ):
     service = TrainingProfileService(db)

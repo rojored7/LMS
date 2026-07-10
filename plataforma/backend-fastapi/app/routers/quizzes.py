@@ -3,7 +3,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.middleware.auth import get_current_user, require_instructor, verify_module_ownership
+from app.middleware.auth import get_current_user, verify_module_ownership
+from app.permissions import Permission, require_permission
 from app.middleware.error_handler import NotFoundError
 from app.models.assessment import Quiz, Question
 from app.models.course import Module
@@ -57,7 +58,7 @@ async def get_quiz(
 async def create_quiz(
     module_id: str,
     body: QuizCreate,
-    user: User = Depends(require_instructor),
+    user: User = Depends(require_permission(Permission.QUIZ_MANAGE)),
     db: AsyncSession = Depends(get_db),
 ):
     await verify_module_ownership(module_id, user, db)
@@ -71,7 +72,7 @@ async def create_quiz(
 async def update_quiz(
     quiz_id: str,
     body: QuizUpdate,
-    user: User = Depends(require_instructor),
+    user: User = Depends(require_permission(Permission.QUIZ_MANAGE)),
     db: AsyncSession = Depends(get_db),
 ):
     quiz_row = (await db.execute(select(Quiz).where(Quiz.id == quiz_id))).scalar_one_or_none()
@@ -86,7 +87,7 @@ async def update_quiz(
 @router.delete("/{quiz_id}")
 async def delete_quiz(
     quiz_id: str,
-    user: User = Depends(require_instructor),
+    user: User = Depends(require_permission(Permission.QUIZ_MANAGE)),
     db: AsyncSession = Depends(get_db),
 ):
     quiz_row = (await db.execute(select(Quiz).where(Quiz.id == quiz_id))).scalar_one_or_none()
@@ -118,7 +119,7 @@ async def submit_attempt(
 async def add_question(
     quiz_id: str,
     body: QuestionCreate,
-    user: User = Depends(require_instructor),
+    user: User = Depends(require_permission(Permission.QUIZ_MANAGE)),
     db: AsyncSession = Depends(get_db),
 ):
     quiz_row = (await db.execute(select(Quiz).where(Quiz.id == quiz_id))).scalar_one_or_none()
@@ -134,7 +135,7 @@ async def add_question(
 async def update_question(
     question_id: str,
     body: QuestionUpdate,
-    user: User = Depends(require_instructor),
+    user: User = Depends(require_permission(Permission.QUIZ_MANAGE)),
     db: AsyncSession = Depends(get_db),
 ):
     q = (await db.execute(select(Question).where(Question.id == question_id))).scalar_one_or_none()
@@ -152,7 +153,7 @@ async def update_question(
 @router.delete("/questions/{question_id}")
 async def delete_question(
     question_id: str,
-    user: User = Depends(require_instructor),
+    user: User = Depends(require_permission(Permission.QUIZ_MANAGE)),
     db: AsyncSession = Depends(get_db),
 ):
     q = (await db.execute(select(Question).where(Question.id == question_id))).scalar_one_or_none()

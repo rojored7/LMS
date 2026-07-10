@@ -7,8 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import structlog
 
 from app.database import get_db
-from app.middleware.auth import require_admin
 from app.models.user import User, UserRole
+from app.permissions import Permission, require_permission
 from app.schemas.admin import AdminEnrollmentResponse, AdminUserWithEnrollments, LdapConfigUpdate, LdapConfigResponse, LdapTestRequest, LdapTestResponse
 from app.schemas.common import ApiResponse, PaginationMeta
 from app.schemas.gamification import LeaderboardEntry, XpAdjustRequest, XpTransactionResponse
@@ -43,7 +43,7 @@ def _serialize_user(user: User) -> dict:
 
 @router.get("/dashboard")
 async def get_dashboard_stats(
-    user: User = Depends(require_admin),
+    user: User = Depends(require_permission(Permission.ADMIN_PANEL)),
     db: AsyncSession = Depends(get_db),
 ):
     service = AdminService(db)
@@ -57,7 +57,7 @@ async def list_users(
     limit: int = Query(20, ge=1, le=100),
     search: str | None = None,
     role: str | None = None,
-    user: User = Depends(require_admin),
+    user: User = Depends(require_permission(Permission.ADMIN_PANEL)),
     db: AsyncSession = Depends(get_db),
 ):
     service = UserService(db)
@@ -75,7 +75,7 @@ async def list_users(
 async def get_leaderboard(
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
-    admin: User = Depends(require_admin),
+    admin: User = Depends(require_permission(Permission.ADMIN_PANEL)),
     db: AsyncSession = Depends(get_db),
 ):
     service = AdminService(db)
@@ -99,7 +99,7 @@ async def get_leaderboard(
 @router.get("/users/{user_id}")
 async def get_user(
     user_id: str,
-    admin: User = Depends(require_admin),
+    admin: User = Depends(require_permission(Permission.ADMIN_PANEL)),
     db: AsyncSession = Depends(get_db),
 ):
     service = UserService(db)
@@ -111,7 +111,7 @@ async def get_user(
 async def update_user_role(
     user_id: str,
     body: RoleUpdateRequest,
-    admin: User = Depends(require_admin),
+    admin: User = Depends(require_permission(Permission.ADMIN_PANEL)),
     db: AsyncSession = Depends(get_db),
 ):
     service = UserService(db)
@@ -124,7 +124,7 @@ async def update_user_role(
 async def adjust_user_xp(
     user_id: str,
     body: XpAdjustRequest,
-    admin: User = Depends(require_admin),
+    admin: User = Depends(require_permission(Permission.ADMIN_PANEL)),
     db: AsyncSession = Depends(get_db),
 ):
     service = AdminService(db)
@@ -142,7 +142,7 @@ async def get_user_xp_history(
     user_id: str,
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
-    admin: User = Depends(require_admin),
+    admin: User = Depends(require_permission(Permission.ADMIN_PANEL)),
     db: AsyncSession = Depends(get_db),
 ):
     service = AdminService(db)
@@ -158,7 +158,7 @@ async def get_user_xp_history(
 @router.delete("/users/{user_id}")
 async def delete_user(
     user_id: str,
-    admin: User = Depends(require_admin),
+    admin: User = Depends(require_permission(Permission.ADMIN_PANEL)),
     db: AsyncSession = Depends(get_db),
 ):
     if user_id == admin.id:
@@ -175,7 +175,7 @@ async def delete_user(
 @router.post("/users/bulk-role")
 async def bulk_update_role(
     body: BulkRoleRequest,
-    admin: User = Depends(require_admin),
+    admin: User = Depends(require_permission(Permission.ADMIN_PANEL)),
     db: AsyncSession = Depends(get_db),
 ):
     service = AdminService(db)
@@ -187,7 +187,7 @@ async def bulk_update_role(
 @router.get("/enrollments/recent")
 async def get_recent_enrollments(
     limit: int = Query(10, ge=1, le=50),
-    admin: User = Depends(require_admin),
+    admin: User = Depends(require_permission(Permission.ADMIN_PANEL)),
     db: AsyncSession = Depends(get_db),
 ):
     service = AdminService(db)
@@ -198,7 +198,7 @@ async def get_recent_enrollments(
 @router.get("/users/{user_id}/enrollments")
 async def get_user_enrollments(
     user_id: str,
-    admin: User = Depends(require_admin),
+    admin: User = Depends(require_permission(Permission.ADMIN_PANEL)),
     db: AsyncSession = Depends(get_db),
 ):
     user_service = UserService(db)
@@ -221,7 +221,7 @@ async def get_user_enrollments(
 @router.post("/enrollments")
 async def assign_course_to_user(
     body: AssignCourseRequest,
-    admin: User = Depends(require_admin),
+    admin: User = Depends(require_permission(Permission.ADMIN_PANEL)),
     db: AsyncSession = Depends(get_db),
 ):
     course_service = CourseService(db)
@@ -233,7 +233,7 @@ async def assign_course_to_user(
 @router.delete("/enrollments/{enrollment_id}")
 async def remove_enrollment(
     enrollment_id: str,
-    admin: User = Depends(require_admin),
+    admin: User = Depends(require_permission(Permission.ADMIN_PANEL)),
     db: AsyncSession = Depends(get_db),
 ):
     course_service = CourseService(db)
@@ -245,7 +245,7 @@ async def remove_enrollment(
 
 @router.get("/ldap/config")
 async def get_ldap_config(
-    _admin: User = Depends(require_admin),
+    _admin: User = Depends(require_permission(Permission.ADMIN_PANEL)),
     db: AsyncSession = Depends(get_db),
 ):
     from app.services.ldap_config_service import LdapConfigService
@@ -261,7 +261,7 @@ async def get_ldap_config(
 @router.put("/ldap/config")
 async def update_ldap_config(
     body: LdapConfigUpdate,
-    _admin: User = Depends(require_admin),
+    _admin: User = Depends(require_permission(Permission.ADMIN_PANEL)),
     db: AsyncSession = Depends(get_db),
 ):
     from app.services.ldap_config_service import LdapConfigService
@@ -277,7 +277,7 @@ async def update_ldap_config(
 @router.post("/ldap/test")
 async def test_ldap_connection(
     body: LdapTestRequest,
-    _admin: User = Depends(require_admin),
+    _admin: User = Depends(require_permission(Permission.ADMIN_PANEL)),
 ):
     import asyncio
     from app.services.ldap_config_service import LdapConfigService

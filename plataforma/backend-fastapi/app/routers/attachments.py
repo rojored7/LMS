@@ -7,7 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.database import get_db
-from app.middleware.auth import get_current_user, require_instructor, require_role
+from app.middleware.auth import get_current_user
+from app.permissions import Permission, require_permission
 from app.middleware.rate_limit import limiter
 from app.models.course import Lesson, Module
 from app.models.user import User, UserRole
@@ -64,7 +65,7 @@ async def upload_attachment(
     lesson_id: str,
     file: UploadFile,
     description: str | None = None,
-    current_user: User = Depends(require_instructor),
+    current_user: User = Depends(require_permission(Permission.ATTACHMENT_MANAGE)),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     content = await file.read()

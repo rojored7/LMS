@@ -96,6 +96,7 @@ services:
     volumes:
       - ./backend-fastapi/app:/app/app:delegated
       - ./backend-fastapi/alembic:/app/alembic:delegated
+      - ./backend-fastapi/tests:/app/tests:ro
       - ..:/content:ro
       - backend_uploads:/app/uploads
       - backend_logs:/app/logs

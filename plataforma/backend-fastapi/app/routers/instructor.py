@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import structlog
 
 from app.database import get_db
-from app.middleware.auth import require_instructor
+from app.permissions import Permission, require_permission
 from app.models.user import User, UserRole
 from app.services.instructor_service import InstructorService
 
@@ -14,7 +14,7 @@ router = APIRouter(prefix="/api/instructor", tags=["instructor"])
 
 @router.get("/dashboard")
 async def get_instructor_dashboard(
-    user: User = Depends(require_instructor),
+    user: User = Depends(require_permission(Permission.INSTRUCTOR_DASHBOARD)),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     service = InstructorService(db)
@@ -25,7 +25,7 @@ async def get_instructor_dashboard(
 
 @router.get("/courses")
 async def get_instructor_courses(
-    user: User = Depends(require_instructor),
+    user: User = Depends(require_permission(Permission.INSTRUCTOR_DASHBOARD)),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     service = InstructorService(db)
@@ -36,7 +36,7 @@ async def get_instructor_courses(
 @router.get("/courses/{course_id}/students")
 async def get_course_students(
     course_id: str,
-    user: User = Depends(require_instructor),
+    user: User = Depends(require_permission(Permission.INSTRUCTOR_DASHBOARD)),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     service = InstructorService(db)
@@ -47,7 +47,7 @@ async def get_course_students(
 @router.get("/courses/{course_id}/gradebook")
 async def get_gradebook(
     course_id: str,
-    user: User = Depends(require_instructor),
+    user: User = Depends(require_permission(Permission.INSTRUCTOR_DASHBOARD)),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     service = InstructorService(db)
@@ -57,7 +57,7 @@ async def get_gradebook(
 
 @router.get("/analytics")
 async def get_instructor_analytics(
-    user: User = Depends(require_instructor),
+    user: User = Depends(require_permission(Permission.INSTRUCTOR_DASHBOARD)),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     service = InstructorService(db)

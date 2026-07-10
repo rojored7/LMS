@@ -5,9 +5,9 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.middleware.auth import require_role
 from app.middleware.rate_limit import limiter
-from app.models.user import User, UserRole
+from app.models.user import User
+from app.permissions import Permission, require_permission
 from app.services.export_service import ExportService
 
 router = APIRouter(prefix="/api/export", tags=["export"])
@@ -24,7 +24,7 @@ _SAFE_FILENAME_RE = re.compile(r"[^a-zA-Z0-9_-]")
 async def export_enrollments(
     request: Request,
     course_id: str | None = None,
-    current_user: User = Depends(require_role(UserRole.ADMIN)),
+    current_user: User = Depends(require_permission(Permission.EXPORT_DATA)),
     db: AsyncSession = Depends(get_db),
 ) -> StreamingResponse:
     service = ExportService(db)
@@ -43,7 +43,7 @@ async def export_enrollments(
 async def export_progress(
     request: Request,
     course_id: str,
-    current_user: User = Depends(require_role(UserRole.ADMIN)),
+    current_user: User = Depends(require_permission(Permission.EXPORT_DATA)),
     db: AsyncSession = Depends(get_db),
 ) -> StreamingResponse:
     service = ExportService(db)
@@ -61,7 +61,7 @@ async def export_progress(
 @limiter.limit("5/hour")
 async def export_course_stats(
     request: Request,
-    current_user: User = Depends(require_role(UserRole.ADMIN)),
+    current_user: User = Depends(require_permission(Permission.EXPORT_DATA)),
     db: AsyncSession = Depends(get_db),
 ) -> StreamingResponse:
     service = ExportService(db)

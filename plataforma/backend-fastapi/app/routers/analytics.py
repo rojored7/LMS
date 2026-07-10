@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.middleware.auth import require_admin
 from app.models.user import User
+from app.permissions import Permission, require_permission
 from app.schemas.common import ApiResponse
 from app.services.analytics_service import AnalyticsService
 
@@ -12,7 +12,7 @@ router = APIRouter(prefix="/api/analytics", tags=["analytics"])
 
 @router.get("/stats")
 async def get_platform_stats(
-    user: User = Depends(require_admin),
+    user: User = Depends(require_permission(Permission.ANALYTICS_READ)),
     db: AsyncSession = Depends(get_db),
 ):
     service = AnalyticsService(db)
@@ -23,7 +23,7 @@ async def get_platform_stats(
 @router.get("/enrollment-trends")
 async def get_enrollment_trends(
     days: int = Query(30, ge=1, le=365),
-    user: User = Depends(require_admin),
+    user: User = Depends(require_permission(Permission.ANALYTICS_READ)),
     db: AsyncSession = Depends(get_db),
 ):
     service = AnalyticsService(db)
@@ -33,7 +33,7 @@ async def get_enrollment_trends(
 
 @router.get("/courses")
 async def get_course_stats(
-    user: User = Depends(require_admin),
+    user: User = Depends(require_permission(Permission.ANALYTICS_READ)),
     db: AsyncSession = Depends(get_db),
 ):
     service = AnalyticsService(db)
@@ -44,7 +44,7 @@ async def get_course_stats(
 @router.get("/user-activity")
 async def get_user_activity(
     days: int = Query(7, ge=1, le=90),
-    user: User = Depends(require_admin),
+    user: User = Depends(require_permission(Permission.ANALYTICS_READ)),
     db: AsyncSession = Depends(get_db),
 ):
     service = AnalyticsService(db)
@@ -54,7 +54,7 @@ async def get_user_activity(
 
 @router.get("/user-distribution")
 async def get_user_distribution(
-    user: User = Depends(require_admin),
+    user: User = Depends(require_permission(Permission.ANALYTICS_READ)),
     db: AsyncSession = Depends(get_db),
 ):
     service = AnalyticsService(db)
@@ -65,7 +65,7 @@ async def get_user_distribution(
 @router.get("/recent-activity")
 async def get_recent_activity(
     limit: int = Query(10, ge=1, le=50),
-    user: User = Depends(require_admin),
+    user: User = Depends(require_permission(Permission.ANALYTICS_READ)),
     db: AsyncSession = Depends(get_db),
 ):
     service = AnalyticsService(db)
@@ -75,7 +75,7 @@ async def get_recent_activity(
 
 @router.get("/comparative-stats")
 async def get_comparative_stats(
-    user: User = Depends(require_admin),
+    user: User = Depends(require_permission(Permission.ANALYTICS_READ)),
     db: AsyncSession = Depends(get_db),
 ):
     service = AnalyticsService(db)

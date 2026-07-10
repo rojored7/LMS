@@ -116,9 +116,12 @@ def require_role(allowed_roles: list[UserRole]):
     return role_checker
 
 
-require_admin = require_role([UserRole.ADMIN])
-require_instructor = require_role([UserRole.ADMIN, UserRole.INSTRUCTOR])
-require_instructor_only = require_role([UserRole.INSTRUCTOR])
+# Aliases backward-compatible — apuntan a require_permission() centralizado.
+# DEPRECATED: usar require_permission(Permission.X) de app.permissions en endpoints nuevos.
+from app.permissions import Permission, require_permission  # noqa: E402
+
+require_admin = require_permission(Permission.ADMIN_PANEL)
+require_instructor = require_permission(Permission.COURSE_CREATE)
 
 
 async def verify_module_ownership(module_id: str, user: User, db: AsyncSession) -> None:

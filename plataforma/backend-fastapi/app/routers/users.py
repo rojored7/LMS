@@ -5,8 +5,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.database import get_db
-from app.middleware.auth import get_current_user, require_admin
+from app.middleware.auth import get_current_user
 from app.models.user import User
+from app.permissions import Permission, require_permission
 from app.schemas.common import ApiResponse, PaginationMeta
 from app.schemas.auth import ChangePasswordRequest
 from app.schemas.user import UserProfileUpdate, UserResponse
@@ -23,7 +24,7 @@ async def list_users(
     limit: int = Query(20, ge=1, le=100),
     role: str | None = None,
     search: str | None = None,
-    _user: User = Depends(require_admin),
+    _user: User = Depends(require_permission(Permission.USER_LIST)),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     service = UserService(db)
@@ -82,7 +83,7 @@ async def get_user(
 @router.delete("/{user_id}")
 async def delete_user(
     user_id: str,
-    _user: User = Depends(require_admin),
+    _user: User = Depends(require_permission(Permission.USER_DELETE)),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     service = UserService(db)

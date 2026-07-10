@@ -7,8 +7,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.database import get_db
-from app.middleware.auth import get_current_user, require_admin
+from app.middleware.auth import get_current_user
 from app.middleware.rate_limit import limiter
+from app.permissions import Permission, require_permission
 from app.models.gamification import UserBadge
 from app.models.user import User
 from app.schemas.common import ApiResponse
@@ -35,14 +36,14 @@ async def list_badges(db: AsyncSession = Depends(get_db)) -> dict:
 
 
 @router.post("")
-async def create_badge(data: BadgeCreate, _user: User = Depends(require_admin), db: AsyncSession = Depends(get_db)) -> dict:
+async def create_badge(data: BadgeCreate, _user: User = Depends(require_permission(Permission.BADGE_MANAGE)), db: AsyncSession = Depends(get_db)) -> dict:
     service = BadgeService(db)
     badge = await service.create_badge(data.name, data.slug, data.description, data.icon, data.color, data.xp_reward)
     return ApiResponse(success=True, data=BadgeResponse.model_validate(badge).model_dump()).model_dump()
 
 
 @router.post("/{badge_id}/award/{user_id}")
-async def award_badge(badge_id: str, user_id: str, _user: User = Depends(require_admin), db: AsyncSession = Depends(get_db)) -> dict:
+async def award_badge(badge_id: str, user_id: str, _user: User = Depends(require_permission(Permission.BADGE_MANAGE)), db: AsyncSession = Depends(get_db)) -> dict:
     service = BadgeService(db)
     user_badge = await service.award_badge(user_id, badge_id)
     return ApiResponse(success=True, data=UserBadgeResponse.model_validate(user_badge).model_dump()).model_dump()

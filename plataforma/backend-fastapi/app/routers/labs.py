@@ -4,7 +4,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.middleware.auth import get_current_user, require_instructor, verify_module_ownership
+from app.middleware.auth import get_current_user, verify_module_ownership
+from app.permissions import Permission, require_permission
 from app.middleware.error_handler import NotFoundError
 from app.middleware.rate_limit import limiter
 from app.models.assessment import Lab, LabSubmission
@@ -73,7 +74,7 @@ async def get_lab(
 async def create_lab(
     module_id: str,
     body: LabCreate,
-    user: User = Depends(require_instructor),
+    user: User = Depends(require_permission(Permission.LAB_MANAGE)),
     db: AsyncSession = Depends(get_db),
 ):
     await verify_module_ownership(module_id, user, db)
@@ -86,7 +87,7 @@ async def create_lab(
 async def update_lab(
     lab_id: str,
     body: LabUpdate,
-    user: User = Depends(require_instructor),
+    user: User = Depends(require_permission(Permission.LAB_MANAGE)),
     db: AsyncSession = Depends(get_db),
 ):
     lab_row = (await db.execute(select(Lab).where(Lab.id == lab_id))).scalar_one_or_none()
@@ -101,7 +102,7 @@ async def update_lab(
 @router.delete("/{lab_id}")
 async def delete_lab(
     lab_id: str,
-    user: User = Depends(require_instructor),
+    user: User = Depends(require_permission(Permission.LAB_MANAGE)),
     db: AsyncSession = Depends(get_db),
 ):
     lab_row = (await db.execute(select(Lab).where(Lab.id == lab_id))).scalar_one_or_none()
