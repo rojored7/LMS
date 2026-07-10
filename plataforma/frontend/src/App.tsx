@@ -341,7 +341,7 @@ function App() {
                 <Route
                   path="/admin/courses/import"
                   element={
-                    <ProtectedRoute requiredRoles={[UserRole.INSTRUCTOR]}>
+                    <ProtectedRoute requiredRoles={[UserRole.INSTRUCTOR, UserRole.ADMIN]}>
                       <DashboardLayout>
                         <CourseImportPage />
                       </DashboardLayout>
