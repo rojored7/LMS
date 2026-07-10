@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import structlog
 
 from app.database import get_db
-from app.middleware.auth import require_instructor, require_instructor_only
+from app.middleware.auth import require_instructor
 from app.middleware.error_handler import AuthorizationError, NotFoundError
 from app.models.course import Course, Module, Lesson, LessonType
 from app.models.progress import Enrollment
@@ -170,7 +170,7 @@ def _slugify(text: str) -> str:
 @router.post("")
 async def create_course(
     body: AdminCourseCreate,
-    _user: User = Depends(require_instructor_only),
+    _user: User = Depends(require_instructor),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     slug = _slugify(body.title)
@@ -296,7 +296,7 @@ async def get_course_admin(
 async def update_course(
     course_id: str,
     data: CourseUpdate,
-    _user: User = Depends(require_instructor_only),
+    _user: User = Depends(require_instructor),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     await _verify_course_ownership(course_id, _user, db)
@@ -392,7 +392,7 @@ def _module_to_dict(module: Module) -> dict:
 async def create_module(
     course_id: str,
     body: ModuleCreate,
-    _user: User = Depends(require_instructor_only),
+    _user: User = Depends(require_instructor),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     await _verify_course_ownership(course_id, _user, db)
@@ -405,7 +405,7 @@ async def create_module(
 async def reorder_modules(
     course_id: str,
     body: ModuleReorderRequest,
-    _user: User = Depends(require_instructor_only),
+    _user: User = Depends(require_instructor),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     await _verify_course_ownership(course_id, _user, db)
@@ -420,7 +420,7 @@ async def update_module(
     course_id: str,
     module_id: str,
     body: ModuleUpdate,
-    _user: User = Depends(require_instructor_only),
+    _user: User = Depends(require_instructor),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     await _verify_course_ownership(course_id, _user, db)
@@ -434,7 +434,7 @@ async def update_module(
 async def delete_module(
     course_id: str,
     module_id: str,
-    _user: User = Depends(require_instructor_only),
+    _user: User = Depends(require_instructor),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     await _verify_course_ownership(course_id, _user, db)
@@ -449,7 +449,7 @@ async def create_lesson(
     course_id: str,
     module_id: str,
     body: LessonCreate,
-    _user: User = Depends(require_instructor_only),
+    _user: User = Depends(require_instructor),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     await _verify_course_ownership(course_id, _user, db)
@@ -468,7 +468,7 @@ async def reorder_lessons(
     course_id: str,
     module_id: str,
     body: LessonReorderRequest,
-    _user: User = Depends(require_instructor_only),
+    _user: User = Depends(require_instructor),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     await _verify_course_ownership(course_id, _user, db)
@@ -485,7 +485,7 @@ async def update_lesson(
     module_id: str,
     lesson_id: str,
     body: LessonUpdate,
-    _user: User = Depends(require_instructor_only),
+    _user: User = Depends(require_instructor),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     await _verify_course_ownership(course_id, _user, db)
@@ -505,7 +505,7 @@ async def delete_lesson(
     course_id: str,
     module_id: str,
     lesson_id: str,
-    _user: User = Depends(require_instructor_only),
+    _user: User = Depends(require_instructor),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     await _verify_course_ownership(course_id, _user, db)

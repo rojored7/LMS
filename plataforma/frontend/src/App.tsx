@@ -352,7 +352,7 @@ function App() {
                 <Route
                   path="/admin/courses/create"
                   element={
-                    <ProtectedRoute requiredRoles={[UserRole.INSTRUCTOR]}>
+                    <ProtectedRoute requiredRoles={[UserRole.INSTRUCTOR, UserRole.ADMIN]}>
                       <DashboardLayout>
                         <CourseWizardPage />
                       </DashboardLayout>
@@ -363,7 +363,7 @@ function App() {
                 <Route
                   path="/admin/courses/:id/edit"
                   element={
-                    <ProtectedRoute requiredRoles={[UserRole.INSTRUCTOR]}>
+                    <ProtectedRoute requiredRoles={[UserRole.INSTRUCTOR, UserRole.ADMIN]}>
                       <DashboardLayout>
                         <CourseEditorPage />
                       </DashboardLayout>
