@@ -239,6 +239,20 @@ export function useCourseEditorHandlers(id: string | undefined) {
     });
   };
 
+  // Reorder handlers
+  const handleReorderModules = async (orderedModuleIds: string[]) => {
+    if (!id) return;
+    try {
+      await contentEditorService.reorderModules(id, orderedModuleIds);
+      await loadCourse();
+      addToast({ message: 'Orden de modulos actualizado', type: 'success', duration: 3000 });
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : 'No se pudo reordenar los modulos';
+      addToast({ message, type: 'error', duration: 5000 });
+    }
+  };
+
   // Delete handler
   const requestDelete = (type: string, itemId: string, label: string, moduleId?: string) => {
     setDeleteTarget({ type, id: itemId, moduleId, label });
@@ -342,5 +356,6 @@ export function useCourseEditorHandlers(id: string | undefined) {
     handleSaveLab,
     requestDelete,
     handleConfirmDelete,
+    handleReorderModules,
   };
 }

@@ -267,6 +267,7 @@ async def get_course_admin(
     if row is None:
         raise NotFoundError("Curso no encontrado")
     course, enroll_count = row
+    course.modules.sort(key=lambda m: m.order)
     from app.schemas.course import CourseAdminDetailResponse
     d = CourseAdminDetailResponse.model_validate(course).model_dump()
     d["enrollmentCount"] = enroll_count or 0

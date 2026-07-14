@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   PencilIcon,
   DocumentDuplicateIcon,
@@ -29,14 +29,23 @@ const CourseActionMenu: React.FC<CourseActionMenuProps> = ({
   onDelete,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [menuPosition, setMenuPosition] = useState<'down' | 'up'>('down');
+  const buttonRef = useRef<HTMLButtonElement>(null);
+
+  const handleToggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!isOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setMenuPosition(window.innerHeight - rect.bottom < 260 ? 'up' : 'down');
+    }
+    setIsOpen(!isOpen);
+  };
 
   return (
     <div className="relative">
       <button
-        onClick={(e) => {
-          e.stopPropagation();
-          setIsOpen(!isOpen);
-        }}
+        ref={buttonRef}
+        onClick={handleToggle}
         className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
       >
         <EllipsisVerticalIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
@@ -45,7 +54,7 @@ const CourseActionMenu: React.FC<CourseActionMenuProps> = ({
       {isOpen && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)} />
-          <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-20">
+          <div className={`absolute right-0 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-20 ${menuPosition === 'up' ? 'bottom-full mb-2' : 'mt-2'}`}>
             <button
               onClick={(e) => {
                 e.stopPropagation();
