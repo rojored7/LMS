@@ -14,14 +14,13 @@ import StatusBadge from '../components/courses/StatusBadge';
 import CourseCard from '../components/courses/CourseCard';
 import CourseActionMenu from '../components/courses/CourseActionMenu';
 import useCourseManagement from '../hooks/useCourseManagement';
-import { useUiStore } from '../store/uiStore';
+
 import DifficultyScore from '../components/common/DifficultyScore';
-import { useAuth } from '../hooks/useAuth';
+
 
 const CourseListPage: React.FC = () => {
   const navigate = useNavigate();
-  const { addToast } = useUiStore();
-  const { isAdmin } = useAuth();
+
   const {
     courses,
     totalCourses,
@@ -118,18 +117,12 @@ const CourseListPage: React.FC = () => {
         header: 'Titulo',
         accessor: (course) => (
           <div className="max-w-[280px]">
-            {isAdmin() ? (
-              <span className="font-medium text-gray-900 dark:text-gray-100 block truncate">
-                {course.title}
-              </span>
-            ) : (
-              <Link
+            <Link
                 to={`/admin/courses/${course.id}/edit`}
                 className="font-medium text-gray-900 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 block truncate"
               >
                 {course.title}
               </Link>
-            )}
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 line-clamp-1 break-words">
               {course.description}
             </p>
@@ -199,8 +192,8 @@ const CourseListPage: React.FC = () => {
         accessor: (course) => (
           <CourseActionMenu
             course={course}
-            onEdit={isAdmin() ? undefined : handleEdit}
-            onDuplicate={isAdmin() ? undefined : handleDuplicateInit}
+            onEdit={handleEdit}
+            onDuplicate={handleDuplicateInit}
             onExport={exportCourse}
             onPublish={publishCourse}
             onUnpublish={unpublishCourse}
@@ -273,7 +266,7 @@ const CourseListPage: React.FC = () => {
                   <ArrowLeftIcon className="w-4 h-4" />
                   <span>Dashboard</span>
                 </button>
-                {!isAdmin() && (
+                {(
                   <>
                     <Link
                       to="/admin/courses/import"
@@ -319,7 +312,7 @@ const CourseListPage: React.FC = () => {
                   <ArrowLeftIcon className="w-5 h-5" />
                   <span>Volver al Dashboard</span>
                 </button>
-                {!isAdmin() && (
+                {(
                   <>
                     <Link
                       to="/admin/courses/import"
@@ -494,8 +487,8 @@ const CourseListPage: React.FC = () => {
                       key={course.id}
                       course={course}
                       getLevelBadgeClass={getLevelBadgeClass}
-                      onEdit={isAdmin() ? undefined : handleEdit}
-                      onDuplicate={isAdmin() ? undefined : handleDuplicateInit}
+                      onEdit={handleEdit}
+                      onDuplicate={handleDuplicateInit}
                       onExport={exportCourse}
                       onPublish={publishCourse}
                       onUnpublish={unpublishCourse}
