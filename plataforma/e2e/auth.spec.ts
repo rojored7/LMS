@@ -140,7 +140,8 @@ test.describe('Authentication Flow', () => {
     ]);
 
     // El backend retorna 401 con "Credenciales invalidas"
-    expect(response.status()).toBe(401);
+    // Nginx puede retornar 429 si se supero el rate limit de login (5r/min)
+    expect([401, 429]).toContain(response.status());
 
     // Verificar que no se redirige al dashboard
     await page.waitForTimeout(500);
