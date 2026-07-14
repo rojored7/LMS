@@ -92,9 +92,10 @@ test.describe('HU-004: Middleware JWT valida tokens correctamente', () => {
 // Test de logout en describe separado SIN storageState compartido.
 // Hace login fresco para que solo ese token sea blacklisteado al hacer logout,
 // sin afectar el student.json compartido que usan los demas tests.
+// Usa API directamente para logout en lugar de UI (mas robusto).
 test.describe('HU-004: Logout revoca acceso correctamente', () => {
   test('Logout elimina sesión y revoca acceso', async ({ page }) => {
-    // Fresh login - crea token propio que no afecta a otros tests
+    // Fresh login via UI para obtener cookie HttpOnly en el contexto del browser
     await page.goto(`${BASE_URL}/login`);
     await page.waitForSelector('input[name="email"]', { timeout: 15000 });
     await page.fill('input[name="email"]', 'student@ciber.com');
@@ -102,24 +103,16 @@ test.describe('HU-004: Logout revoca acceso correctamente', () => {
     await page.click('button[type="submit"]');
     await page.waitForURL(/\/(dashboard|courses)/, { timeout: 30000 });
 
-    // Verificar que tenemos sesion activa
-    await page.goto(`${BASE_URL}/profile`);
-    await expect(page).not.toHaveURL(/.*login/);
+    // Verificar que tenemos sesion activa via API
+    const profileCheck = await page.request.get(`${API_URL}/users/me`);
+    expect(profileCheck.ok()).toBeTruthy();
 
-    // Logout via Header dropdown
-    const headerButtons = page.locator('header button');
-    const count = await headerButtons.count();
-    if (count > 0) {
-      await headerButtons.nth(count - 1).click();
-    }
+    // Logout via API directamente (mas robusto que UI - evita dependencia de selectores)
+    const logoutResponse = await page.request.post(`${API_URL}/auth/logout`);
+    expect([200, 204]).toContain(logoutResponse.status());
 
-    const logoutButton = page.locator('button:has-text("Cerrar Sesión"), button:has-text("Cerrar sesión")').first();
-    if (await logoutButton.isVisible({ timeout: 3000 })) {
-      await logoutButton.click();
-      await page.waitForURL(/.*login/, { timeout: 20000 });
-    }
-
-    // Despues de logout, ruta protegida debe redirigir a login
+    // Despues de logout via API, la cookie fue borrada por el servidor.
+    // Navegar a ruta protegida debe redirigir a login.
     await page.goto(`${BASE_URL}/profile`);
     await expect(page).toHaveURL(/.*login/, { timeout: 20000 });
   });

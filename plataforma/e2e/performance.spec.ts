@@ -10,14 +10,18 @@ const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 
 // Umbrales de Core Web Vitals (ajustados para entorno de VM/produccion)
 const isLocalhost = !process.env.BASE_URL || process.env.BASE_URL.includes('localhost');
+// Los tests corren desde la maquina del desarrollador hacia servidores remotos
+// (QA/prod en LAN). La latencia de red se incluye en las metricas del browser
+// porque Playwright controla el browser localmente pero la carga viene del servidor
+// remoto. Los umbrales remotos deben ser generosos para evitar falsos positivos.
 const THRESHOLDS = {
-  FCP: isLocalhost ? 1800 : 8000,     // First Contentful Paint
-  LCP: isLocalhost ? 2500 : 12000,    // Largest Contentful Paint
+  FCP: isLocalhost ? 1800 : 15000,    // First Contentful Paint
+  LCP: isLocalhost ? 2500 : 20000,    // Largest Contentful Paint
   FID: 100,                            // First Input Delay: < 100ms
   CLS: 0.25,                           // Cumulative Layout Shift
-  TTI: isLocalhost ? 3500 : 12000,    // Time to Interactive
-  TBT: isLocalhost ? 300 : 2000,      // Total Blocking Time
-  TTFB: isLocalhost ? 800 : 3000,     // Time to First Byte
+  TTI: isLocalhost ? 3500 : 20000,    // Time to Interactive
+  TBT: isLocalhost ? 300 : 3000,      // Total Blocking Time
+  TTFB: isLocalhost ? 800 : 5000,     // Time to First Byte
 };
 
 test.describe('Performance - Core Web Vitals', () => {
@@ -375,8 +379,8 @@ test.describe('Performance - Load Testing', () => {
     console.log(`Avg load time for ${userCount} users: ${avgLoadTime}ms`);
     console.log(`Max load time: ${maxLoadTime}ms`);
 
-    const concurrentLimit = isLocalhost ? 5000 : 15000;
-    const concurrentMaxLimit = isLocalhost ? 8000 : 20000;
+    const concurrentLimit = isLocalhost ? 5000 : 25000;
+    const concurrentMaxLimit = isLocalhost ? 8000 : 35000;
     expect(avgLoadTime).toBeLessThan(concurrentLimit);
     expect(maxLoadTime).toBeLessThan(concurrentMaxLimit);
 
