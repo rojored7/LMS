@@ -52,8 +52,7 @@ export function useCourseEditorHandlers(id: string | undefined) {
       const course = await courseManagementService.getCourse(id);
       setCourse(course);
     } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : 'No se pudo cargar el curso';
+      const message = error instanceof Error ? error.message : 'No se pudo cargar el curso';
       addToast({ message, type: 'error', duration: 5000 });
     } finally {
       setLoading(false);
@@ -86,8 +85,7 @@ export function useCourseEditorHandlers(id: string | undefined) {
         duration: 3000,
       });
     } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : 'No se pudieron guardar los cambios';
+      const message = error instanceof Error ? error.message : 'No se pudieron guardar los cambios';
       addToast({ message, type: 'error', duration: 5000 });
     }
   };
@@ -181,8 +179,7 @@ export function useCourseEditorHandlers(id: string | undefined) {
         duration: 3000,
       });
     } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : 'No se pudo guardar el contenido';
+      const message = error instanceof Error ? error.message : 'No se pudo guardar el contenido';
       addToast({ message, type: 'error', duration: 5000 });
     }
   };
@@ -247,8 +244,7 @@ export function useCourseEditorHandlers(id: string | undefined) {
       await loadCourse();
       addToast({ message: 'Orden de modulos actualizado', type: 'success', duration: 3000 });
     } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : 'No se pudo reordenar los modulos';
+      const message = error instanceof Error ? error.message : 'No se pudo reordenar los modulos';
       addToast({ message, type: 'error', duration: 5000 });
     }
   };
@@ -288,8 +284,7 @@ export function useCourseEditorHandlers(id: string | undefined) {
       setShowDeleteConfirm(false);
       setDeleteTarget(null);
     } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : 'No se pudo eliminar';
+      const message = error instanceof Error ? error.message : 'No se pudo eliminar';
       addToast({ message, type: 'error', duration: 5000 });
     } finally {
       setDeleting(false);

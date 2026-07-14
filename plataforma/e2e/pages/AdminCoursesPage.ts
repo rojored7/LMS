@@ -34,9 +34,8 @@ export class AdminCoursesPage {
 
   // Verificaciones de permisos por rol
   async verifyAdminView() {
-    // Admin ve la tabla pero NO ve boton de crear ni editar
+    // Admin tiene acceso completo: ve la tabla y puede crear/editar/eliminar cursos
     await expect(this.page).toHaveURL(/admin\/courses/);
-    await expect(this.createCourseButton).not.toBeVisible({ timeout: 3000 }).catch(() => {});
   }
 
   async verifyInstructorView() {

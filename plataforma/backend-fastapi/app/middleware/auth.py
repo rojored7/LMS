@@ -50,6 +50,7 @@ async def _validate_token(token: str, token_service: TokenService, db: AsyncSess
     cached_raw = await redis_client.get(cache_key)
     if cached_raw:
         data = json.loads(cached_raw)
+        from datetime import datetime, timezone
         user = User()
         user.id = data["id"]
         user.email = data["email"]
@@ -57,6 +58,12 @@ async def _validate_token(token: str, token_service: TokenService, db: AsyncSess
         user.role = UserRole(data["role"])
         user.xp = data.get("xp", 0)
         user.training_profile_id = data.get("training_profile_id")
+        user.theme = data.get("theme", "system")
+        user.locale = data.get("locale", "es")
+        raw_created = data.get("created_at")
+        user.created_at = datetime.fromisoformat(raw_created) if raw_created else None
+        raw_login = data.get("last_login_at")
+        user.last_login_at = datetime.fromisoformat(raw_login) if raw_login else None
         try:
             import sentry_sdk
             sentry_sdk.set_user({"id": user.id, "email": user.email, "role": user.role.value})
@@ -79,6 +86,10 @@ async def _validate_token(token: str, token_service: TokenService, db: AsyncSess
             "role": user.role.value,
             "xp": user.xp,
             "training_profile_id": user.training_profile_id,
+            "theme": user.theme or "system",
+            "locale": user.locale or "es",
+            "created_at": user.created_at.isoformat() if user.created_at else None,
+            "last_login_at": user.last_login_at.isoformat() if user.last_login_at else None,
         }),
     )
 

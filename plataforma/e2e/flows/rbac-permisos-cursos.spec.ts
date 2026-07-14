@@ -2,7 +2,7 @@
  * E2E Flow: RBAC - Permisos de gestion de cursos
  *
  * Verifica la separacion de permisos admin/instructor implementada:
- * - ADMIN: puede ver cursos, publicar, eliminar. NO puede crear ni editar.
+ * - ADMIN: acceso completo a gestion de cursos (crear, editar, importar, publicar, eliminar).
  * - INSTRUCTOR: puede crear, editar, publicar sus cursos. NO puede eliminar.
  * - STUDENT: no accede a /admin/courses.
  *
@@ -22,24 +22,29 @@ const API_URL = process.env.API_URL || `${BASE_URL}/api`;
 test.describe('RBAC - Permisos de cursos via API (Admin)', () => {
   test.use({ storageState: AUTH_FILES.admin });
 
-  test('ADMIN recibe 403 al intentar crear un curso', async ({ page }) => {
+  test('ADMIN puede crear un curso', async ({ page }) => {
+    const title = `Curso test admin ${Date.now()}`;
     const response = await page.request.post(`${API_URL}/admin/courses`, {
       data: {
-        title: 'Curso test admin',
-        slug: `test-admin-${Date.now()}`,
-        description: 'Test',
-        level: 'beginner',
+        title,
+        description: 'Test E2E permisos RBAC admin',
+        level: 'BEGINNER',
         duration: 60,
+        modules: [],
       },
     });
-    expect(response.status()).toBe(403);
+    expect([200, 201]).toContain(response.status());
+    const body = await response.json();
+    expect(body.success).toBe(true);
   });
 
-  test('ADMIN recibe 403 al intentar importar un ZIP', async ({ page }) => {
+  test('ADMIN puede acceder al endpoint de importacion de cursos', async ({ page }) => {
+    // El endpoint de validacion de ZIP requiere multipart/form-data con archivo.
+    // Sin archivo, devuelve 400 o 422 (validacion), no 403.
     const response = await page.request.post(`${API_URL}/admin/courses/import/validate`, {
       data: {},
     });
-    expect(response.status()).toBe(403);
+    expect(response.status()).not.toBe(403);
   });
 
   test('ADMIN puede ver la lista de todos los cursos', async ({ page }) => {
@@ -101,9 +106,11 @@ test.describe('RBAC - Permisos de cursos via UI (Admin)', () => {
     await coursesPage.verifyAdminView();
   });
 
-  test('ADMIN es redirigido a 403 si navega a /admin/courses/create', async ({ page }) => {
+  test('ADMIN puede navegar a /admin/courses/create', async ({ page }) => {
     await page.goto(`${BASE_URL}/admin/courses/create`);
-    await expect(page).toHaveURL(/403|forbidden/, { timeout: 8000 });
+    // ADMIN tiene acceso completo a creacion de cursos
+    await expect(page).not.toHaveURL(/403|forbidden/, { timeout: 8000 });
+    await expect(page).toHaveURL(/admin\/courses\/create/, { timeout: 8000 });
   });
 });
 
