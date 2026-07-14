@@ -17,7 +17,6 @@ import useCourseManagement from '../hooks/useCourseManagement';
 
 import DifficultyScore from '../components/common/DifficultyScore';
 
-
 const CourseListPage: React.FC = () => {
   const navigate = useNavigate();
 
@@ -118,11 +117,11 @@ const CourseListPage: React.FC = () => {
         accessor: (course) => (
           <div className="max-w-[280px]">
             <Link
-                to={`/admin/courses/${course.id}/edit`}
-                className="font-medium text-gray-900 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 block truncate"
-              >
-                {course.title}
-              </Link>
+              to={`/admin/courses/${course.id}/edit`}
+              className="font-medium text-gray-900 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 block truncate"
+            >
+              {course.title}
+            </Link>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 line-clamp-1 break-words">
               {course.description}
             </p>
@@ -266,7 +265,7 @@ const CourseListPage: React.FC = () => {
                   <ArrowLeftIcon className="w-4 h-4" />
                   <span>Dashboard</span>
                 </button>
-                {(
+                {
                   <>
                     <Link
                       to="/admin/courses/import"
@@ -283,7 +282,7 @@ const CourseListPage: React.FC = () => {
                       <span>Crear Curso</span>
                     </Link>
                   </>
-                )}
+                }
               </div>
 
               {/* Mobile menu button */}
@@ -312,7 +311,7 @@ const CourseListPage: React.FC = () => {
                   <ArrowLeftIcon className="w-5 h-5" />
                   <span>Volver al Dashboard</span>
                 </button>
-                {(
+                {
                   <>
                     <Link
                       to="/admin/courses/import"
@@ -335,7 +334,7 @@ const CourseListPage: React.FC = () => {
                       </div>
                     </Link>
                   </>
-                )}
+                }
               </div>
             )}
           </div>
