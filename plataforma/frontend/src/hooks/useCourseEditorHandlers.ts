@@ -128,7 +128,8 @@ export function useCourseEditorHandlers(id: string | undefined) {
     if (editingModule?.id) {
       await contentEditorService.updateModule(id, editingModule.id, data);
     } else {
-      await contentEditorService.createModule(id, data);
+      const nextOrder = currentCourse?.modules?.length ?? 0;
+      await contentEditorService.createModule(id, { ...data, order: nextOrder });
     }
     await loadCourse();
     addToast({
@@ -249,6 +250,18 @@ export function useCourseEditorHandlers(id: string | undefined) {
     }
   };
 
+  const handleReorderLessons = async (moduleId: string, orderedLessonIds: string[]) => {
+    if (!id) return;
+    try {
+      await contentEditorService.reorderLessons(id, moduleId, orderedLessonIds);
+      await loadCourse();
+      addToast({ message: 'Orden de lecciones actualizado', type: 'success', duration: 3000 });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'No se pudo reordenar las lecciones';
+      addToast({ message, type: 'error', duration: 5000 });
+    }
+  };
+
   // Delete handler
   const requestDelete = (type: string, itemId: string, label: string, moduleId?: string) => {
     setDeleteTarget({ type, id: itemId, moduleId, label });
@@ -352,5 +365,6 @@ export function useCourseEditorHandlers(id: string | undefined) {
     requestDelete,
     handleConfirmDelete,
     handleReorderModules,
+    handleReorderLessons,
   };
 }

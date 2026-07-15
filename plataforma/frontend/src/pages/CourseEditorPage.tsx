@@ -30,6 +30,65 @@ import type {
   AdminLabSummary,
 } from '../services/api/courseManagement.service';
 
+interface SortableLessonItemProps {
+  lesson: AdminLessonSummary;
+  moduleId: string;
+  onEdit: (moduleId: string, lesson: any) => void;
+  onDelete: (type: string, id: string, label: string, moduleId: string) => void;
+  onClickContent: (content: string, lessonId: string, moduleId: string) => void;
+}
+
+const SortableLessonItem: React.FC<SortableLessonItemProps> = ({
+  lesson,
+  moduleId,
+  onEdit,
+  onDelete,
+  onClickContent,
+}) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: lesson.id || '',
+  });
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+  return (
+    <div ref={setNodeRef} style={style} className="flex items-center justify-between group py-1">
+      <div className="flex items-center space-x-1 flex-1 min-w-0">
+        <div
+          {...attributes}
+          {...listeners}
+          className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-400 flex-shrink-0"
+          aria-label="Arrastrar para reordenar leccion"
+        >
+          <Bars3Icon className="w-3 h-3" />
+        </div>
+        <div
+          onClick={() => onClickContent(lesson.content || '', lesson.id || '', moduleId)}
+          className="text-sm text-gray-700 hover:text-blue-600 cursor-pointer truncate"
+        >
+          {lesson.title}
+        </div>
+      </div>
+      <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <button
+          onClick={() => onEdit(moduleId, lesson)}
+          className="p-0.5 text-gray-400 hover:text-blue-600"
+        >
+          <PencilIcon className="w-3 h-3" />
+        </button>
+        <button
+          onClick={() => onDelete('lesson', lesson.id || '', lesson.title, moduleId)}
+          className="p-0.5 text-gray-400 hover:text-red-600"
+        >
+          <TrashIcon className="w-3 h-3" />
+        </button>
+      </div>
+    </div>
+  );
+};
+
 interface SortableModuleItemProps {
   module: any;
   selectedModuleId: string | null;
@@ -38,6 +97,7 @@ interface SortableModuleItemProps {
   requestDelete: (type: string, id: string, label: string, moduleId?: string) => void;
   handleAddLesson: (moduleId: string) => void;
   handleEditLesson: (moduleId: string, lesson: any) => void;
+  handleReorderLessons: (moduleId: string, lessonIds: string[]) => Promise<void>;
   setSelectedLessonContent: (content: string) => void;
   setSelectedLessonId: (id: string | null) => void;
   setSelectedLessonModuleId: (id: string | null) => void;
@@ -51,6 +111,7 @@ const SortableModuleItem: React.FC<SortableModuleItemProps> = ({
   requestDelete,
   handleAddLesson,
   handleEditLesson,
+  handleReorderLessons,
   setSelectedLessonContent,
   setSelectedLessonId,
   setSelectedLessonModuleId,
@@ -58,6 +119,20 @@ const SortableModuleItem: React.FC<SortableModuleItemProps> = ({
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: module.id || '',
   });
+
+  const lessonSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
+
+  const handleLessonDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const lessons: AdminLessonSummary[] = module.lessons || [];
+    const oldIndex = lessons.findIndex((l) => l.id === active.id);
+    const newIndex = lessons.findIndex((l) => l.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const reordered = arrayMove(lessons, oldIndex, newIndex);
+    const ids = reordered.map((l) => l.id).filter((lid): lid is string => Boolean(lid));
+    handleReorderLessons(module.id || '', ids);
+  };
 
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
@@ -108,34 +183,31 @@ const SortableModuleItem: React.FC<SortableModuleItemProps> = ({
       </div>
       {selectedModuleId === module.id && (
         <div className="mt-3 ml-6 space-y-1">
-          {(module.lessons || []).map((lesson: any) => (
-            <div key={lesson.id} className="flex items-center justify-between group py-1">
-              <div
-                onClick={() => {
-                  setSelectedLessonContent((lesson as AdminLessonSummary).content || '');
-                  setSelectedLessonId(lesson.id || null);
-                  setSelectedLessonModuleId(module.id || null);
-                }}
-                className="text-sm text-gray-700 hover:text-blue-600 cursor-pointer flex-1 truncate"
-              >
-                {lesson.title}
-              </div>
-              <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button
-                  onClick={() => handleEditLesson(module.id || '', lesson)}
-                  className="p-0.5 text-gray-400 hover:text-blue-600"
-                >
-                  <PencilIcon className="w-3 h-3" />
-                </button>
-                <button
-                  onClick={() => requestDelete('lesson', lesson.id || '', lesson.title, module.id)}
-                  className="p-0.5 text-gray-400 hover:text-red-600"
-                >
-                  <TrashIcon className="w-3 h-3" />
-                </button>
-              </div>
-            </div>
-          ))}
+          <DndContext
+            sensors={lessonSensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleLessonDragEnd}
+          >
+            <SortableContext
+              items={(module.lessons || []).map((l: AdminLessonSummary) => l.id || '')}
+              strategy={verticalListSortingStrategy}
+            >
+              {(module.lessons || []).map((lesson: AdminLessonSummary) => (
+                <SortableLessonItem
+                  key={lesson.id}
+                  lesson={lesson}
+                  moduleId={module.id || ''}
+                  onEdit={handleEditLesson}
+                  onDelete={(type, itemId, label, mId) => requestDelete(type, itemId, label, mId)}
+                  onClickContent={(content, lessonId, mId) => {
+                    setSelectedLessonContent(content);
+                    setSelectedLessonId(lessonId);
+                    setSelectedLessonModuleId(mId);
+                  }}
+                />
+              ))}
+            </SortableContext>
+          </DndContext>
           <button
             onClick={() => handleAddLesson(module.id || '')}
             className="text-xs text-blue-600 hover:text-blue-700 flex items-center space-x-1 mt-2"
@@ -203,6 +275,7 @@ const CourseEditorPage: React.FC = () => {
     requestDelete,
     handleConfirmDelete,
     handleReorderModules,
+    handleReorderLessons,
   } = useCourseEditorHandlers(id);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
@@ -429,6 +502,7 @@ const CourseEditorPage: React.FC = () => {
                           requestDelete={requestDelete}
                           handleAddLesson={handleAddLesson}
                           handleEditLesson={handleEditLesson}
+                          handleReorderLessons={handleReorderLessons}
                           setSelectedLessonContent={setSelectedLessonContent}
                           setSelectedLessonId={setSelectedLessonId}
                           setSelectedLessonModuleId={setSelectedLessonModuleId}

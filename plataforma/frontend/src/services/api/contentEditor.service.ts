@@ -169,8 +169,8 @@ class ContentEditorService {
       errors.push('El título del módulo debe tener al menos 3 caracteres');
     }
 
-    if (module.order !== undefined && module.order < 1) {
-      errors.push('El orden del módulo debe ser mayor a 0');
+    if (module.order !== undefined && module.order < 0) {
+      errors.push('El orden del módulo debe ser mayor o igual a 0');
     }
 
     return errors;
@@ -187,8 +187,8 @@ class ContentEditorService {
       errors.push('El contenido de la lección debe tener al menos 10 caracteres');
     }
 
-    if (lesson.order !== undefined && lesson.order < 1) {
-      errors.push('El orden de la lección debe ser mayor a 0');
+    if (lesson.order !== undefined && lesson.order < 0) {
+      errors.push('El orden de la lección debe ser mayor o igual a 0');
     }
 
     return errors;
