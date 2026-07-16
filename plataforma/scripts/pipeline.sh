@@ -443,8 +443,12 @@ print(f'  {out.strip()[-200:]}')
 
 # Reiniciar servicios
 print('Reiniciando servicios PROD...')
-run(f'cd {RDIR} && docker compose -f docker-compose.prod.yml down --remove-orphans', timeout=60)
-time.sleep(3)
+# Forzar eliminacion de containers por nombre (independiente del project name de compose)
+run('docker rm -f ciber-frontend-prod ciber-backend-prod ciber-executor-prod ciber-nginx-prod ciber-postgres-prod ciber-redis-prod 2>/dev/null || true', timeout=30)
+time.sleep(2)
+down_out, down_err = run(f'cd {RDIR} && docker compose -f docker-compose.prod.yml down --remove-orphans --timeout 5 2>&1', timeout=60)
+print(f'  down output: {(down_out+down_err).strip()[-200:]}')
+time.sleep(2)
 out, err_out = run(f'cd {RDIR} && docker compose -f docker-compose.prod.yml up -d --no-build 2>&1', timeout=120)
 print(f'  compose up output: {(out+err_out).strip()[-500:]}')
 
