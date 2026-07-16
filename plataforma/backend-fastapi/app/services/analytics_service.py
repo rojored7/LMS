@@ -4,9 +4,9 @@ import structlog
 from sqlalchemy import Date, cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.course import Course
+from app.models.course import Course, Lesson, Module
 from app.models.gamification import Badge, Certificate, UserBadge
-from app.models.progress import Enrollment
+from app.models.progress import Enrollment, UserProgress
 from app.models.user import User, UserRole
 
 logger = structlog.get_logger()
@@ -108,7 +108,7 @@ class AnalyticsService:
         ).scalar() or 0
         new_enrollments = (
             await self.db.execute(
-                select(func.count()).select_from(Enrollment).where(Enrollment.created_at >= cutoff)
+                select(func.count()).select_from(Enrollment).where(Enrollment.enrolled_at >= cutoff)
             )
         ).scalar() or 0
         active_users = (
@@ -144,13 +144,148 @@ class AnalyticsService:
             activity_type = "completion" if enrollment.completed_at else "enrollment"
             timestamp = enrollment.completed_at if enrollment.completed_at else enrollment.enrolled_at
             data.append({
-                "type": activity_type,
-                "userName": user.name or user.email,
-                "userEmail": user.email,
-                "courseTitle": course.title,
-                "timestamp": timestamp.isoformat() if timestamp else None,
+                "user_name": user.name or user.email,
+                "user_email": user.email,
+                "course_title": course.title,
+                "action": activity_type,
+                "created_at": timestamp.isoformat() if timestamp else None,
             })
         return data
+
+    # estimated_time in Lesson model is stored in minutes; time_spent in UserProgress is seconds
+    _ESTIMATED_TIME_TO_SECONDS = 60
+
+    @staticmethod
+    def _classify_reading(ratio: float) -> str:
+        if ratio < 0.5:
+            return "skimming"
+        if ratio > 1.5:
+            return "deep_read"
+        return "on_track"
+
+    async def get_users_time_summary(
+        self, course_id: str | None = None, limit: int = 50, offset: int = 0
+    ) -> list[dict]:
+        q = (
+            select(
+                User.id.label("user_id"),
+                User.name.label("user_name"),
+                User.email.label("user_email"),
+                Course.id.label("course_id"),
+                Course.title.label("course_title"),
+                func.sum(UserProgress.time_spent).label("time_seconds"),
+                func.count(UserProgress.id).label("lessons_completed"),
+            )
+            .join(UserProgress, UserProgress.user_id == User.id)
+            .join(Module, UserProgress.module_id == Module.id)
+            .join(Course, Module.course_id == Course.id)
+            .where(
+                UserProgress.lesson_id.isnot(None),
+                UserProgress.completed.is_(True),
+            )
+            .group_by(User.id, User.name, User.email, Course.id, Course.title)
+            .order_by(func.sum(UserProgress.time_spent).desc())
+        )
+        if course_id:
+            q = q.where(Course.id == course_id)
+
+        result = await self.db.execute(q.offset(offset).limit(limit))
+        rows = result.all()
+
+        users: dict[str, dict] = {}
+        for row in rows:
+            uid = row.user_id
+            if uid not in users:
+                users[uid] = {
+                    "userId": uid,
+                    "userName": row.user_name or row.user_email,
+                    "userEmail": row.user_email,
+                    "totalTimeSeconds": 0,
+                    "courseBreakdown": [],
+                }
+            time_s = int(row.time_seconds or 0)
+            completed = int(row.lessons_completed or 0)
+            avg = round(time_s / completed) if completed > 0 else 0
+            users[uid]["totalTimeSeconds"] += time_s
+            users[uid]["courseBreakdown"].append({
+                "courseId": row.course_id,
+                "courseTitle": row.course_title,
+                "timeSeconds": time_s,
+                "lessonsCompleted": completed,
+                "avgTimePerLessonSeconds": avg,
+            })
+
+        return list(users.values())
+
+    async def get_course_lesson_time_stats(self, course_id: str) -> list[dict]:
+        result = await self.db.execute(
+            select(
+                Lesson.id.label("lesson_id"),
+                Lesson.title.label("lesson_title"),
+                Lesson.estimated_time.label("estimated_time"),
+                func.avg(UserProgress.time_spent).label("avg_time"),
+                func.count(UserProgress.id).label("completions"),
+            )
+            .join(UserProgress, UserProgress.lesson_id == Lesson.id)
+            .join(Module, Lesson.module_id == Module.id)
+            .where(
+                Module.course_id == course_id,
+                UserProgress.completed.is_(True),
+            )
+            .group_by(Lesson.id, Lesson.title, Lesson.estimated_time)
+            .order_by(Lesson.id)
+        )
+        rows = result.all()
+        stats = []
+        for row in rows:
+            avg_real = round(float(row.avg_time or 0))
+            estimated_s = int(row.estimated_time or 0) * self._ESTIMATED_TIME_TO_SECONDS
+            ratio = round(avg_real / estimated_s, 2) if estimated_s > 0 else 0.0
+            stats.append({
+                "lessonId": row.lesson_id,
+                "lessonTitle": row.lesson_title,
+                "estimatedTimeSeconds": estimated_s,
+                "avgRealTimeSeconds": avg_real,
+                "completions": int(row.completions or 0),
+                "ratio": ratio,
+                "classification": self._classify_reading(ratio),
+            })
+        return stats
+
+    async def get_user_course_lesson_times(self, user_id: str, course_id: str) -> list[dict]:
+        result = await self.db.execute(
+            select(
+                Lesson.id.label("lesson_id"),
+                Lesson.title.label("lesson_title"),
+                Lesson.estimated_time.label("estimated_time"),
+                UserProgress.time_spent.label("real_time"),
+                UserProgress.completed_at.label("completed_at"),
+            )
+            .join(UserProgress, UserProgress.lesson_id == Lesson.id)
+            .join(Module, Lesson.module_id == Module.id)
+            .where(
+                UserProgress.user_id == user_id,
+                Module.course_id == course_id,
+                UserProgress.completed.is_(True),
+            )
+            .order_by(Module.order, Lesson.order)
+        )
+        rows = result.all()
+        items = []
+        for row in rows:
+            real_s = int(row.real_time or 0)
+            estimated_s = int(row.estimated_time or 0) * self._ESTIMATED_TIME_TO_SECONDS
+            ratio = round(real_s / estimated_s, 2) if estimated_s > 0 else 0.0
+            items.append({
+                "lessonId": row.lesson_id,
+                "lessonTitle": row.lesson_title,
+                "estimatedTimeSeconds": estimated_s,
+                "realTimeSeconds": real_s,
+                "ratio": ratio,
+                "classification": self._classify_reading(ratio),
+                "completedAt": row.completed_at.isoformat() if row.completed_at else None,
+            })
+        return items
 
     async def get_comparative_stats(self) -> dict:
         now = datetime.now(timezone.utc)

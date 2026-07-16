@@ -6,7 +6,6 @@
 import { useQuery } from '@tanstack/react-query';
 import analyticsService from '../services/api/analytics.service';
 
-export { type AnalyticsFilter } from '../services/api/analytics.service';
 
 export function useAnalytics(days = 30) {
   const {
@@ -75,6 +74,33 @@ export function useAnalytics(days = 30) {
     isLoading,
     refetch: refetchStats,
   };
+}
+
+export function useTimeTracking(params?: { courseId?: string; limit?: number }) {
+  const { data: usersTime, isLoading, refetch } = useQuery({
+    queryKey: ['analytics', 'time-tracking', 'users', params],
+    queryFn: () => analyticsService.getUsersTimeSummary(params),
+    staleTime: 2 * 60 * 1000,
+  });
+  return { usersTime: usersTime ?? [], isLoading, refetch };
+}
+
+export function useLessonTimeStats(courseId: string | undefined) {
+  return useQuery({
+    queryKey: ['analytics', 'time-tracking', 'course', courseId],
+    queryFn: () => analyticsService.getCourseTimeStat(courseId!),
+    enabled: !!courseId,
+    staleTime: 2 * 60 * 1000,
+  });
+}
+
+export function useUserCourseLessonTimes(userId: string | undefined, courseId: string | undefined) {
+  return useQuery({
+    queryKey: ['analytics', 'time-tracking', 'user-course', userId, courseId],
+    queryFn: () => analyticsService.getUserCourseLessonTimes(userId!, courseId!),
+    enabled: !!userId && !!courseId,
+    staleTime: 2 * 60 * 1000,
+  });
 }
 
 export default useAnalytics;

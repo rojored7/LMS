@@ -23,6 +23,7 @@ export default defineConfig({
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
+    ignoreHTTPSErrors: true,
 
     // Timeouts aumentados para operaciones de red y produccion
     actionTimeout: 20000,

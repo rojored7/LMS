@@ -67,6 +67,42 @@ export interface ComparativeStats {
   };
 }
 
+export interface UserTimeCourseBreakdown {
+  courseId: string;
+  courseTitle: string;
+  timeSeconds: number;
+  lessonsCompleted: number;
+  avgTimePerLessonSeconds: number;
+}
+
+export interface UserTimeSummary {
+  userId: string;
+  userName: string;
+  userEmail: string;
+  totalTimeSeconds: number;
+  courseBreakdown: UserTimeCourseBreakdown[];
+}
+
+export interface LessonTimeStat {
+  lessonId: string;
+  lessonTitle: string;
+  estimatedTimeSeconds: number;
+  avgRealTimeSeconds: number;
+  completions: number;
+  ratio: number;
+  classification: 'skimming' | 'on_track' | 'deep_read';
+}
+
+export interface UserCourseLessonTime {
+  lessonId: string;
+  lessonTitle: string;
+  estimatedTimeSeconds: number;
+  realTimeSeconds: number;
+  ratio: number;
+  classification: 'skimming' | 'on_track' | 'deep_read';
+  completedAt: string | null;
+}
+
 class AnalyticsService {
   async getStats(): Promise<AnalyticsStats> {
     const envelope = await api.get('/analytics/stats');
@@ -100,6 +136,21 @@ class AnalyticsService {
 
   async getComparativeStats(days = 30): Promise<ComparativeStats> {
     const envelope = await api.get('/analytics/comparative-stats', { params: { days } });
+    return (envelope as any).data;
+  }
+
+  async getUsersTimeSummary(params?: { courseId?: string; limit?: number; offset?: number }): Promise<UserTimeSummary[]> {
+    const envelope = await api.get('/analytics/time-tracking/users', { params });
+    return (envelope as any).data;
+  }
+
+  async getCourseTimeStat(courseId: string): Promise<LessonTimeStat[]> {
+    const envelope = await api.get(`/analytics/time-tracking/courses/${courseId}`);
+    return (envelope as any).data;
+  }
+
+  async getUserCourseLessonTimes(userId: string, courseId: string): Promise<UserCourseLessonTime[]> {
+    const envelope = await api.get(`/analytics/time-tracking/users/${userId}/courses/${courseId}`);
     return (envelope as any).data;
   }
 }

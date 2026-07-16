@@ -3,7 +3,7 @@
  * Displays lesson content with completion tracking, optional video embed, and attachments
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import VideoEmbed from '../common/VideoEmbed';
@@ -25,8 +25,10 @@ interface LessonContentProps {
 }
 
 export const LessonContent: React.FC<LessonContentProps> = ({ lesson, courseId }) => {
-  const [timeSpent, setTimeSpent] = useState(0);
-  const [startTime, setStartTime] = useState<number>(Date.now());
+  const lessonStartRef = useRef<number>(Date.now());
+  const accumulatedRef = useRef<number>(0);
+  const isHiddenRef = useRef<boolean>(false);
+  const [displayTime, setDisplayTime] = useState(0);
   const completeLesson = useCompleteLesson();
 
   const { data: attachments = [] } = useQuery({
@@ -37,21 +39,46 @@ export const LessonContent: React.FC<LessonContentProps> = ({ lesson, courseId }
 
   const isCompleted = lesson.userProgress?.completed || false;
 
-  // Track time spent on lesson
+  // Track time spent on lesson - uses refs to avoid stale closure bug
   useEffect(() => {
-    setStartTime(Date.now());
+    lessonStartRef.current = Date.now();
+    accumulatedRef.current = 0;
+    isHiddenRef.current = false;
+    setDisplayTime(0);
+
     const interval = setInterval(() => {
-      setTimeSpent(Math.floor((Date.now() - startTime) / 1000));
+      if (!isHiddenRef.current) {
+        const elapsed = Math.floor((Date.now() - lessonStartRef.current) / 1000);
+        setDisplayTime(accumulatedRef.current + elapsed);
+      }
     }, 1000);
 
-    return () => clearInterval(interval);
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        isHiddenRef.current = true;
+        accumulatedRef.current += Math.floor((Date.now() - lessonStartRef.current) / 1000);
+      } else {
+        isHiddenRef.current = false;
+        lessonStartRef.current = Date.now();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [lesson.id]);
 
   const handleComplete = () => {
+    const finalTime = isHiddenRef.current
+      ? accumulatedRef.current
+      : accumulatedRef.current + Math.floor((Date.now() - lessonStartRef.current) / 1000);
+
     completeLesson.mutate({
       lessonId: lesson.id,
       courseId: courseId || lesson.module?.courseId || '',
-      timeSpent,
+      timeSpent: finalTime,
     });
   };
 
@@ -165,7 +192,7 @@ export const LessonContent: React.FC<LessonContentProps> = ({ lesson, courseId }
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2 text-sm text-gray-600">
             <ClockIcon className="h-4 w-4" />
-            <span>Tiempo en esta lección: {formatTime(timeSpent)}</span>
+            <span>Tiempo en esta lección: {formatTime(displayTime)}</span>
           </div>
 
           {!isCompleted ? (

@@ -24,6 +24,7 @@ import { LoadingSpinner } from '../components/common/LoadingSpinner';
 import { useAnalytics } from '../hooks/useAnalytics';
 import { exportEnrollments, exportCourseStats } from '../services/api/export.service';
 import { cn } from '../utils/cn';
+import { TimeTrackingTable } from '../components/admin/TimeTrackingTable';
 
 import {
   LineChart as RechartsLineChart,
@@ -58,6 +59,7 @@ export const AnalyticsDashboard: React.FC = () => {
   const { t } = useTranslation();
   const [days, setDays] = useState(30);
   const [isExporting, setIsExporting] = useState(false);
+  const [activeTab, setActiveTab] = useState<'overview' | 'time'>('overview');
 
   const {
     stats,
@@ -75,7 +77,7 @@ export const AnalyticsDashboard: React.FC = () => {
     {
       title: t('analytics.totalUsers', 'Total usuarios'),
       value: stats?.total_users ?? '-',
-      change: comparativeStats?.changes.new_users_pct ?? 0,
+      change: comparativeStats?.changes?.new_users_pct ?? 0,
       changeLabel: 'vs periodo anterior',
       icon: <Users className="w-5 h-5" />,
       color: 'blue',
@@ -90,7 +92,7 @@ export const AnalyticsDashboard: React.FC = () => {
     },
     {
       title: t('analytics.completionRate', 'Tasa de completacion'),
-      value: stats ? `${stats.completion_rate.toFixed(1)}%` : '-',
+      value: stats?.completion_rate != null ? `${stats.completion_rate.toFixed(1)}%` : '-',
       change: 0,
       changeLabel: '',
       icon: <Award className="w-5 h-5" />,
@@ -99,35 +101,47 @@ export const AnalyticsDashboard: React.FC = () => {
     {
       title: t('analytics.totalEnrollments', 'Inscripciones'),
       value: stats?.total_enrollments ?? '-',
-      change: comparativeStats?.changes.enrollments_pct ?? 0,
+      change: comparativeStats?.changes?.enrollments_pct ?? 0,
       changeLabel: 'vs periodo anterior',
       icon: <Activity className="w-5 h-5" />,
       color: 'purple',
     },
   ];
 
-  const userGrowthData = (userActivity ?? []).map((p) => ({
-    date: p.date.slice(0, 10),
-    nuevos: p.new_users,
-    activos: p.active_users,
-  }));
+  const userGrowthData = (Array.isArray(userActivity) ? userActivity : [])
+    .filter((p) => p != null && p.date != null)
+    .map((p) => ({
+      date: (p.date as string).slice(0, 10),
+      nuevos: p.new_users ?? 0,
+      activos: p.active_users ?? 0,
+    }));
 
-  const coursePopularityData = (courseStats ?? []).slice(0, 5).map((c) => ({
-    name: c.title.length > 20 ? c.title.slice(0, 20) + '...' : c.title,
-    inscritos: c.enrollments,
-    completados: c.completions,
-  }));
+  const coursePopularityData = (Array.isArray(courseStats) ? courseStats : [])
+    .filter((c) => c != null)
+    .slice(0, 5)
+    .map((c) => {
+      const t = c.title ?? '';
+      return {
+        name: t.length > 20 ? t.slice(0, 20) + '...' : t,
+        inscritos: c.enrollments ?? 0,
+        completados: c.completions ?? 0,
+      };
+    });
 
-  const enrollmentChartData = (enrollmentTrends ?? []).map((p) => ({
-    date: p.date.slice(0, 10),
-    inscripciones: p.count,
-  }));
+  const enrollmentChartData = (Array.isArray(enrollmentTrends) ? enrollmentTrends : [])
+    .filter((p) => p != null && p.date != null)
+    .map((p) => ({
+      date: (p.date as string).slice(0, 10),
+      inscripciones: p.count ?? 0,
+    }));
 
-  const distributionData = (userDistribution ?? []).map((d, i) => ({
-    name: d.role,
-    value: d.count,
-    color: COLORS[i % COLORS.length],
-  }));
+  const distributionData = (Array.isArray(userDistribution) ? userDistribution : [])
+    .filter((d) => d != null)
+    .map((d, i) => ({
+      name: d.role ?? '',
+      value: d.count ?? 0,
+      color: COLORS[i % COLORS.length],
+    }));
 
   const handleExport = async (type: 'enrollments' | 'courses') => {
     setIsExporting(true);
@@ -149,14 +163,6 @@ export const AnalyticsDashboard: React.FC = () => {
     { label: 'Ultimo ano', days: 365 },
   ];
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <LoadingSpinner />
-      </div>
-    );
-  }
-
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -170,48 +176,88 @@ export const AnalyticsDashboard: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Date Range Selector */}
-          <select
-            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
-            value={days}
-            onChange={(e) => setDays(parseInt(e.target.value))}
-          >
-            {dateRangeOptions.map((option) => (
-              <option key={option.days} value={option.days}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+        {activeTab === 'overview' && (
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Date Range Selector */}
+            <select
+              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
+              value={days}
+              onChange={(e) => setDays(parseInt(e.target.value))}
+            >
+              {dateRangeOptions.map((option) => (
+                <option key={option.days} value={option.days}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
 
-          {/* Refresh Button */}
-          <Button variant="secondary" size="sm" onClick={() => refetch()}>
-            <RefreshCw className="w-4 h-4" />
-          </Button>
-
-          {/* Export Dropdown */}
-          <div className="relative group">
-            <Button variant="primary" size="sm" disabled={isExporting}>
-              <Download className="w-4 h-4 mr-2" />
-              {t('common.export', 'Exportar')}
+            {/* Refresh Button */}
+            <Button variant="secondary" size="sm" onClick={() => refetch()}>
+              <RefreshCw className="w-4 h-4" />
             </Button>
-            <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 invisible group-hover:visible z-10">
-              <button
-                onClick={() => handleExport('enrollments')}
-                className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 text-sm"
-              >
-                Inscripciones CSV
-              </button>
-              <button
-                onClick={() => handleExport('courses')}
-                className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 text-sm"
-              >
-                Estadisticas cursos CSV
-              </button>
+
+            {/* Export Dropdown */}
+            <div className="relative group">
+              <Button variant="primary" size="sm" disabled={isExporting}>
+                <Download className="w-4 h-4 mr-2" />
+                {t('common.export', 'Exportar')}
+              </Button>
+              <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 invisible group-hover:visible z-10">
+                <button
+                  onClick={() => handleExport('enrollments')}
+                  className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 text-sm"
+                >
+                  Inscripciones CSV
+                </button>
+                <button
+                  onClick={() => handleExport('courses')}
+                  className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 text-sm"
+                >
+                  Estadisticas cursos CSV
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
+
+      {/* Tab switcher */}
+      <div className="flex gap-1 border-b border-gray-200 dark:border-gray-700">
+        <button
+          onClick={() => setActiveTab('overview')}
+          className={cn(
+            'px-4 py-2 text-sm font-medium border-b-2 transition-colors',
+            activeTab === 'overview'
+              ? 'border-blue-600 text-blue-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+          )}
+        >
+          General
+        </button>
+        <button
+          onClick={() => setActiveTab('time')}
+          className={cn(
+            'px-4 py-2 text-sm font-medium border-b-2 transition-colors',
+            activeTab === 'time'
+              ? 'border-blue-600 text-blue-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+          )}
+        >
+          Tiempo por usuario
+        </button>
+      </div>
+
+      {/* Time tracking tab */}
+      {activeTab === 'time' && <TimeTrackingTable />}
+
+      {/* Overview tab */}
+      {activeTab === 'overview' && isLoading && (
+        <div className="flex items-center justify-center h-64">
+          <LoadingSpinner />
+        </div>
+      )}
+
+      {activeTab === 'overview' && !isLoading && (<>
 
       {/* Metric Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -410,6 +456,7 @@ export const AnalyticsDashboard: React.FC = () => {
           ))}
         </div>
       </Card>
+      </>)}
     </div>
   );
 };

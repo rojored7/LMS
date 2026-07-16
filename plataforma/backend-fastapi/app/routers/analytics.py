@@ -81,3 +81,39 @@ async def get_comparative_stats(
     service = AnalyticsService(db)
     data = await service.get_comparative_stats()
     return ApiResponse(success=True, data=data).model_dump()
+
+
+@router.get("/time-tracking/users")
+async def get_users_time_summary(
+    course_id: str | None = Query(None),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    user: User = Depends(require_permission(Permission.ANALYTICS_READ)),
+    db: AsyncSession = Depends(get_db),
+):
+    service = AnalyticsService(db)
+    data = await service.get_users_time_summary(course_id=course_id, limit=limit, offset=offset)
+    return ApiResponse(success=True, data=data).model_dump()
+
+
+@router.get("/time-tracking/courses/{course_id}")
+async def get_course_lesson_time_stats(
+    course_id: str,
+    user: User = Depends(require_permission(Permission.ANALYTICS_READ)),
+    db: AsyncSession = Depends(get_db),
+):
+    service = AnalyticsService(db)
+    data = await service.get_course_lesson_time_stats(course_id=course_id)
+    return ApiResponse(success=True, data=data).model_dump()
+
+
+@router.get("/time-tracking/users/{user_id}/courses/{course_id}")
+async def get_user_course_lesson_times(
+    user_id: str,
+    course_id: str,
+    current_user: User = Depends(require_permission(Permission.ANALYTICS_READ)),
+    db: AsyncSession = Depends(get_db),
+):
+    service = AnalyticsService(db)
+    data = await service.get_user_course_lesson_times(user_id=user_id, course_id=course_id)
+    return ApiResponse(success=True, data=data).model_dump()
