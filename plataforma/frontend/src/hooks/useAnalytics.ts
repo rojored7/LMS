@@ -6,7 +6,6 @@
 import { useQuery } from '@tanstack/react-query';
 import analyticsService from '../services/api/analytics.service';
 
-
 export function useAnalytics(days = 30) {
   const {
     data: stats,
@@ -77,7 +76,11 @@ export function useAnalytics(days = 30) {
 }
 
 export function useTimeTracking(params?: { courseId?: string; limit?: number }) {
-  const { data: usersTime, isLoading, refetch } = useQuery({
+  const {
+    data: usersTime,
+    isLoading,
+    refetch,
+  } = useQuery({
     queryKey: ['analytics', 'time-tracking', 'users', params],
     queryFn: () => analyticsService.getUsersTimeSummary(params),
     staleTime: 2 * 60 * 1000,

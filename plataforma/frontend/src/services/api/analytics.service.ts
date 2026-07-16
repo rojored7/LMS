@@ -139,7 +139,11 @@ class AnalyticsService {
     return (envelope as any).data;
   }
 
-  async getUsersTimeSummary(params?: { courseId?: string; limit?: number; offset?: number }): Promise<UserTimeSummary[]> {
+  async getUsersTimeSummary(params?: {
+    courseId?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<UserTimeSummary[]> {
     const envelope = await api.get('/analytics/time-tracking/users', { params });
     return (envelope as any).data;
   }
@@ -149,7 +153,10 @@ class AnalyticsService {
     return (envelope as any).data;
   }
 
-  async getUserCourseLessonTimes(userId: string, courseId: string): Promise<UserCourseLessonTime[]> {
+  async getUserCourseLessonTimes(
+    userId: string,
+    courseId: string
+  ): Promise<UserCourseLessonTime[]> {
     const envelope = await api.get(`/analytics/time-tracking/users/${userId}/courses/${courseId}`);
     return (envelope as any).data;
   }

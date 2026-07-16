@@ -57,7 +57,8 @@ export const LessonTimeBreakdown: React.FC<LessonTimeBreakdownProps> = ({ userId
         </thead>
         <tbody className="divide-y divide-gray-100">
           {lessons.map((lesson) => {
-            const config = classificationConfig[lesson.classification] ?? classificationConfig.on_track;
+            const config =
+              classificationConfig[lesson.classification] ?? classificationConfig.on_track;
             const ratioPercent = Math.round(lesson.ratio * 100);
             const barWidth = Math.min(ratioPercent, 200);
             return (
@@ -71,7 +72,9 @@ export const LessonTimeBreakdown: React.FC<LessonTimeBreakdownProps> = ({ userId
                   {formatSeconds(lesson.realTimeSeconds)}
                 </td>
                 <td className="py-2 pr-4 text-right font-mono text-gray-500">
-                  {lesson.estimatedTimeSeconds > 0 ? formatSeconds(lesson.estimatedTimeSeconds) : '-'}
+                  {lesson.estimatedTimeSeconds > 0
+                    ? formatSeconds(lesson.estimatedTimeSeconds)
+                    : '-'}
                 </td>
                 <td className="py-2 pr-4">
                   <div className="flex items-center justify-center gap-2">
@@ -79,8 +82,11 @@ export const LessonTimeBreakdown: React.FC<LessonTimeBreakdownProps> = ({ userId
                       <div
                         className={cn(
                           'h-full rounded-full',
-                          lesson.classification === 'deep_read' ? 'bg-blue-400' :
-                          lesson.classification === 'skimming' ? 'bg-yellow-400' : 'bg-green-400'
+                          lesson.classification === 'deep_read'
+                            ? 'bg-blue-400'
+                            : lesson.classification === 'skimming'
+                              ? 'bg-yellow-400'
+                              : 'bg-green-400'
                         )}
                         style={{ width: `${Math.min(barWidth / 2, 100)}%` }}
                       />
@@ -89,7 +95,9 @@ export const LessonTimeBreakdown: React.FC<LessonTimeBreakdownProps> = ({ userId
                   </div>
                 </td>
                 <td className="py-2">
-                  <span className={cn('px-2 py-0.5 rounded-full text-xs font-medium', config.className)}>
+                  <span
+                    className={cn('px-2 py-0.5 rounded-full text-xs font-medium', config.className)}
+                  >
                     {config.label}
                   </span>
                 </td>

@@ -4,15 +4,7 @@ import { useTimeTracking, useLessonTimeStats } from '../../hooks/useAnalytics';
 import { LoadingSpinner } from '../common/LoadingSpinner';
 import { LessonTimeBreakdown } from './LessonTimeBreakdown';
 import { cn } from '../../utils/cn';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 function formatSeconds(s: number): string {
   if (s <= 0) return '0s';
@@ -49,8 +41,9 @@ export const TimeTrackingTable: React.FC = () => {
     }
   };
 
-  const getSortValue = (user: typeof usersTime[0], key: SortKey): string | number => {
-    if (key === 'lessonsCompleted') return user.courseBreakdown.reduce((s, c) => s + c.lessonsCompleted, 0);
+  const getSortValue = (user: (typeof usersTime)[0], key: SortKey): string | number => {
+    if (key === 'lessonsCompleted')
+      return user.courseBreakdown.reduce((s, c) => s + c.lessonsCompleted, 0);
     return user[key];
   };
 
@@ -85,7 +78,8 @@ export const TimeTrackingTable: React.FC = () => {
     <div className="space-y-6">
       {/* Notice */}
       <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-amber-800">
-        Los tiempos se registran a partir del deploy de esta funcionalidad. Datos anteriores pueden mostrar 0s.
+        Los tiempos se registran a partir del deploy de esta funcionalidad. Datos anteriores pueden
+        mostrar 0s.
       </div>
 
       {/* Users table */}
@@ -124,7 +118,10 @@ export const TimeTrackingTable: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
               {sorted.map((user) => {
-                const totalLessons = user.courseBreakdown.reduce((s, c) => s + c.lessonsCompleted, 0);
+                const totalLessons = user.courseBreakdown.reduce(
+                  (s, c) => s + c.lessonsCompleted,
+                  0
+                );
                 const isOpen = expanded?.userId === user.userId;
 
                 return (
@@ -145,7 +142,11 @@ export const TimeTrackingTable: React.FC = () => {
                       }}
                     >
                       <td className="px-4 py-3 text-gray-400">
-                        {isOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                        {isOpen ? (
+                          <ChevronDown className="w-4 h-4" />
+                        ) : (
+                          <ChevronRight className="w-4 h-4" />
+                        )}
                       </td>
                       <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">
                         {user.userName}
@@ -180,7 +181,9 @@ export const TimeTrackingTable: React.FC = () => {
                                       : 'border-gray-300 text-gray-600 hover:border-blue-400'
                                   )}
                                 >
-                                  {c.courseTitle.length > 30 ? c.courseTitle.slice(0, 30) + '…' : c.courseTitle}
+                                  {c.courseTitle.length > 30
+                                    ? c.courseTitle.slice(0, 30) + '…'
+                                    : c.courseTitle}
                                 </button>
                               ))}
                             </div>
@@ -188,7 +191,9 @@ export const TimeTrackingTable: React.FC = () => {
 
                           {/* Course summary */}
                           {(() => {
-                            const course = user.courseBreakdown.find((c) => c.courseId === expanded?.courseId);
+                            const course = user.courseBreakdown.find(
+                              (c) => c.courseId === expanded?.courseId
+                            );
                             if (!course) return null;
                             return (
                               <div className="grid grid-cols-3 gap-4 mb-4 text-center">
@@ -245,7 +250,12 @@ export const TimeTrackingTable: React.FC = () => {
               <YAxis type="category" dataKey="name" width={140} tick={{ fontSize: 11 }} />
               <Tooltip
                 /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-                formatter={((v: number, name: string) => [`${v}m`, name === 'real' ? 'Promedio real' : 'Estimado']) as any}
+                formatter={
+                  ((v: number, name: string) => [
+                    `${v}m`,
+                    name === 'real' ? 'Promedio real' : 'Estimado',
+                  ]) as any
+                }
               />
               <Bar dataKey="estimado" fill="#E5E7EB" name="Estimado" radius={[0, 3, 3, 0]} />
               <Bar dataKey="real" fill="#3B82F6" name="Promedio real" radius={[0, 3, 3, 0]} />

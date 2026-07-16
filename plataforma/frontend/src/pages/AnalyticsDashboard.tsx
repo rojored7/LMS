@@ -257,206 +257,219 @@ export const AnalyticsDashboard: React.FC = () => {
         </div>
       )}
 
-      {activeTab === 'overview' && !isLoading && (<>
-
-      {/* Metric Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {metrics.map((metric, index) => (
-          <Card key={index} className="p-6">
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <p className="text-sm text-gray-600 dark:text-gray-400">{metric.title}</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white mt-2">
-                  {metric.value}
-                </p>
-                <div className="flex items-center mt-2">
-                  {metric.change > 0 ? (
-                    <TrendingUp className="w-4 h-4 text-green-500 mr-1" />
-                  ) : (
-                    <TrendingDown className="w-4 h-4 text-red-500 mr-1" />
-                  )}
-                  <span
+      {activeTab === 'overview' && !isLoading && (
+        <>
+          {/* Metric Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {metrics.map((metric, index) => (
+              <Card key={index} className="p-6">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">{metric.title}</p>
+                    <p className="text-2xl font-bold text-gray-900 dark:text-white mt-2">
+                      {metric.value}
+                    </p>
+                    <div className="flex items-center mt-2">
+                      {metric.change > 0 ? (
+                        <TrendingUp className="w-4 h-4 text-green-500 mr-1" />
+                      ) : (
+                        <TrendingDown className="w-4 h-4 text-red-500 mr-1" />
+                      )}
+                      <span
+                        className={cn(
+                          'text-sm font-medium',
+                          metric.change > 0 ? 'text-green-500' : 'text-red-500'
+                        )}
+                      >
+                        {Math.abs(metric.change)}%
+                      </span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">
+                        {metric.changeLabel}
+                      </span>
+                    </div>
+                  </div>
+                  <div
                     className={cn(
-                      'text-sm font-medium',
-                      metric.change > 0 ? 'text-green-500' : 'text-red-500'
+                      'p-3 rounded-lg',
+                      `bg-${metric.color}-100 dark:bg-${metric.color}-900/30`
                     )}
                   >
-                    {Math.abs(metric.change)}%
-                  </span>
-                  <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">
-                    {metric.changeLabel}
-                  </span>
+                    {metric.icon}
+                  </div>
                 </div>
+              </Card>
+            ))}
+          </div>
+
+          {/* Charts Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* User Growth Chart */}
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {t('analytics.userGrowth', 'User Growth')}
+                </h3>
+                <LineChart className="w-5 h-5 text-gray-400" />
               </div>
-              <div
-                className={cn(
-                  'p-3 rounded-lg',
-                  `bg-${metric.color}-100 dark:bg-${metric.color}-900/30`
-                )}
-              >
-                {metric.icon}
+              <ResponsiveContainer width="100%" height={300}>
+                <AreaChart data={userGrowthData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                  <XAxis dataKey="date" stroke="#9CA3AF" tick={{ fontSize: 11 }} />
+                  <YAxis stroke="#9CA3AF" />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#1F2937',
+                      border: 'none',
+                      borderRadius: '8px',
+                    }}
+                  />
+                  <Legend />
+                  <Area
+                    type="monotone"
+                    dataKey="nuevos"
+                    stroke="#3B82F6"
+                    fill="#3B82F6"
+                    fillOpacity={0.6}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="activos"
+                    stroke="#10B981"
+                    fill="#10B981"
+                    fillOpacity={0.6}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </Card>
+
+            {/* Course Popularity */}
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {t('analytics.coursePopularity', 'Course Popularity')}
+                </h3>
+                <BarChart3 className="w-5 h-5 text-gray-400" />
               </div>
+              <ResponsiveContainer width="100%" height={300}>
+                <RechartsBarChart data={coursePopularityData} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                  <XAxis type="number" stroke="#9CA3AF" />
+                  <YAxis
+                    dataKey="name"
+                    type="category"
+                    stroke="#9CA3AF"
+                    width={130}
+                    tick={{ fontSize: 11 }}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#1F2937',
+                      border: 'none',
+                      borderRadius: '8px',
+                    }}
+                  />
+                  <Legend />
+                  <Bar dataKey="inscritos" fill="#3B82F6" />
+                  <Bar dataKey="completados" fill="#10B981" />
+                </RechartsBarChart>
+              </ResponsiveContainer>
+            </Card>
+
+            {/* Weekly Engagement */}
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {t('analytics.weeklyEngagement', 'Weekly Engagement')}
+                </h3>
+                <Activity className="w-5 h-5 text-gray-400" />
+              </div>
+              <ResponsiveContainer width="100%" height={300}>
+                <RechartsLineChart data={enrollmentChartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                  <XAxis dataKey="date" stroke="#9CA3AF" tick={{ fontSize: 11 }} />
+                  <YAxis stroke="#9CA3AF" />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#1F2937',
+                      border: 'none',
+                      borderRadius: '8px',
+                    }}
+                  />
+                  <Legend />
+                  <Line type="monotone" dataKey="inscripciones" stroke="#3B82F6" strokeWidth={2} />
+                </RechartsLineChart>
+              </ResponsiveContainer>
+            </Card>
+
+            {/* Device Usage Pie Chart */}
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {t('analytics.deviceUsage', 'Device Usage')}
+                </h3>
+                <PieChart className="w-5 h-5 text-gray-400" />
+              </div>
+              <ResponsiveContainer width="100%" height={300}>
+                <RechartsPieChart>
+                  <Pie
+                    data={distributionData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, value }) => `${name}: ${value}`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {distributionData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#1F2937',
+                      border: 'none',
+                      borderRadius: '8px',
+                    }}
+                  />
+                </RechartsPieChart>
+              </ResponsiveContainer>
+            </Card>
+          </div>
+
+          {/* Activity Feed */}
+          <Card className="p-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+              {t('analytics.recentActivity', 'Actividad reciente')}
+            </h3>
+            <div className="space-y-3">
+              {(recentActivity ?? []).length === 0 && (
+                <p className="text-sm text-gray-500">Sin actividad reciente.</p>
+              )}
+              {(recentActivity ?? []).map((item, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
+                >
+                  <div className="w-2 h-2 bg-green-500 rounded-full" />
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-700 dark:text-gray-300">
+                      <span className="font-medium">{item.user_name}</span>
+                      {' — '}
+                      {item.action}
+                      {' — '}
+                      {item.course_title}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {new Date(item.created_at).toLocaleString('es-CO')}
+                    </p>
+                  </div>
+                </div>
+              ))}
             </div>
           </Card>
-        ))}
-      </div>
-
-      {/* Charts Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* User Growth Chart */}
-        <Card className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              {t('analytics.userGrowth', 'User Growth')}
-            </h3>
-            <LineChart className="w-5 h-5 text-gray-400" />
-          </div>
-          <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={userGrowthData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-              <XAxis dataKey="date" stroke="#9CA3AF" tick={{ fontSize: 11 }} />
-              <YAxis stroke="#9CA3AF" />
-              <Tooltip
-                contentStyle={{ backgroundColor: '#1F2937', border: 'none', borderRadius: '8px' }}
-              />
-              <Legend />
-              <Area
-                type="monotone"
-                dataKey="nuevos"
-                stroke="#3B82F6"
-                fill="#3B82F6"
-                fillOpacity={0.6}
-              />
-              <Area
-                type="monotone"
-                dataKey="activos"
-                stroke="#10B981"
-                fill="#10B981"
-                fillOpacity={0.6}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </Card>
-
-        {/* Course Popularity */}
-        <Card className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              {t('analytics.coursePopularity', 'Course Popularity')}
-            </h3>
-            <BarChart3 className="w-5 h-5 text-gray-400" />
-          </div>
-          <ResponsiveContainer width="100%" height={300}>
-            <RechartsBarChart data={coursePopularityData} layout="vertical">
-              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-              <XAxis type="number" stroke="#9CA3AF" />
-              <YAxis
-                dataKey="name"
-                type="category"
-                stroke="#9CA3AF"
-                width={130}
-                tick={{ fontSize: 11 }}
-              />
-              <Tooltip
-                contentStyle={{ backgroundColor: '#1F2937', border: 'none', borderRadius: '8px' }}
-              />
-              <Legend />
-              <Bar dataKey="inscritos" fill="#3B82F6" />
-              <Bar dataKey="completados" fill="#10B981" />
-            </RechartsBarChart>
-          </ResponsiveContainer>
-        </Card>
-
-        {/* Weekly Engagement */}
-        <Card className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              {t('analytics.weeklyEngagement', 'Weekly Engagement')}
-            </h3>
-            <Activity className="w-5 h-5 text-gray-400" />
-          </div>
-          <ResponsiveContainer width="100%" height={300}>
-            <RechartsLineChart data={enrollmentChartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-              <XAxis dataKey="date" stroke="#9CA3AF" tick={{ fontSize: 11 }} />
-              <YAxis stroke="#9CA3AF" />
-              <Tooltip
-                contentStyle={{ backgroundColor: '#1F2937', border: 'none', borderRadius: '8px' }}
-              />
-              <Legend />
-              <Line type="monotone" dataKey="inscripciones" stroke="#3B82F6" strokeWidth={2} />
-            </RechartsLineChart>
-          </ResponsiveContainer>
-        </Card>
-
-        {/* Device Usage Pie Chart */}
-        <Card className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              {t('analytics.deviceUsage', 'Device Usage')}
-            </h3>
-            <PieChart className="w-5 h-5 text-gray-400" />
-          </div>
-          <ResponsiveContainer width="100%" height={300}>
-            <RechartsPieChart>
-              <Pie
-                data={distributionData}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={({ name, value }) => `${name}: ${value}`}
-                outerRadius={80}
-                fill="#8884d8"
-                dataKey="value"
-              >
-                {distributionData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Pie>
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: '#1F2937',
-                  border: 'none',
-                  borderRadius: '8px',
-                }}
-              />
-            </RechartsPieChart>
-          </ResponsiveContainer>
-        </Card>
-      </div>
-
-      {/* Activity Feed */}
-      <Card className="p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-          {t('analytics.recentActivity', 'Actividad reciente')}
-        </h3>
-        <div className="space-y-3">
-          {(recentActivity ?? []).length === 0 && (
-            <p className="text-sm text-gray-500">Sin actividad reciente.</p>
-          )}
-          {(recentActivity ?? []).map((item, i) => (
-            <div
-              key={i}
-              className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
-            >
-              <div className="w-2 h-2 bg-green-500 rounded-full" />
-              <div className="flex-1">
-                <p className="text-sm text-gray-700 dark:text-gray-300">
-                  <span className="font-medium">{item.user_name}</span>
-                  {' — '}
-                  {item.action}
-                  {' — '}
-                  {item.course_title}
-                </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  {new Date(item.created_at).toLocaleString('es-CO')}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </Card>
-      </>)}
+        </>
+      )}
     </div>
   );
 };

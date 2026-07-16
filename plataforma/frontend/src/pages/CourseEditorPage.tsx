@@ -120,7 +120,9 @@ const SortableModuleItem: React.FC<SortableModuleItemProps> = ({
     id: module.id || '',
   });
 
-  const lessonSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
+  const lessonSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+  );
 
   const handleLessonDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
