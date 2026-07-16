@@ -95,12 +95,6 @@ interface SortableModuleItemProps {
   setSelectedModuleId: (id: string | null) => void;
   handleEditModule: (mod: any) => void;
   requestDelete: (type: string, id: string, label: string, moduleId?: string) => void;
-  handleAddLesson: (moduleId: string) => void;
-  handleEditLesson: (moduleId: string, lesson: any) => void;
-  handleReorderLessons: (moduleId: string, lessonIds: string[]) => Promise<void>;
-  setSelectedLessonContent: (content: string) => void;
-  setSelectedLessonId: (id: string | null) => void;
-  setSelectedLessonModuleId: (id: string | null) => void;
 }
 
 const SortableModuleItem: React.FC<SortableModuleItemProps> = ({
@@ -109,32 +103,10 @@ const SortableModuleItem: React.FC<SortableModuleItemProps> = ({
   setSelectedModuleId,
   handleEditModule,
   requestDelete,
-  handleAddLesson,
-  handleEditLesson,
-  handleReorderLessons,
-  setSelectedLessonContent,
-  setSelectedLessonId,
-  setSelectedLessonModuleId,
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: module.id || '',
   });
-
-  const lessonSensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
-  );
-
-  const handleLessonDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    const lessons: AdminLessonSummary[] = module.lessons || [];
-    const oldIndex = lessons.findIndex((l) => l.id === active.id);
-    const newIndex = lessons.findIndex((l) => l.id === over.id);
-    if (oldIndex === -1 || newIndex === -1) return;
-    const reordered = arrayMove(lessons, oldIndex, newIndex);
-    const ids = reordered.map((l) => l.id).filter((lid): lid is string => Boolean(lid));
-    handleReorderLessons(module.id || '', ids);
-  };
 
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
@@ -142,11 +114,13 @@ const SortableModuleItem: React.FC<SortableModuleItemProps> = ({
     opacity: isDragging ? 0.5 : 1,
   };
 
+  const isSelected = selectedModuleId === module.id;
+
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`border border-gray-200 rounded-lg p-3 ${isDragging ? 'shadow-lg bg-blue-50 border-blue-200' : ''}`}
+      className={`border rounded-lg p-3 ${isDragging ? 'shadow-lg bg-blue-50 border-blue-200' : isSelected ? 'border-blue-400 bg-blue-50' : 'border-gray-200'}`}
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2 flex-1 min-w-0">
@@ -159,8 +133,8 @@ const SortableModuleItem: React.FC<SortableModuleItemProps> = ({
             <Bars3Icon className="w-4 h-4" />
           </div>
           <div
-            onClick={() => setSelectedModuleId(module.id || null)}
-            className={`cursor-pointer flex-1 min-w-0 ${selectedModuleId === module.id ? 'text-blue-600' : ''}`}
+            onClick={() => setSelectedModuleId(isSelected ? null : module.id || null)}
+            className={`cursor-pointer flex-1 min-w-0 ${isSelected ? 'text-blue-600' : ''}`}
           >
             <h4 className="font-medium truncate">{module.title}</h4>
             <p className="text-sm text-gray-500 mt-1">{module.lessons?.length || 0} lecciones</p>
@@ -183,42 +157,6 @@ const SortableModuleItem: React.FC<SortableModuleItemProps> = ({
           </button>
         </div>
       </div>
-      {selectedModuleId === module.id && (
-        <div className="mt-3 ml-6 space-y-1">
-          <DndContext
-            sensors={lessonSensors}
-            collisionDetection={closestCenter}
-            onDragEnd={handleLessonDragEnd}
-          >
-            <SortableContext
-              items={(module.lessons || []).map((l: AdminLessonSummary) => l.id || '')}
-              strategy={verticalListSortingStrategy}
-            >
-              {(module.lessons || []).map((lesson: AdminLessonSummary) => (
-                <SortableLessonItem
-                  key={lesson.id}
-                  lesson={lesson}
-                  moduleId={module.id || ''}
-                  onEdit={handleEditLesson}
-                  onDelete={(type, itemId, label, mId) => requestDelete(type, itemId, label, mId)}
-                  onClickContent={(content, lessonId, mId) => {
-                    setSelectedLessonContent(content);
-                    setSelectedLessonId(lessonId);
-                    setSelectedLessonModuleId(mId);
-                  }}
-                />
-              ))}
-            </SortableContext>
-          </DndContext>
-          <button
-            onClick={() => handleAddLesson(module.id || '')}
-            className="text-xs text-blue-600 hover:text-blue-700 flex items-center space-x-1 mt-2"
-          >
-            <PlusIcon className="w-3 h-3" />
-            <span>Agregar leccion</span>
-          </button>
-        </div>
-      )}
     </div>
   );
 };
@@ -281,6 +219,26 @@ const CourseEditorPage: React.FC = () => {
   } = useCourseEditorHandlers(id);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
+  const lessonSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
+
+  const selectedModule =
+    (currentCourse?.modules ?? []).find((m) => m.id === selectedModuleId) ?? null;
+  const lessonIds = (selectedModule?.lessons ?? [])
+    .map((l) => l.id || '')
+    .filter(Boolean);
+
+  const handleLessonDragEnd = (event: DragEndEvent) => {
+    if (!selectedModule) return;
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const lessons = selectedModule.lessons || [];
+    const oldIndex = lessons.findIndex((l) => l.id === active.id);
+    const newIndex = lessons.findIndex((l) => l.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const reordered = arrayMove(lessons, oldIndex, newIndex);
+    const ids = reordered.map((l) => l.id).filter((lid): lid is string => Boolean(lid));
+    handleReorderLessons(selectedModule.id || '', ids);
+  };
 
   if (loading) {
     return (
@@ -502,17 +460,58 @@ const CourseEditorPage: React.FC = () => {
                           setSelectedModuleId={setSelectedModuleId}
                           handleEditModule={handleEditModule}
                           requestDelete={requestDelete}
-                          handleAddLesson={handleAddLesson}
-                          handleEditLesson={handleEditLesson}
-                          handleReorderLessons={handleReorderLessons}
-                          setSelectedLessonContent={setSelectedLessonContent}
-                          setSelectedLessonId={setSelectedLessonId}
-                          setSelectedLessonModuleId={setSelectedLessonModuleId}
                         />
                       ))}
                     </div>
                   </SortableContext>
                 </DndContext>
+                {selectedModule && (
+                  <div className="mt-3 pt-3 border-t border-gray-200">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-xs font-semibold text-gray-600 truncate">
+                        {selectedModule.title}
+                      </p>
+                      <button
+                        onClick={() => handleAddLesson(selectedModule.id || '')}
+                        className="text-xs text-blue-600 hover:text-blue-700 flex items-center space-x-1 flex-shrink-0 ml-2"
+                      >
+                        <PlusIcon className="w-3 h-3" />
+                        <span>Agregar</span>
+                      </button>
+                    </div>
+                    <DndContext
+                      sensors={lessonSensors}
+                      collisionDetection={closestCenter}
+                      onDragEnd={handleLessonDragEnd}
+                    >
+                      <SortableContext items={lessonIds} strategy={verticalListSortingStrategy}>
+                        <div className="space-y-1">
+                          {(selectedModule.lessons || []).map((lesson) => (
+                            <SortableLessonItem
+                              key={lesson.id}
+                              lesson={lesson as AdminLessonSummary}
+                              moduleId={selectedModule.id || ''}
+                              onEdit={handleEditLesson}
+                              onDelete={(type, itemId, label, mId) =>
+                                requestDelete(type, itemId, label, mId)
+                              }
+                              onClickContent={(content, lessonId, mId) => {
+                                setSelectedLessonContent(content);
+                                setSelectedLessonId(lessonId);
+                                setSelectedLessonModuleId(mId);
+                              }}
+                            />
+                          ))}
+                          {!(selectedModule.lessons?.length) && (
+                            <p className="text-xs text-gray-400 py-2 text-center">
+                              Sin lecciones — agrega una
+                            </p>
+                          )}
+                        </div>
+                      </SortableContext>
+                    </DndContext>
+                  </div>
+                )}
               </div>
               <div className="flex-1 p-4 flex flex-col">
                 <div className="flex items-center justify-between mb-4">
