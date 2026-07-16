@@ -133,8 +133,17 @@ else
         2>&1 | tail -5
     log "Executor OK"
 
+    info "Construyendo nginx..."
+    docker build \
+        -t plataforma-nginx:latest \
+        -t "plataforma-nginx:sha-${GIT_SHA}" \
+        -f nginx/Dockerfile \
+        nginx/ \
+        2>&1 | tail -5
+    log "Nginx OK"
+
     info "Guardando imagenes en tar (esto puede tardar)..."
-    docker save plataforma-backend plataforma-frontend plataforma-executor | gzip > "$IMAGES_TAR"
+    docker save plataforma-backend plataforma-frontend plataforma-executor plataforma-nginx | gzip > "$IMAGES_TAR"
 
     if command -v cygpath &>/dev/null; then
         IMAGES_TAR_ABS="$(cygpath -w "$IMAGES_TAR")"
