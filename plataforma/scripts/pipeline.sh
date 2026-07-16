@@ -436,7 +436,8 @@ print(f'  {out.strip()[-200:]}')
 print('Reiniciando servicios PROD...')
 run(f'cd {RDIR} && docker compose -f docker-compose.prod.yml down --remove-orphans', timeout=60)
 time.sleep(3)
-out, _ = run(f'cd {RDIR} && docker compose -f docker-compose.prod.yml up -d --no-build 2>&1', timeout=120)
+out, err_out = run(f'cd {RDIR} && docker compose -f docker-compose.prod.yml up -d --no-build 2>&1', timeout=120)
+print(f'  compose up output: {(out+err_out).strip()[-500:]}')
 
 # Esperar health
 print('Esperando health checks PROD (max 90s)...')
