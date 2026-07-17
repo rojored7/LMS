@@ -109,25 +109,29 @@ def _parse_md_quiz(qf: Path) -> ParsedQuiz | None:
             attempts=3,
         )
 
-        # Parse questions: look for ### N. or ### Pregunta N or **Pregunta N:** patterns
-        question_blocks = re.split(r"(?=^(?:### (?:\d+\.|Pregunta \d+)|\*\*Pregunta \d+))", content, flags=re.MULTILINE)
+        # Parse questions: look for ### N., ### Pregunta N, ## Pregunta N or **Pregunta N:** patterns
+        question_blocks = re.split(
+            r"(?=^(?:#{2,3}\s+(?:\d+[.:-]|Pregunta\s+\d+)|\*\*Pregunta\s+\d+))",
+            content,
+            flags=re.MULTILINE,
+        )
 
         for block in question_blocks:
             block = block.strip()
-            if not (block.startswith("### ") or block.startswith("**Pregunta")):
+            if not (block.startswith("## ") or block.startswith("### ") or block.startswith("**Pregunta")):
                 continue
 
             q_lines = block.splitlines()
             question_text = ""
 
-            # Format A: ### 1. Question text here?
-            q_match = re.match(r"### \d+\.\s*(.*)", q_lines[0])
+            # Format A: ### 1. Question text here? or ### 1: Question text
+            q_match = re.match(r"#{2,3}\s+\d+[.:]\s*(.*)", q_lines[0])
             if q_match and q_match.group(1).strip():
                 question_text = q_match.group(1).strip()
 
-            # Format B: ### Pregunta N (question text on next non-empty line)
+            # Format B: ### Pregunta N / ## Pregunta N (question text on next non-empty line)
             if not question_text:
-                q_match = re.match(r"### (?:Pregunta\s+)?\d+", q_lines[0])
+                q_match = re.match(r"#{2,3}\s+(?:Pregunta\s+)?\d+", q_lines[0])
                 if q_match:
                     for line in q_lines[1:]:
                         line = line.strip()
@@ -154,11 +158,32 @@ def _parse_md_quiz(qf: Path) -> ParsedQuiz | None:
             correct_answer = None
             explanation = None
 
+            # Bug 2 fix: pre-scan the block to distinguish MC options from essay sub-parts.
+            # a)/b)/c) lines are MC options only when:
+            # - block has "**Respuesta correcta**:" inline marker, OR
+            # - block has >= 2 lettered option lines AND they are not sub-questions
+            #   (essay sub-parts end with "?" making them sub-questions, not choices)
+            block_lower = block.lower()
+            has_mc_marker = "respuesta correcta" in block_lower
+            option_lines_raw = [
+                ln.strip() for ln in q_lines[1:]
+                if re.match(r"^[a-dA-D]\)\s", ln.strip())
+            ]
+            option_line_count = len(option_lines_raw)
+            all_options_are_subquestions = (
+                bool(option_lines_raw)
+                and all(ln.rstrip().endswith("?") for ln in option_lines_raw)
+            )
+            is_mc_block = has_mc_marker or (option_line_count >= 2 and not all_options_are_subquestions)
+
             for line in q_lines[1:]:
                 line = line.strip()
-                # Option: a) text, b) text, etc.
+                if not line or line == "---":
+                    continue
+
+                # Bug 2 fix: only capture a)/b) as options in MC blocks
                 opt_match = re.match(r"^([a-zA-Z])\)\s*(.*)", line)
-                if opt_match:
+                if opt_match and is_mc_block:
                     options.append(opt_match.group(2).strip())
                     continue
 
@@ -187,12 +212,40 @@ def _parse_md_quiz(qf: Path) -> ParsedQuiz | None:
                         explanation=explanation,
                     )
                 )
+            elif question_text and not options:
+                # Bug 3 fix: essay/open-answer questions → SHORT_ANSWER
+                # correct_answer must be "" (str), NOT 0 (int) — scoring.py would
+                # do opts[0] on options=None and raise IndexError.
+                quiz.questions.append(
+                    ParsedQuestion(
+                        order=len(quiz.questions) + 1,
+                        type="SHORT_ANSWER",
+                        question=question_text,
+                        options=None,
+                        correct_answer="",
+                        explanation=explanation,
+                    )
+                )
 
-        # Parse answers section at the end (### Respuesta N: letra) text)
-        answer_section = re.search(r"## Respuestas", content, re.IGNORECASE)
+        # Bug 1 fix: match all real heading variants used in cuestionario.md files:
+        # "## Respuestas", "## Clave de Respuestas", "## Respuestas de Referencia",
+        # "## Soluciones", "## Respuestas y Explicaciones", "## Respuestas Resumidas"
+        answer_section = re.search(
+            r"##\s+(?:Clave\s+de\s+)?(?:Respuestas|Soluciones)(?:\s+\w+)*",
+            content,
+            re.IGNORECASE,
+        )
         if answer_section:
             answer_text = content[answer_section.start():]
-            answer_matches = re.findall(r"### Respuesta\s+(\d+):\s*([a-zA-Z])\)", answer_text)
+            # Bug 1 fix: removed trailing \) — real format is "### Respuesta N: B" (no paren)
+            answer_matches = re.findall(r"### Respuesta\s+(\d+)[:.]\s*([a-zA-Z])", answer_text)
+            # Fallback: numbered list format "1. B - explanation"
+            if not answer_matches:
+                answer_matches = re.findall(
+                    r"^\s*(\d+)\.\s*([a-zA-Z])\s*[-\u2014]",
+                    answer_text,
+                    re.MULTILINE,
+                )
             for q_num_str, letter in answer_matches:
                 q_num = int(q_num_str)
                 idx = ord(letter.lower()) - ord("a")
