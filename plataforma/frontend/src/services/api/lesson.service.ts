@@ -84,8 +84,21 @@ export const getLessonProgress = async (lessonId: string): Promise<LessonProgres
   return (response as any).data || response;
 };
 
+/**
+ * Ping time spent on a lesson (fire-and-forget, silent on error)
+ */
+export const pingLessonTime = async (lessonId: string, seconds: number): Promise<void> => {
+  if (seconds <= 0) return;
+  try {
+    await api.patch(`/lessons/${lessonId}/time`, { seconds });
+  } catch {
+    // silencioso — errores de tracking no deben interrumpir al usuario
+  }
+};
+
 export default {
   getLesson,
   completeLesson,
   getLessonProgress,
+  pingLessonTime,
 };

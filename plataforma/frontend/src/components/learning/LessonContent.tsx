@@ -9,6 +9,7 @@ import { MarkdownRenderer } from './MarkdownRenderer';
 import VideoEmbed from '../common/VideoEmbed';
 import { LessonDetail, getAttachments } from '../../services/api/lesson.service';
 import { useCompleteLesson } from '../../hooks/useLessons';
+import { useLessonTimer } from '../../hooks/useLessonTimer';
 import {
   ClockIcon,
   CheckCircleIcon,
@@ -36,6 +37,8 @@ export const LessonContent: React.FC<LessonContentProps> = ({ lesson, courseId }
     queryFn: () => getAttachments(lesson.id),
     staleTime: 5 * 60 * 1000,
   });
+
+  useLessonTimer(lesson?.id ?? null);
 
   const isCompleted = lesson.userProgress?.completed || false;
 

@@ -339,3 +339,37 @@ class ProgressService:
     async def update_project_status(self, user_id: str, module_id: str, status: str) -> None:
         await self.recalculate_course_progress(user_id, module_id)
 
+    async def add_time_to_lesson(self, user_id: str, lesson_id: str, seconds: int) -> None:
+        """Acumula segundos al registro UserProgress sin alterar el estado de completacion."""
+        lesson_result = await self.db.execute(select(Lesson).where(Lesson.id == lesson_id))
+        lesson = lesson_result.scalar_one_or_none()
+        if lesson is None:
+            return
+
+        existing = await self.db.execute(
+            select(UserProgress).where(
+                UserProgress.user_id == user_id,
+                UserProgress.module_id == lesson.module_id,
+                UserProgress.lesson_id == lesson_id,
+            )
+        )
+        progress = existing.scalar_one_or_none()
+
+        if progress is None:
+            progress = UserProgress(
+                user_id=user_id,
+                module_id=lesson.module_id,
+                lesson_id=lesson_id,
+                status="not_started",
+                completed=False,
+                progress=0,
+                time_spent=seconds,
+                last_access=datetime.now(timezone.utc),
+            )
+            self.db.add(progress)
+        else:
+            progress.time_spent = (progress.time_spent or 0) + seconds
+            progress.last_access = datetime.now(timezone.utc)
+
+        await self.db.commit()
+

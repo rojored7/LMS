@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -32,8 +32,24 @@ async def get_lesson(lesson_id: str, user: User = Depends(get_current_user), db:
     return {"success": True, "data": data}
 
 
+class LessonTimePingBody(BaseModel):
+    seconds: int = Field(default=0, ge=0, le=120)
+
+
 class CompleteLessonBody(BaseModel):
     timeSpent: int = 0
+
+
+@router.patch("/{lesson_id}/time")
+async def ping_lesson_time(
+    lesson_id: str,
+    body: LessonTimePingBody,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    service = ProgressService(db)
+    await service.add_time_to_lesson(user.id, lesson_id, body.seconds)
+    return {"success": True}
 
 
 @router.post("/{lesson_id}/complete")
