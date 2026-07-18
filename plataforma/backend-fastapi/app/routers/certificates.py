@@ -1,6 +1,8 @@
+import os
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, Query, Request
+from fastapi.responses import FileResponse
 from pydantic import Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -24,7 +26,6 @@ class CertificateResponse(CamelModel):
     course_id: str
     certificate_url: str | None = None
     verification_code: str
-    issued: bool
     issued_at: datetime
 
 
@@ -68,6 +69,34 @@ async def verify_certificate(
     service = CertificateService(db)
     result = await service.verify(code)
     return ApiResponse(success=True, data=result).model_dump()
+
+
+@router.get("/{certificate_id}/download")
+@limiter.limit("30/minute")
+async def download_certificate(
+    request: Request,
+    certificate_id: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    service = CertificateService(db)
+    cert = await service.get_by_id(certificate_id)
+    if cert.user_id != user.id and user.role not in (UserRole.ADMIN, UserRole.INSTRUCTOR):
+        raise AuthorizationError("No tienes acceso a este certificado")
+    if not cert.certificate_url:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="PDF no generado aun")
+    filename = cert.certificate_url.split("/")[-1]
+    uploads_dir = os.environ.get("UPLOADS_DIR", "/app/uploads")
+    filepath = os.path.join(uploads_dir, "certificates", filename)
+    if not os.path.isfile(filepath):
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Archivo no encontrado")
+    return FileResponse(
+        filepath,
+        media_type="application/pdf",
+        filename=f"certificado-{cert.verification_code}.pdf",
+    )
 
 
 @router.get("/{certificate_id}")

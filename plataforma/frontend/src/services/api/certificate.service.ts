@@ -9,7 +9,7 @@ export interface Certificate {
   id: string;
   userId: string;
   courseId: string;
-  certificateUrl: string;
+  certificateUrl: string | null;
   issuedAt: string;
   verificationCode: string;
   course?: {
@@ -35,16 +35,16 @@ export interface CertificateVerification {
  * @param courseId - Course ID
  */
 export const generateCertificate = async (courseId: string): Promise<Certificate> => {
-  const response = await api.post(`/certificates/generate/${courseId}`);
-  return response.data;
+  const response: any = await api.post('/certificates/generate', { courseId });
+  return response?.data ?? response;
 };
 
 /**
  * Get my certificates
  */
 export const getMyCertificates = async (): Promise<Certificate[]> => {
-  const response = await api.get('/certificates/my-certificates');
-  return response.data;
+  const response: any = await api.get('/certificates');
+  return response?.data ?? response ?? [];
 };
 
 /**
@@ -52,10 +52,9 @@ export const getMyCertificates = async (): Promise<Certificate[]> => {
  * @param certificateId - Certificate ID
  */
 export const downloadCertificate = async (certificateId: string): Promise<Blob> => {
-  const response = await api.get(`/certificates/${certificateId}/download`, {
+  return await api.get(`/certificates/${certificateId}/download`, {
     responseType: 'blob',
-  });
-  return response.data;
+  }) as unknown as Blob;
 };
 
 /**
@@ -65,8 +64,8 @@ export const downloadCertificate = async (certificateId: string): Promise<Blob> 
 export const verifyCertificate = async (
   verificationCode: string
 ): Promise<CertificateVerification> => {
-  const response = await api.get(`/certificates/${verificationCode}/verify`);
-  return response.data;
+  const response: any = await api.get(`/certificates/verify/${verificationCode}`);
+  return response?.data ?? response;
 };
 
 /**
@@ -74,8 +73,8 @@ export const verifyCertificate = async (
  * @param certificateId - Certificate ID
  */
 export const getCertificate = async (certificateId: string): Promise<Certificate> => {
-  const response = await api.get(`/certificates/${certificateId}`);
-  return response.data;
+  const response: any = await api.get(`/certificates/${certificateId}`);
+  return response?.data ?? response;
 };
 
 export default {

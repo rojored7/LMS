@@ -225,6 +225,23 @@ class ProgressService:
                             await badge_svc.award_course_completion_badge(
                                 user_id=user.id, course=course, enrollment=enrollment,
                             )
+                            # Auto-generar certificado PDF (SAVEPOINT: fallo no contamina progreso)
+                            try:
+                                from app.services.certificate_service import CertificateService
+                                from app.middleware.error_handler import ConflictError
+                                async with self.db.begin_nested():
+                                    cert_svc = CertificateService(self.db)
+                                    await cert_svc.generate(
+                                        user_id=user.id, course_id=course.id
+                                    )
+                            except ConflictError:
+                                pass  # Certificado ya existe
+                            except Exception:
+                                logger.exception(
+                                    "auto_certificate_failed",
+                                    user_id=user.id,
+                                    course_id=course.id,
+                                )
             await self.db.flush()
 
     async def get_detailed_progress(self, user_id: str, skip: int = 0, limit: int = 50) -> list[dict]:

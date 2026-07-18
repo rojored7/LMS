@@ -23,6 +23,8 @@ CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "4000", "--reload
 
 # --- Production ---
 FROM base AS production
-RUN adduser --disabled-password --gecos "" appuser && chown -R appuser /app
+RUN adduser --disabled-password --gecos "" appuser \
+    && mkdir -p /app/uploads/certificates /app/uploads/lessons \
+    && chown -R appuser /app
 USER appuser
 CMD ["gunicorn", "app.main:app", "--bind", "0.0.0.0:4000", "--workers", "4", "--worker-class", "uvicorn.workers.UvicornWorker", "--timeout", "120", "--graceful-timeout", "30", "--keep-alive", "5", "--access-logfile", "-", "--error-logfile", "-"]
