@@ -96,9 +96,7 @@ export const Profile: React.FC = () => {
       if (certificateFile && userBadgeId) {
         const formData = new FormData();
         formData.append('file', certificateFile);
-        await api.post(`/badges/user-badge/${userBadgeId}/certificate`, formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
+        await api.post(`/badges/user-badge/${userBadgeId}/certificate`, formData);
       }
 
       toast.success('Badge importado exitosamente');
