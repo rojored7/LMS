@@ -1,5 +1,6 @@
 import os
 import secrets
+import uuid as _uuid_mod
 
 import structlog
 from sqlalchemy import select
@@ -72,13 +73,27 @@ class AttachmentService:
         if len(content) > MAX_FILE_SIZE:
             raise ValueError(f"Archivo excede el limite de {MAX_FILE_SIZE // (1024 * 1024)}MB")
 
+        # Validar que lesson_id es un UUID bien formado antes de usarlo en rutas de FS
+        try:
+            _uuid_mod.UUID(lesson_id)
+        except ValueError:
+            raise ValueError("lesson_id invalido")
+
         detected = self._detect_mime(content)
-        if detected not in _ALLOWED_MIMES and mime_type not in _ALLOWED_MIMES:
+        # Rechazar si los magic bytes detectan un tipo no permitido
+        if detected is not None and detected not in _ALLOWED_MIMES:
+            raise ValueError("Tipo de archivo no permitido")
+        # Rechazar si no hay magic bytes y el tipo declarado tampoco esta permitido
+        if detected is None and mime_type not in _ALLOWED_MIMES:
             raise ValueError("Tipo de archivo no permitido")
 
         effective_mime = detected or mime_type
 
+        base_uploads = os.path.realpath(self.uploads_dir)
         dest_dir = os.path.realpath(os.path.join(self.uploads_dir, "lessons", lesson_id))
+        # Verificar que dest_dir no sale del directorio de uploads (defensa en profundidad)
+        if not dest_dir.startswith(base_uploads + os.sep):
+            raise ValueError("Ruta de directorio invalida")
         os.makedirs(dest_dir, exist_ok=True)
 
         safe_name = secrets.token_hex(16) + ext

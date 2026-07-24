@@ -3,6 +3,7 @@
  * Renders markdown content with syntax highlighting
  */
 
+import { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
@@ -41,6 +42,83 @@ function extractTextFromChildren(children: any): string {
   }
 
   return '';
+}
+
+/**
+ * Carga una imagen que requiere autenticacion usando fetch con credenciales.
+ *
+ * El endpoint GET /api/uploads/* requiere auth via cookies HttpOnly.
+ * El tag <img> nativo del navegador no envia esas cookies en cross-origin dev.
+ * Solucion: fetch con credentials:'include' obtiene el blob, se convierte a
+ * un Blob URL local que el <img> puede cargar sin restricciones de auth.
+ *
+ * Para URLs externas (no /api/uploads/) se devuelve el src original sin modificar.
+ */
+function useAuthenticatedImage(src: string | undefined): string | undefined {
+  const [resolved, setResolved] = useState<string | undefined>(src);
+
+  useEffect(() => {
+    if (!src || !src.startsWith('/api/uploads/')) {
+      setResolved(src);
+      return;
+    }
+
+    let cancelled = false;
+    let objectUrl: string | undefined;
+
+    fetch(src, { credentials: 'include' })
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.blob();
+      })
+      .then((blob) => {
+        if (cancelled) return;
+        objectUrl = URL.createObjectURL(blob);
+        setResolved(objectUrl);
+      })
+      .catch(() => {
+        if (!cancelled) setResolved(undefined);
+      });
+
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [src]);
+
+  return resolved;
+}
+
+/**
+ * Componente que renderiza imagenes del backend con autenticacion.
+ * Se define fuera de MarkdownRenderer para que ESLint reconozca los hooks
+ * (el nombre en uppercase indica que es un componente React valido).
+ */
+function AuthenticatedImage({ src, alt }: { src?: string; alt?: string }) {
+  const imgSrc = useAuthenticatedImage(src);
+  const [hasError, setHasError] = useState(false);
+
+  if (hasError) {
+    return <span className="text-sm text-gray-400 italic">[imagen no disponible]</span>;
+  }
+
+  if (!imgSrc) {
+    return (
+      <span className="inline-flex items-center justify-center w-full my-4 py-4 bg-gray-100 rounded-lg text-gray-400 text-sm">
+        Cargando imagen...
+      </span>
+    );
+  }
+
+  return (
+    <img
+      src={imgSrc}
+      alt={alt || ''}
+      loading="lazy"
+      className="max-w-full h-auto rounded-lg my-4 shadow-sm"
+      onError={() => setHasError(true)}
+    />
+  );
 }
 
 export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, className = '' }) => {
@@ -136,6 +214,11 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, cla
           },
           li({ children }) {
             return <li className="text-gray-700">{children}</li>;
+          },
+          // Delega a AuthenticatedImage (componente React uppercase) para
+          // cumplir con react-hooks/rules-of-hooks.
+          img({ src, alt }) {
+            return <AuthenticatedImage src={src} alt={alt} />;
           },
           // Custom rendering for paragraphs to handle video embeds
           p({ children }) {

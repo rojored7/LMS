@@ -96,9 +96,29 @@ export const pingLessonTime = async (lessonId: string, seconds: number): Promise
   }
 };
 
+/**
+ * Sube una imagen a una leccion como adjunto y devuelve la URL de descarga.
+ * Usada por MarkdownEditor.onImageUpload para incrustar imagenes en el contenido.
+ * @param lessonId - ID de la leccion destino
+ * @param file - Archivo de imagen a subir
+ * @returns URL relativa tipo "/api/uploads/lessons/{id}/{filename}"
+ */
+export const uploadLessonImage = async (lessonId: string, file: File): Promise<string> => {
+  const formData = new FormData();
+  formData.append('file', file);
+  // No forzar Content-Type: Axios detecta FormData y asigna el boundary correcto automaticamente
+  const response = await api.post(`/attachments/lesson/${lessonId}`, formData);
+  const data = (response as any).data;
+  if (!data?.downloadUrl) {
+    throw new Error('El servidor no devolvio downloadUrl');
+  }
+  return data.downloadUrl as string;
+};
+
 export default {
   getLesson,
   completeLesson,
   getLessonProgress,
   pingLessonTime,
+  uploadLessonImage,
 };

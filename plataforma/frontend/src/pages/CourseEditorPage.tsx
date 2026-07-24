@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
   ArrowLeftIcon,
@@ -18,6 +18,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import MarkdownEditor from '../components/common/MarkdownEditor';
+import { uploadLessonImage } from '../services/api/lesson.service';
 import { ConfirmDialog } from '../components/common/ConfirmDialog';
 import ModuleFormModal from '../components/editor/ModuleFormModal';
 import LessonFormModal from '../components/editor/LessonFormModal';
@@ -219,13 +220,13 @@ const CourseEditorPage: React.FC = () => {
   } = useCourseEditorHandlers(id);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
-  const lessonSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
+  const lessonSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+  );
 
   const selectedModule =
     (currentCourse?.modules ?? []).find((m) => m.id === selectedModuleId) ?? null;
-  const lessonIds = (selectedModule?.lessons ?? [])
-    .map((l) => l.id || '')
-    .filter(Boolean);
+  const lessonIds = (selectedModule?.lessons ?? []).map((l) => l.id || '').filter(Boolean);
 
   const handleLessonDragEnd = (event: DragEndEvent) => {
     if (!selectedModule) return;
@@ -239,6 +240,14 @@ const CourseEditorPage: React.FC = () => {
     const ids = reordered.map((l) => l.id).filter((lid): lid is string => Boolean(lid));
     handleReorderLessons(selectedModule.id || '', ids);
   };
+
+  const handleImageUpload = useCallback(
+    (file: File): Promise<string> => {
+      if (!selectedLessonId) return Promise.reject(new Error('No hay leccion seleccionada'));
+      return uploadLessonImage(selectedLessonId, file);
+    },
+    [selectedLessonId]
+  );
 
   if (loading) {
     return (
@@ -502,7 +511,7 @@ const CourseEditorPage: React.FC = () => {
                               }}
                             />
                           ))}
-                          {!(selectedModule.lessons?.length) && (
+                          {!selectedModule.lessons?.length && (
                             <p className="text-xs text-gray-400 py-2 text-center">
                               Sin lecciones — agrega una
                             </p>
@@ -532,6 +541,7 @@ const CourseEditorPage: React.FC = () => {
                     onChange={(value) => setSelectedLessonContent(value)}
                     height={500}
                     placeholder="Selecciona una leccion para editar su contenido..."
+                    onImageUpload={selectedLessonId ? handleImageUpload : undefined}
                   />
                 </div>
               </div>

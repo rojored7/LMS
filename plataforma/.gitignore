@@ -28,6 +28,7 @@ out/
 .env.*.local
 .env.production
 .env.test
+.env.pipeline
 *.pem
 *.key
 credentials.json
