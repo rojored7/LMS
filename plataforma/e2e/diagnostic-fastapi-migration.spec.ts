@@ -426,7 +426,7 @@ test.describe('FastAPI Migration Diagnostic', () => {
       timeout: 10000,
     }).catch(() => null);
 
-    await page.locator('button[type="submit"]').click();
+    await page.locator('button[type="submit"]').first().click();
 
     const res = await responsePromise;
     if (res) {
@@ -483,7 +483,7 @@ test.describe('FastAPI Migration Diagnostic', () => {
 
     await emailInput.fill(email);
     await page.locator('input[name="password"], input[type="password"]').first().fill('testpass123');
-    await page.locator('button[type="submit"]').click();
+    await page.locator('button[type="submit"]').first().click();
 
     await page.waitForTimeout(3000);
     const urlAfterLogin = page.url();
