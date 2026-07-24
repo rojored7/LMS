@@ -27,7 +27,7 @@ MOCK_LDAP_CONFIG = {
 
 @pytest.mark.asyncio
 async def test_ldap_disabled_does_not_call_bind() -> None:
-    """Cuando LDAP_ENABLED=False, authenticate_and_sync falla antes de llamar a _bind_user."""
+    """Cuando no hay config LDAP en DB, authenticate_and_sync falla antes de llamar a _bind_user."""
     svc = LdapService()
     bind_called = []
 
@@ -35,10 +35,7 @@ async def test_ldap_disabled_does_not_call_bind() -> None:
         bind_called.append(True)
         return None
 
-    mock_settings = MagicMock()
-    mock_settings.LDAP_ENABLED = False
-
-    with patch("app.services.ldap_service.get_settings", return_value=mock_settings), \
+    with patch("app.services.ldap_config_service.LdapConfigService.ldap_is_configured", new_callable=AsyncMock, return_value=False), \
          patch("app.services.ldap_service.asyncio") as mock_asyncio:
         mock_asyncio.to_thread = fake_to_thread
 
@@ -46,7 +43,7 @@ async def test_ldap_disabled_does_not_call_bind() -> None:
         with pytest.raises(ValidationError, match="LDAP no esta habilitado"):
             await svc.authenticate_and_sync("user", "pass", MagicMock(), MagicMock())
 
-    assert not bind_called, "asyncio.to_thread fue llamado a pesar de LDAP_ENABLED=False"
+    assert not bind_called, "asyncio.to_thread fue llamado cuando LDAP no esta configurado"
 
 
 @pytest.mark.asyncio
@@ -57,13 +54,7 @@ async def test_ldap_bind_uses_asyncio_to_thread() -> None:
     async def fake_to_thread(func, *args, **kwargs):
         return None
 
-    mock_settings = MagicMock()
-    mock_settings.LDAP_ENABLED = True
-    mock_settings.MAX_SESSIONS_PER_USER = 5
-    mock_settings.JWT_REFRESH_EXPIRES_IN_DAYS = 7
-    mock_settings.JWT_EXPIRES_IN_MINUTES = 15
-
-    with patch("app.services.ldap_service.get_settings", return_value=mock_settings), \
+    with patch("app.services.ldap_config_service.LdapConfigService.ldap_is_configured", new_callable=AsyncMock, return_value=True), \
          patch("app.services.ldap_config_service.LdapConfigService.get_config", new_callable=AsyncMock, return_value=MOCK_LDAP_CONFIG), \
          patch("app.services.ldap_service.asyncio") as mock_asyncio:
         mock_asyncio.to_thread = AsyncMock(side_effect=fake_to_thread)
@@ -89,15 +80,9 @@ async def test_ldap_escape_filter_chars_applied_to_username() -> None:
         received_safe_username["value"] = safe_username
         return None
 
-    mock_settings = MagicMock()
-    mock_settings.LDAP_ENABLED = True
-    mock_settings.MAX_SESSIONS_PER_USER = 5
-    mock_settings.JWT_REFRESH_EXPIRES_IN_DAYS = 7
-    mock_settings.JWT_EXPIRES_IN_MINUTES = 15
-
     malicious_username = "admin)(|(uid=*"
 
-    with patch("app.services.ldap_service.get_settings", return_value=mock_settings), \
+    with patch("app.services.ldap_config_service.LdapConfigService.ldap_is_configured", new_callable=AsyncMock, return_value=True), \
          patch("app.services.ldap_config_service.LdapConfigService.get_config", new_callable=AsyncMock, return_value=MOCK_LDAP_CONFIG), \
          patch("app.services.ldap_service.asyncio") as mock_asyncio:
         mock_asyncio.to_thread = AsyncMock(side_effect=fake_to_thread)

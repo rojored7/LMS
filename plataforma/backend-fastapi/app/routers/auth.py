@@ -30,8 +30,10 @@ settings = get_settings()
 
 
 @router.get("/providers")
-async def get_auth_providers():
-    providers = {"local": True, "ldap": settings.LDAP_ENABLED}
+async def get_auth_providers(db: AsyncSession = Depends(get_db)):
+    from app.services.ldap_config_service import LdapConfigService
+    ldap_active = await LdapConfigService.ldap_is_configured(db)
+    providers = {"local": True, "ldap": ldap_active}
     if settings.OAUTH_ENABLED and settings.GOOGLE_CLIENT_ID:
         providers["google"] = True
     else:
@@ -358,7 +360,8 @@ async def login_ldap(
     db: AsyncSession = Depends(get_db),
     token_service: TokenService = Depends(get_token_service),
 ):
-    if not settings.LDAP_ENABLED:
+    from app.services.ldap_config_service import LdapConfigService
+    if not await LdapConfigService.ldap_is_configured(db):
         from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="LDAP no habilitado")
 

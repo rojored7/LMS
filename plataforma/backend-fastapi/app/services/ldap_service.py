@@ -119,11 +119,11 @@ class LdapService:
         db: AsyncSession,
         token_service: TokenService,
     ) -> dict:
-        settings = get_settings()
-        if not settings.LDAP_ENABLED:
+        from app.services.ldap_config_service import LdapConfigService
+        if not await LdapConfigService.ldap_is_configured(db):
             raise ValidationError("LDAP no esta habilitado")
 
-        from app.services.ldap_config_service import LdapConfigService
+        settings = get_settings()
         config = await LdapConfigService().get_config(db)
 
         safe_username = escape_filter_chars(username)

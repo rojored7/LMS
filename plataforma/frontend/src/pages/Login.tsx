@@ -8,21 +8,27 @@ import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
 import { Card, CardBody, CardHeader } from '../components/common/Card';
 import { useAuth } from '../hooks/useAuth';
+import { useAuthStore } from '../store/authStore';
 import { useToast } from '../hooks/useToast';
 import { loginSchema } from '../utils/validators';
 import { ROUTES, API_URL } from '../utils/constants';
-import { getAuthProviders } from '../services/auth.service';
+import { getAuthProviders, loginLdap } from '../services/auth.service';
 
 export const Login: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { login, isAuthenticated, error: authError, clearError } = useAuth();
+  const { setUser } = useAuthStore();
   const toast = useToast();
 
   const [formData, setFormData] = useState({
     email: '',
     password: '',
   });
+
+  const [ldapUsername, setLdapUsername] = useState('');
+  const [ldapPassword, setLdapPassword] = useState('');
+  const [isLdapLoading, setIsLdapLoading] = useState(false);
 
   const [searchParams] = useSearchParams();
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -120,6 +126,30 @@ export const Login: React.FC = () => {
       setErrors({ general: errorMessage });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleLdapLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLdapLoading(true);
+    try {
+      const response = await loginLdap(ldapUsername, ldapPassword);
+      const raw = response.user as any;
+      const name = raw.name || '';
+      const spaceIndex = name.indexOf(' ');
+      setUser({
+        ...raw,
+        name,
+        firstName: spaceIndex === -1 ? name : name.substring(0, spaceIndex),
+        lastName: spaceIndex === -1 ? '' : name.substring(spaceIndex + 1),
+        isActive: true,
+      });
+      toast.success('Sesion iniciada correctamente');
+    } catch (error: any) {
+      const msg = error?.error?.message || 'Credenciales LDAP invalidas';
+      toast.error(msg);
+    } finally {
+      setIsLdapLoading(false);
     }
   };
 
@@ -313,6 +343,61 @@ export const Login: React.FC = () => {
                   </svg>
                   Google
                 </a>
+              </>
+            )}
+            {/* LDAP login */}
+            {providers.ldap && (
+              <>
+                <div className="relative my-4">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-gray-300" />
+                  </div>
+                  <div className="relative flex justify-center text-sm">
+                    <span className="px-2 bg-white text-gray-500">o inicia sesion con LDAP</span>
+                  </div>
+                </div>
+
+                <form onSubmit={handleLdapLogin} className="space-y-3">
+                  <Input
+                    type="text"
+                    name="ldapUsername"
+                    label="Usuario LDAP"
+                    placeholder="nombre.usuario"
+                    value={ldapUsername}
+                    onChange={(e) => setLdapUsername(e.target.value)}
+                    required
+                    autoComplete="username"
+                    leftIcon={
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                    }
+                  />
+                  <Input
+                    type="password"
+                    name="ldapPassword"
+                    label="Contrasena LDAP"
+                    placeholder="••••••••"
+                    value={ldapPassword}
+                    onChange={(e) => setLdapPassword(e.target.value)}
+                    required
+                    autoComplete="current-password"
+                    leftIcon={
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                      </svg>
+                    }
+                  />
+                  <Button
+                    type="submit"
+                    variant="secondary"
+                    size="lg"
+                    isLoading={isLdapLoading}
+                    className="w-full"
+                  >
+                    Entrar con LDAP
+                  </Button>
+                </form>
               </>
             )}
           </CardBody>

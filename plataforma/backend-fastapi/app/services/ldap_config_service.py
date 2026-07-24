@@ -129,6 +129,15 @@ class LdapConfigService:
         await db.refresh(row)
         return _row_to_dict(row)
 
+    @staticmethod
+    async def ldap_is_configured(db: AsyncSession) -> bool:
+        """Retorna True si hay config LDAP en DB con server_url no vacio."""
+        try:
+            config = await LdapConfigService().get_config(db)
+            return bool(config.get("server_url"))
+        except Exception:
+            return False
+
     def test_connection(self, config: dict) -> dict:
         """Prueba la conexion LDAP sin guardar. Debe ser llamado via asyncio.to_thread."""
         try:
