@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.middleware.error_handler import ConflictError, NotFoundError
-from app.models.course import CourseProfile
+from app.models.course import Course, CourseProfile
 from app.models.user import TrainingProfile
 
 logger = structlog.get_logger()
@@ -18,7 +18,7 @@ class TrainingProfileService:
         result = await self.db.execute(
             select(TrainingProfile)
             .where(TrainingProfile.id == profile_id)
-            .options(selectinload(TrainingProfile.course_profiles))
+            .options(selectinload(TrainingProfile.course_profiles).selectinload(CourseProfile.course))
         )
         profile = result.scalar_one_or_none()
         if not profile:
@@ -29,7 +29,7 @@ class TrainingProfileService:
         result = await self.db.execute(
             select(TrainingProfile)
             .where(TrainingProfile.slug == slug)
-            .options(selectinload(TrainingProfile.course_profiles))
+            .options(selectinload(TrainingProfile.course_profiles).selectinload(CourseProfile.course))
         )
         profile = result.scalar_one_or_none()
         if not profile:
@@ -38,7 +38,7 @@ class TrainingProfileService:
 
     async def list_profiles(self) -> list[TrainingProfile]:
         result = await self.db.execute(
-            select(TrainingProfile).options(selectinload(TrainingProfile.course_profiles))
+            select(TrainingProfile).options(selectinload(TrainingProfile.course_profiles).selectinload(CourseProfile.course))
         )
         return list(result.scalars().unique().all())
 
@@ -96,4 +96,33 @@ class TrainingProfileService:
         if not cp:
             raise NotFoundError("Relacion curso-perfil no encontrada")
         await self.db.delete(cp)
+        await self.db.flush()
+
+    async def update_course(self, profile_id: str, course_id: str, data: dict) -> CourseProfile:
+        result = await self.db.execute(
+            select(CourseProfile).where(
+                CourseProfile.profile_id == profile_id,
+                CourseProfile.course_id == course_id,
+            )
+        )
+        cp = result.scalar_one_or_none()
+        if not cp:
+            raise NotFoundError("Relacion curso-perfil no encontrada")
+        for key, value in data.items():
+            if hasattr(cp, key):
+                setattr(cp, key, value)
+        await self.db.flush()
+        return cp
+
+    async def reorder_courses(self, profile_id: str, courses: list[dict]) -> None:
+        for item in courses:
+            result = await self.db.execute(
+                select(CourseProfile).where(
+                    CourseProfile.profile_id == profile_id,
+                    CourseProfile.course_id == item["course_id"],
+                )
+            )
+            cp = result.scalar_one_or_none()
+            if cp:
+                cp.order = item["order"]
         await self.db.flush()

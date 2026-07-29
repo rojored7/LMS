@@ -1,83 +1,52 @@
-/**
- * TrainingProfiles Page
- * Manage training profiles (admin only)
- */
-
-import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, BookOpen, Users } from 'lucide-react';
+import React, { useState } from 'react';
+import { Plus, Edit, Trash2, BookOpen, ListOrdered } from 'lucide-react';
 import { Button } from '../components/common/Button';
 import { Modal } from '../components/common/Modal';
 import { TrainingProfileForm } from '../components/admin/TrainingProfileForm';
-import { useToast } from '../hooks/useToast';
-import trainingProfileService, {
-  type TrainingProfile,
+import { ProfileCoursesPanel } from '../components/admin/ProfileCoursesPanel';
+import {
+  useProfiles,
+  useCreateProfile,
+  useUpdateProfile,
+  useDeleteProfile,
+} from '../hooks/useTrainingProfiles';
+import { useCourses } from '../hooks/useCourses';
+import type {
+  TrainingProfile,
+  CreateTrainingProfileRequest,
 } from '../services/api/trainingProfile.service';
-import courseService from '../services/course.service';
 
 export const TrainingProfiles: React.FC = () => {
-  const toast = useToast();
+  const { data: profiles = [], isLoading } = useProfiles();
+  const { data: coursesResponse } = useCourses({ page: 1, limit: 100 });
+  const availableCourses = (coursesResponse as any)?.courses || [];
 
-  const [profiles, setProfiles] = useState<TrainingProfile[]>([]);
-  const [availableCourses, setAvailableCourses] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [modalState, setModalState] = useState<{
+  const createProfile = useCreateProfile();
+  const updateProfile = useUpdateProfile();
+  const deleteProfile = useDeleteProfile();
+
+  const [profileModal, setProfileModal] = useState<{
     isOpen: boolean;
     profile: TrainingProfile | null;
   }>({ isOpen: false, profile: null });
-  const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  const [coursesModal, setCoursesModal] = useState<{
+    isOpen: boolean;
+    profile: TrainingProfile | null;
+  }>({ isOpen: false, profile: null });
 
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      const [profilesData, coursesResponse] = await Promise.all([
-        trainingProfileService.getAllProfiles(),
-        courseService.getCourses({ page: 1, limit: 100 }),
-      ]);
-
-      setProfiles(profilesData);
-      setAvailableCourses(coursesResponse.data?.courses || []);
-    } catch (err: any) {
-      toast.error('Error al cargar datos');
-    } finally {
-      setLoading(false);
+  const handleSubmit = async (data: CreateTrainingProfileRequest) => {
+    if (profileModal.profile) {
+      await updateProfile.mutateAsync({ profileId: profileModal.profile.id, data });
+    } else {
+      await createProfile.mutateAsync(data);
     }
-  };
-
-  const handleSubmit = async (data: any) => {
-    try {
-      setSubmitting(true);
-      if (modalState.profile) {
-        await trainingProfileService.updateProfile(modalState.profile.id, data);
-        toast.success('Perfil actualizado correctamente');
-      } else {
-        await trainingProfileService.createProfile(data);
-        toast.success('Perfil creado correctamente');
-      }
-
-      setModalState({ isOpen: false, profile: null });
-      loadData();
-    } catch (err: any) {
-      toast.error(err?.error?.message || 'Error al guardar perfil');
-      throw err;
-    } finally {
-      setSubmitting(false);
-    }
+    setProfileModal({ isOpen: false, profile: null });
   };
 
   const handleDelete = async (profileId: string) => {
-    if (!confirm('¿Eliminar este perfil? Esta acción no se puede deshacer.')) return;
-
-    try {
-      await trainingProfileService.deleteProfile(profileId);
-      toast.success('Perfil eliminado correctamente');
-      loadData();
-    } catch (err: any) {
-      toast.error(err?.error?.message || 'Error al eliminar perfil');
-    }
+    if (!confirm('Eliminar este perfil? Esta accion no se puede deshacer.')) return;
+    await deleteProfile.mutateAsync(profileId);
   };
 
   return (
@@ -96,14 +65,14 @@ export const TrainingProfiles: React.FC = () => {
         <Button
           variant="primary"
           leftIcon={<Plus className="w-5 h-5" />}
-          onClick={() => setModalState({ isOpen: true, profile: null })}
+          onClick={() => setProfileModal({ isOpen: true, profile: null })}
         >
           Crear Perfil
         </Button>
       </div>
 
       {/* Profiles Grid */}
-      {loading ? (
+      {isLoading ? (
         <div className="text-center py-12">
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
         </div>
@@ -120,18 +89,35 @@ export const TrainingProfiles: React.FC = () => {
             >
               {/* Header */}
               <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-1">
-                    {profile.name}
-                  </h3>
-                  <code className="text-xs text-gray-500 dark:text-gray-400">{profile.slug}</code>
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  {profile.color && (
+                    <div
+                      className="w-8 h-8 rounded-full flex-shrink-0 border border-gray-200 dark:border-gray-700"
+                      style={{ backgroundColor: profile.color }}
+                    />
+                  )}
+                  <div className="min-w-0">
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-1 truncate">
+                      {profile.name}
+                    </h3>
+                    <code className="text-xs text-gray-500 dark:text-gray-400">{profile.slug}</code>
+                  </div>
                 </div>
 
-                <div className="flex gap-2">
+                <div className="flex gap-1 flex-shrink-0">
                   <button
-                    onClick={() => setModalState({ isOpen: true, profile })}
+                    onClick={() => setCoursesModal({ isOpen: true, profile })}
+                    className="p-2 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded transition-colors"
+                    title="Gestionar cursos"
+                    aria-label="Gestionar cursos"
+                  >
+                    <ListOrdered className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setProfileModal({ isOpen: true, profile })}
                     className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
                     title="Editar"
+                    aria-label="Editar perfil"
                   >
                     <Edit className="w-4 h-4" />
                   </button>
@@ -139,6 +125,7 @@ export const TrainingProfiles: React.FC = () => {
                     onClick={() => handleDelete(profile.id)}
                     className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
                     title="Eliminar"
+                    aria-label="Eliminar perfil"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -151,14 +138,10 @@ export const TrainingProfiles: React.FC = () => {
               </p>
 
               {/* Stats */}
-              <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
+              <div className="flex items-center pt-4 border-t border-gray-200 dark:border-gray-700">
                 <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                   <BookOpen className="w-4 h-4" />
-                  <span>{profile._count?.courses || 0} cursos</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                  <Users className="w-4 h-4" />
-                  <span>{profile._count?.users || 0} usuarios</span>
+                  <span>{profile.courses?.length || 0} cursos</span>
                 </div>
               </div>
             </div>
@@ -166,21 +149,36 @@ export const TrainingProfiles: React.FC = () => {
         </div>
       )}
 
-      {/* Create/Edit Modal */}
+      {/* Create/Edit Profile Modal */}
       <Modal
-        isOpen={modalState.isOpen}
-        onClose={() => setModalState({ isOpen: false, profile: null })}
-        title={modalState.profile ? 'Editar Perfil' : 'Crear Perfil'}
+        isOpen={profileModal.isOpen}
+        onClose={() => setProfileModal({ isOpen: false, profile: null })}
+        title={profileModal.profile ? 'Editar Perfil' : 'Crear Perfil'}
         size="lg"
       >
         <TrainingProfileForm
-          profile={modalState.profile}
-          availableCourses={availableCourses}
+          profile={profileModal.profile}
           onSubmit={handleSubmit}
-          onCancel={() => setModalState({ isOpen: false, profile: null })}
-          isLoading={submitting}
+          onCancel={() => setProfileModal({ isOpen: false, profile: null })}
+          isLoading={createProfile.isPending || updateProfile.isPending}
         />
       </Modal>
+
+      {/* Manage Courses Modal */}
+      {coursesModal.profile && (
+        <Modal
+          isOpen={coursesModal.isOpen}
+          onClose={() => setCoursesModal({ isOpen: false, profile: null })}
+          title={`Gestionar cursos — ${coursesModal.profile.name}`}
+          size="xl"
+        >
+          <ProfileCoursesPanel
+            profile={coursesModal.profile}
+            availableCourses={availableCourses}
+            onClose={() => setCoursesModal({ isOpen: false, profile: null })}
+          />
+        </Modal>
+      )}
     </div>
   );
 };

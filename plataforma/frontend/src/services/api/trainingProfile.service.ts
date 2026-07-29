@@ -10,13 +10,17 @@ export interface TrainingProfile {
   name: string;
   slug: string;
   description: string;
+  icon?: string | null;
+  color?: string | null;
   createdAt: string;
-  updatedAt: string;
+  updatedAt?: string;
   courses?: Array<{
     id: string;
     title: string;
     slug: string;
     level: string;
+    order: number;
+    required: boolean;
   }>;
   _count?: {
     users: number;
@@ -28,10 +32,16 @@ export interface CreateTrainingProfileRequest {
   name: string;
   slug: string;
   description: string;
-  courseIds?: string[];
+  icon?: string | null;
+  color?: string | null;
 }
 
 export interface UpdateTrainingProfileRequest extends Partial<CreateTrainingProfileRequest> {}
+
+export interface CourseOrderItem {
+  courseId: string;
+  order: number;
+}
 
 /**
  * Get all training profiles
@@ -43,7 +53,6 @@ export const getAllProfiles = async (): Promise<TrainingProfile[]> => {
 
 /**
  * Get training profile by ID
- * @param profileId - Profile ID
  */
 export const getProfileById = async (profileId: string): Promise<TrainingProfile> => {
   const response = await api.get(`/training-profiles/${profileId}`);
@@ -52,7 +61,6 @@ export const getProfileById = async (profileId: string): Promise<TrainingProfile
 
 /**
  * Create a new training profile
- * @param profile - Profile data
  */
 export const createProfile = async (
   profile: CreateTrainingProfileRequest
@@ -63,8 +71,6 @@ export const createProfile = async (
 
 /**
  * Update a training profile
- * @param profileId - Profile ID
- * @param profile - Profile data to update
  */
 export const updateProfile = async (
   profileId: string,
@@ -76,7 +82,6 @@ export const updateProfile = async (
 
 /**
  * Delete a training profile
- * @param profileId - Profile ID
  */
 export const deleteProfile = async (profileId: string): Promise<void> => {
   await api.delete(`/training-profiles/${profileId}`);
@@ -84,27 +89,52 @@ export const deleteProfile = async (profileId: string): Promise<void> => {
 
 /**
  * Add course to training profile
- * @param profileId - Profile ID
- * @param courseId - Course ID
+ * NOTE: Backend expects snake_case (course_id, not courseId)
  */
 export const addCourseToProfile = async (
   profileId: string,
-  courseId: string
+  courseId: string,
+  order: number = 0
 ): Promise<TrainingProfile> => {
-  const response = await api.post(`/training-profiles/${profileId}/courses`, { courseId });
+  const response = await api.post(`/training-profiles/${profileId}/courses`, {
+    course_id: courseId,
+    order,
+  });
   return response.data;
 };
 
 /**
  * Remove course from training profile
- * @param profileId - Profile ID
- * @param courseId - Course ID
  */
 export const removeCourseFromProfile = async (
   profileId: string,
   courseId: string
 ): Promise<void> => {
   await api.delete(`/training-profiles/${profileId}/courses/${courseId}`);
+};
+
+/**
+ * Update order and/or required flag of a course within a profile
+ */
+export const updateCourseInProfile = async (
+  profileId: string,
+  courseId: string,
+  data: { order?: number; required?: boolean }
+): Promise<void> => {
+  await api.patch(`/training-profiles/${profileId}/courses/${courseId}`, data);
+};
+
+/**
+ * Reorder courses in a profile in bulk (drag-and-drop)
+ * NOTE: Backend expects snake_case (course_id)
+ */
+export const reorderCourses = async (
+  profileId: string,
+  courses: CourseOrderItem[]
+): Promise<void> => {
+  await api.patch(`/training-profiles/${profileId}/courses/reorder`, {
+    courses: courses.map((c) => ({ course_id: c.courseId, order: c.order })),
+  });
 };
 
 export default {
@@ -115,4 +145,6 @@ export default {
   deleteProfile,
   addCourseToProfile,
   removeCourseFromProfile,
+  updateCourseInProfile,
+  reorderCourses,
 };
