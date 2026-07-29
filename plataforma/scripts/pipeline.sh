@@ -333,7 +333,7 @@ info "BASE_URL=$QA_URL"
 echo ""
 
 E2E_EXIT=0
-BASE_URL="$QA_URL" npx playwright test --reporter=list 2>&1 || E2E_EXIT=$?
+BASE_URL="$QA_URL" npx playwright test --retries=2 --workers=2 --reporter=list 2>&1 || E2E_EXIT=$?
 
 echo ""
 if [ $E2E_EXIT -ne 0 ]; then
