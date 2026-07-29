@@ -19,7 +19,7 @@ import type {
 export const TrainingProfiles: React.FC = () => {
   const { data: profiles = [], isLoading } = useProfiles();
   const { data: coursesResponse } = useCourses({ page: 1, limit: 100 });
-  const availableCourses = (coursesResponse as any)?.courses || [];
+  const availableCourses = (coursesResponse as any)?.data || [];
 
   const createProfile = useCreateProfile();
   const updateProfile = useUpdateProfile();
