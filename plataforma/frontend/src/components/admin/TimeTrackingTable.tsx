@@ -92,24 +92,24 @@ export const TimeTrackingTable: React.FC = () => {
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-900">
               <tr>
-                <th className="w-8 px-4 py-3" />
+                <th className="w-8 px-4 py-2" />
                 <th
-                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer select-none"
+                  className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer select-none"
                   onClick={() => handleSort('userName')}
                 >
                   Usuario <SortIcon k="userName" />
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Email
                 </th>
                 <th
-                  className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer select-none"
+                  className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer select-none"
                   onClick={() => handleSort('totalTimeSeconds')}
                 >
                   Tiempo total <SortIcon k="totalTimeSeconds" />
                 </th>
                 <th
-                  className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer select-none"
+                  className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer select-none"
                   onClick={() => handleSort('lessonsCompleted')}
                 >
                   Lecciones <SortIcon k="lessonsCompleted" />
@@ -141,31 +141,31 @@ export const TimeTrackingTable: React.FC = () => {
                         }
                       }}
                     >
-                      <td className="px-4 py-3 text-gray-400">
+                      <td className="px-4 py-2 text-gray-400">
                         {isOpen ? (
                           <ChevronDown className="w-4 h-4" />
                         ) : (
                           <ChevronRight className="w-4 h-4" />
                         )}
                       </td>
-                      <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">
+                      <td className="px-4 py-2 font-medium text-gray-900 dark:text-white">
                         {user.userName}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-500">{user.userEmail}</td>
-                      <td className="px-4 py-3 text-right font-mono text-sm text-gray-900 dark:text-white">
+                      <td className="px-4 py-2 text-sm text-gray-500">{user.userEmail}</td>
+                      <td className="px-4 py-2 text-right font-mono text-sm text-gray-900 dark:text-white">
                         {formatSeconds(user.totalTimeSeconds)}
                       </td>
-                      <td className="px-4 py-3 text-right text-sm text-gray-900 dark:text-white">
+                      <td className="px-4 py-2 text-right text-sm text-gray-900 dark:text-white">
                         {totalLessons}
                       </td>
                     </tr>
 
                     {isOpen && (
                       <tr>
-                        <td colSpan={5} className="px-4 py-4 bg-gray-50 dark:bg-gray-900">
+                        <td colSpan={5} className="px-4 py-2 bg-gray-50 dark:bg-gray-900">
                           {/* Course tabs */}
                           {user.courseBreakdown.length > 1 && (
-                            <div className="flex gap-2 mb-3 flex-wrap">
+                            <div className="flex gap-2 mb-2 flex-wrap">
                               {user.courseBreakdown.map((c) => (
                                 <button
                                   key={c.courseId}
@@ -196,22 +196,22 @@ export const TimeTrackingTable: React.FC = () => {
                             );
                             if (!course) return null;
                             return (
-                              <div className="grid grid-cols-3 gap-4 mb-4 text-center">
-                                <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200">
+                              <div className="grid grid-cols-3 gap-2 mb-2 text-center">
+                                <div className="bg-white dark:bg-gray-800 rounded-lg p-2 border border-gray-200">
                                   <p className="text-xs text-gray-500">Tiempo en curso</p>
-                                  <p className="font-bold text-gray-900 dark:text-white mt-1">
+                                  <p className="font-bold text-gray-900 dark:text-white">
                                     {formatSeconds(course.timeSeconds)}
                                   </p>
                                 </div>
-                                <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200">
+                                <div className="bg-white dark:bg-gray-800 rounded-lg p-2 border border-gray-200">
                                   <p className="text-xs text-gray-500">Lecciones completadas</p>
-                                  <p className="font-bold text-gray-900 dark:text-white mt-1">
+                                  <p className="font-bold text-gray-900 dark:text-white">
                                     {course.lessonsCompleted}
                                   </p>
                                 </div>
-                                <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200">
+                                <div className="bg-white dark:bg-gray-800 rounded-lg p-2 border border-gray-200">
                                   <p className="text-xs text-gray-500">Prom por leccion</p>
-                                  <p className="font-bold text-gray-900 dark:text-white mt-1">
+                                  <p className="font-bold text-gray-900 dark:text-white">
                                     {formatSeconds(course.avgTimePerLessonSeconds)}
                                   </p>
                                 </div>
@@ -243,7 +243,7 @@ export const TimeTrackingTable: React.FC = () => {
           <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">
             Tiempo promedio por leccion (minutos) — todos los usuarios
           </h3>
-          <ResponsiveContainer width="100%" height={220}>
+          <ResponsiveContainer width="100%" height={160}>
             <BarChart data={chartData} layout="vertical" margin={{ left: 8, right: 24 }}>
               <CartesianGrid strokeDasharray="3 3" horizontal={false} />
               <XAxis type="number" unit="m" tick={{ fontSize: 11 }} />

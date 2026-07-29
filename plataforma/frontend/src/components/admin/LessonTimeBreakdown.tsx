@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 import { useUserCourseLessonTimes } from '../../hooks/useAnalytics';
 import { LoadingSpinner } from '../common/LoadingSpinner';
 import { cn } from '../../utils/cn';
@@ -26,6 +27,7 @@ const classificationConfig = {
 
 export const LessonTimeBreakdown: React.FC<LessonTimeBreakdownProps> = ({ userId, courseId }) => {
   const { data: lessons = [], isLoading } = useUserCourseLessonTimes(userId, courseId);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   if (isLoading) {
     return (
@@ -43,69 +45,92 @@ export const LessonTimeBreakdown: React.FC<LessonTimeBreakdownProps> = ({ userId
     );
   }
 
+  const totalSeconds = lessons.reduce((sum, l) => sum + l.realTimeSeconds, 0);
+
   return (
-    <div className="overflow-x-auto">
-      <table className="min-w-full text-sm">
-        <thead>
-          <tr className="text-left text-xs text-gray-500 uppercase tracking-wide border-b border-gray-200">
-            <th className="pb-2 pr-4">Leccion</th>
-            <th className="pb-2 pr-4 text-right">Tiempo real</th>
-            <th className="pb-2 pr-4 text-right">Tiempo estimado</th>
-            <th className="pb-2 pr-4 text-center">Ratio</th>
-            <th className="pb-2">Patron</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-100">
-          {lessons.map((lesson) => {
-            const config =
-              classificationConfig[lesson.classification] ?? classificationConfig.on_track;
-            const ratioPercent = Math.round(lesson.ratio * 100);
-            const barWidth = Math.min(ratioPercent, 200);
-            return (
-              <tr key={lesson.lessonId} className="hover:bg-gray-50">
-                <td className="py-2 pr-4 max-w-xs">
-                  <span className="truncate block" title={lesson.lessonTitle}>
-                    {lesson.lessonTitle}
-                  </span>
-                </td>
-                <td className="py-2 pr-4 text-right font-mono">
-                  {formatSeconds(lesson.realTimeSeconds)}
-                </td>
-                <td className="py-2 pr-4 text-right font-mono text-gray-500">
-                  {lesson.estimatedTimeSeconds > 0
-                    ? formatSeconds(lesson.estimatedTimeSeconds)
-                    : '-'}
-                </td>
-                <td className="py-2 pr-4">
-                  <div className="flex items-center justify-center gap-2">
-                    <div className="w-20 h-2 bg-gray-200 rounded-full overflow-hidden">
-                      <div
-                        className={cn(
-                          'h-full rounded-full',
-                          lesson.classification === 'deep_read'
-                            ? 'bg-blue-400'
-                            : lesson.classification === 'skimming'
-                              ? 'bg-yellow-400'
-                              : 'bg-green-400'
-                        )}
-                        style={{ width: `${Math.min(barWidth / 2, 100)}%` }}
-                      />
-                    </div>
-                    <span className="text-xs text-gray-600 w-10 text-right">{ratioPercent}%</span>
-                  </div>
-                </td>
-                <td className="py-2">
-                  <span
-                    className={cn('px-2 py-0.5 rounded-full text-xs font-medium', config.className)}
-                  >
-                    {config.label}
-                  </span>
-                </td>
+    <div>
+      <button
+        type="button"
+        onClick={() => setIsExpanded((prev) => !prev)}
+        className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors py-1"
+      >
+        {isExpanded ? (
+          <ChevronDown className="w-4 h-4 flex-shrink-0" />
+        ) : (
+          <ChevronRight className="w-4 h-4 flex-shrink-0" />
+        )}
+        <span>
+          {isExpanded ? 'Ocultar lecciones' : `Ver ${lessons.length} lecciones`}
+        </span>
+        <span className="text-gray-400 text-xs">|</span>
+        <span className="text-xs text-gray-500">Total: {formatSeconds(totalSeconds)}</span>
+      </button>
+
+      {isExpanded && (
+        <div className="overflow-x-auto mt-2">
+          <table className="min-w-full text-sm">
+            <thead>
+              <tr className="text-left text-xs text-gray-500 uppercase tracking-wide border-b border-gray-200">
+                <th className="pb-1 pr-4">Leccion</th>
+                <th className="pb-1 pr-4 text-right">Tiempo real</th>
+                <th className="pb-1 pr-4 text-right">Tiempo estimado</th>
+                <th className="pb-1 pr-4 text-center">Ratio</th>
+                <th className="pb-1">Patron</th>
               </tr>
-            );
-          })}
-        </tbody>
-      </table>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {lessons.map((lesson) => {
+                const config =
+                  classificationConfig[lesson.classification] ?? classificationConfig.on_track;
+                const ratioPercent = Math.round(lesson.ratio * 100);
+                const barWidth = Math.min(ratioPercent, 200);
+                return (
+                  <tr key={lesson.lessonId} className="hover:bg-gray-50">
+                    <td className="py-1 pr-4 max-w-xs">
+                      <span className="truncate block" title={lesson.lessonTitle}>
+                        {lesson.lessonTitle}
+                      </span>
+                    </td>
+                    <td className="py-1 pr-4 text-right font-mono">
+                      {formatSeconds(lesson.realTimeSeconds)}
+                    </td>
+                    <td className="py-1 pr-4 text-right font-mono text-gray-500">
+                      {lesson.estimatedTimeSeconds > 0
+                        ? formatSeconds(lesson.estimatedTimeSeconds)
+                        : '-'}
+                    </td>
+                    <td className="py-1 pr-4">
+                      <div className="flex items-center justify-center gap-2">
+                        <div className="w-20 h-2 bg-gray-200 rounded-full overflow-hidden">
+                          <div
+                            className={cn(
+                              'h-full rounded-full',
+                              lesson.classification === 'deep_read'
+                                ? 'bg-blue-400'
+                                : lesson.classification === 'skimming'
+                                  ? 'bg-yellow-400'
+                                  : 'bg-green-400'
+                            )}
+                            style={{ width: `${Math.min(barWidth / 2, 100)}%` }}
+                          />
+                        </div>
+                        <span className="text-xs text-gray-600 w-10 text-right">{ratioPercent}%</span>
+                      </div>
+                    </td>
+                    <td className="py-1">
+                      <span
+                        className={cn('px-2 py-0.5 rounded-full text-xs font-medium', config.className)}
+                      >
+                        {config.label}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 };
