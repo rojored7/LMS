@@ -173,7 +173,7 @@ export const TrainingProfiles: React.FC = () => {
           size="xl"
         >
           <ProfileCoursesPanel
-            profile={coursesModal.profile}
+            profile={profiles.find((p) => p.id === coursesModal.profile!.id) ?? coursesModal.profile}
             availableCourses={availableCourses}
             onClose={() => setCoursesModal({ isOpen: false, profile: null })}
           />
