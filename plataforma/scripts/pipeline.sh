@@ -110,7 +110,7 @@ else
     log "Backend OK"
 
     info "Construyendo frontend..."
-    docker build \
+    MSYS_NO_PATHCONV=1 docker build \
         --target production \
         --build-arg VITE_API_URL="/api" \
         --build-arg VITE_EXECUTOR_URL="/executor" \
