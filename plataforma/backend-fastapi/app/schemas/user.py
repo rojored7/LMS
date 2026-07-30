@@ -98,6 +98,30 @@ class LabSubmitRequest(BaseModel):
         return v
 
 
+class AreaResponse(CamelModel):
+    id: str
+    name: str
+    description: str | None = None
+    color: str | None = None
+    created_at: datetime
+
+
+class CreateAreaRequest(CamelModel):
+    name: str = Field(min_length=2, max_length=100)
+    description: str | None = None
+    color: str | None = Field(default=None, max_length=7)
+
+
+class UpdateAreaRequest(CamelModel):
+    name: str | None = Field(default=None, min_length=2, max_length=100)
+    description: str | None = None
+    color: str | None = Field(default=None, max_length=7)
+
+
+class AssignAreaRequest(CamelModel):
+    area_id: str | None = None
+
+
 class UserResponse(CamelModel):
     id: str
     email: str
@@ -109,6 +133,8 @@ class UserResponse(CamelModel):
     locale: str = "es"
     created_at: datetime
     last_login_at: datetime | None = None
+    area_id: str | None = None
+    area: AreaResponse | None = None
 
 
 class BadgeResponse(CamelModel):

@@ -1,9 +1,10 @@
 from sqlalchemy import func, select
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 import structlog
 
 from app.middleware.error_handler import AuthorizationError, NotFoundError
-from app.models.user import User, UserRole
+from app.models.user import Area, User, UserRole
 from app.utils.security import hash_password, verify_password
 from app.utils.query_utils import escape_like
 
@@ -14,8 +15,8 @@ class UserService:
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
 
-    async def get_all_users(self, page: int = 1, limit: int = 20, role: str | None = None, search: str | None = None) -> tuple[list[User], int]:
-        query = select(User)
+    async def get_all_users(self, page: int = 1, limit: int = 20, role: str | None = None, search: str | None = None, area_id: str | None = None) -> tuple[list[User], int]:
+        query = select(User).options(selectinload(User.area))
         count_query = select(func.count()).select_from(User)
 
         if role:
@@ -26,6 +27,9 @@ class UserService:
             filter_cond = User.name.ilike(f"%{safe_search}%", escape="\\") | User.email.ilike(f"%{safe_search}%", escape="\\")
             query = query.where(filter_cond)
             count_query = count_query.where(filter_cond)
+        if area_id:
+            query = query.where(User.area_id == area_id)
+            count_query = count_query.where(User.area_id == area_id)
 
         total = (await self.db.execute(count_query)).scalar() or 0
         offset = (page - 1) * limit
@@ -33,10 +37,23 @@ class UserService:
         return list(result.scalars().all()), total
 
     async def get_user_by_id(self, user_id: str) -> User:
-        result = await self.db.execute(select(User).where(User.id == user_id))
+        result = await self.db.execute(
+            select(User).options(selectinload(User.area)).where(User.id == user_id)
+        )
         user = result.scalar_one_or_none()
         if user is None:
             raise NotFoundError("Usuario no encontrado")
+        return user
+
+    async def assign_user_area(self, user_id: str, area_id: str | None) -> User:
+        user = await self.get_user_by_id(user_id)
+        if area_id is not None:
+            area_result = await self.db.execute(select(Area).where(Area.id == area_id))
+            if area_result.scalar_one_or_none() is None:
+                raise NotFoundError(f"Area '{area_id}' no encontrada")
+        user.area_id = area_id
+        await self.db.commit()
+        await self.db.refresh(user, ["area"])
         return user
 
     async def update_profile(self, user_id: str, **kwargs: object) -> User:

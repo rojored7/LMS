@@ -12,8 +12,9 @@ from app.permissions import Permission, require_permission
 from app.schemas.admin import AdminEnrollmentResponse, AdminUserWithEnrollments, LdapConfigUpdate, LdapConfigResponse, LdapTestRequest, LdapTestResponse
 from app.schemas.common import ApiResponse, PaginationMeta
 from app.schemas.gamification import LeaderboardEntry, XpAdjustRequest, XpTransactionResponse
-from app.schemas.user import UserResponse
+from app.schemas.user import AssignAreaRequest, AreaResponse, CreateAreaRequest, UpdateAreaRequest, UserResponse
 from app.services.admin_service import AdminService
+from app.services.area_service import AreaService
 from app.services.course_service import CourseService
 from app.services.user_service import UserService
 
@@ -57,11 +58,12 @@ async def list_users(
     limit: int = Query(20, ge=1, le=100),
     search: str | None = None,
     role: str | None = None,
+    area_id: str | None = None,
     user: User = Depends(require_permission(Permission.ADMIN_PANEL)),
     db: AsyncSession = Depends(get_db),
 ):
     service = UserService(db)
-    users_list, total = await service.get_all_users(page=page, limit=limit, role=role, search=search)
+    users_list, total = await service.get_all_users(page=page, limit=limit, role=role, search=search, area_id=area_id)
     users = [_serialize_user(u) for u in users_list]
     pages = math.ceil(total / limit) if limit > 0 else 1
     return ApiResponse(
@@ -239,6 +241,66 @@ async def remove_enrollment(
     course_service = CourseService(db)
     await course_service.delete_enrollment_by_id(enrollment_id)
     return ApiResponse(success=True, data={"message": "Inscripcion eliminada"}).model_dump()
+
+
+@router.put("/users/{user_id}/area")
+async def assign_user_area(
+    user_id: str,
+    body: AssignAreaRequest,
+    admin: User = Depends(require_permission(Permission.ADMIN_PANEL)),
+    db: AsyncSession = Depends(get_db),
+):
+    user_service = UserService(db)
+    updated = await user_service.assign_user_area(user_id, body.area_id)
+    logger.info("admin_area_assigned", target_user_id=user_id, area_id=body.area_id, admin_id=admin.id)
+    return ApiResponse(success=True, data=_serialize_user(updated)).model_dump()
+
+
+# --- Areas ---
+
+@router.get("/areas")
+async def list_areas(
+    _admin: User = Depends(require_permission(Permission.ADMIN_PANEL)),
+    db: AsyncSession = Depends(get_db),
+):
+    service = AreaService(db)
+    areas = await service.list_areas()
+    data = [AreaResponse.model_validate(a).model_dump() for a in areas]
+    return ApiResponse(success=True, data=data).model_dump()
+
+
+@router.post("/areas", status_code=201)
+async def create_area(
+    body: CreateAreaRequest,
+    _admin: User = Depends(require_permission(Permission.ADMIN_PANEL)),
+    db: AsyncSession = Depends(get_db),
+):
+    service = AreaService(db)
+    area = await service.create_area(body.name, body.description, body.color)
+    return ApiResponse(success=True, data=AreaResponse.model_validate(area).model_dump()).model_dump()
+
+
+@router.put("/areas/{area_id}")
+async def update_area(
+    area_id: str,
+    body: UpdateAreaRequest,
+    _admin: User = Depends(require_permission(Permission.ADMIN_PANEL)),
+    db: AsyncSession = Depends(get_db),
+):
+    service = AreaService(db)
+    area = await service.update_area(area_id, body.name, body.description, body.color)
+    return ApiResponse(success=True, data=AreaResponse.model_validate(area).model_dump()).model_dump()
+
+
+@router.delete("/areas/{area_id}")
+async def delete_area(
+    area_id: str,
+    _admin: User = Depends(require_permission(Permission.ADMIN_PANEL)),
+    db: AsyncSession = Depends(get_db),
+):
+    service = AreaService(db)
+    await service.delete_area(area_id)
+    return ApiResponse(success=True, data={"message": "Area eliminada"}).model_dump()
 
 
 # --- LDAP Configuration ---

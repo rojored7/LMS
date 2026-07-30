@@ -30,6 +30,7 @@ class User(Base):
     theme: Mapped[str] = mapped_column(String(20), default="system", nullable=False)
     locale: Mapped[str] = mapped_column(String(10), default="es", nullable=False)
     training_profile_id: Mapped[str | None] = mapped_column(String(32), ForeignKey("training_profiles.id"), nullable=True)
+    area_id: Mapped[str | None] = mapped_column(String(32), ForeignKey("areas.id", ondelete="SET NULL"), nullable=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -45,6 +46,7 @@ class User(Base):
     user_progress: Mapped[list["UserProgress"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     xp_transactions: Mapped[list["XpTransaction"]] = relationship(back_populates="user", cascade="all, delete-orphan", foreign_keys="[XpTransaction.user_id]")
     training_profile: Mapped["TrainingProfile | None"] = relationship(back_populates="users")
+    area: Mapped["Area | None"] = relationship(back_populates="users")
 
     __table_args__ = (
         Index("ix_users_email", "email"),
@@ -52,6 +54,16 @@ class User(Base):
         Index("ix_users_xp", "xp"),
         Index("ix_users_auth_provider_external_id", "auth_provider", "external_id"),
     )
+
+
+class Area(Base):
+    __tablename__ = "areas"
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_gen_id)
+    name: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    color: Mapped[str | None] = mapped_column(String(7), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    users: Mapped[list["User"]] = relationship(back_populates="area")
 
 
 class TrainingProfile(Base):
