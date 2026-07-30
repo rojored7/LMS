@@ -26,6 +26,7 @@ import {
   UsersList,
   UserProgressDetail,
   TrainingProfiles,
+  Areas,
   AdminGamification,
   ProjectSubmission,
   SubmissionsReview,
@@ -288,6 +289,17 @@ function App() {
                     <ProtectedRoute requiredRoles={[UserRole.ADMIN]}>
                       <DashboardLayout>
                         <TrainingProfiles />
+                      </DashboardLayout>
+                    </ProtectedRoute>
+                  }
+                />
+
+                <Route
+                  path="/admin/areas"
+                  element={
+                    <ProtectedRoute requiredRoles={[UserRole.ADMIN]}>
+                      <DashboardLayout>
+                        <Areas />
                       </DashboardLayout>
                     </ProtectedRoute>
                   }

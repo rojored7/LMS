@@ -1,12 +1,13 @@
 /**
  * UsersList Page
- * Admin page for managing all users with course assignment
+ * Admin page for managing all users with course assignment and area filter
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Search, BookPlus } from 'lucide-react';
 import { useToast } from '../hooks/useToast';
+import { useAreas, useAssignUserArea } from '../hooks/useAreas';
 import userService from '../services/user.service';
 import { assignCourseToUser, getUserEnrollments } from '../services/api/admin.service';
 import AssignCourseModal from '../components/learning/AssignCourseModal';
@@ -19,6 +20,75 @@ interface SelectedUser {
   email: string;
 }
 
+interface AreaChipProps {
+  user: User;
+}
+
+const AreaChip: React.FC<AreaChipProps> = ({ user }) => {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const { data: areas = [] } = useAreas();
+  const assignArea = useAssignUserArea();
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const handleSelect = async (areaId: string | null) => {
+    setOpen(false);
+    await assignArea.mutateAsync({ userId: user.id, areaId });
+    // Reload users list to reflect change
+    window.dispatchEvent(new CustomEvent('users-reload'));
+  };
+
+  const area = user.area;
+  const bgColor = area?.color ?? '#6b7280';
+
+  return (
+    <div className="relative inline-block" ref={ref}>
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen((v) => !v);
+        }}
+        className="flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium text-white transition-opacity hover:opacity-80"
+        style={{ backgroundColor: bgColor }}
+        title="Cambiar area"
+      >
+        {area?.name ?? 'Sin area'}
+      </button>
+
+      {open && (
+        <div className="absolute z-50 top-full left-0 mt-1 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1">
+          <button
+            onClick={() => handleSelect(null)}
+            className="w-full text-left px-3 py-2 text-sm text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700"
+          >
+            Sin area
+          </button>
+          {areas.map((a) => (
+            <button
+              key={a.id}
+              onClick={() => handleSelect(a.id)}
+              className="w-full text-left px-3 py-2 text-sm text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
+            >
+              <span
+                className="w-3 h-3 rounded-full flex-shrink-0"
+                style={{ backgroundColor: a.color ?? '#6b7280' }}
+              />
+              {a.name}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export const UsersList: React.FC = () => {
   const toast = useToast();
   const [searchParams] = useSearchParams();
@@ -26,14 +96,13 @@ export const UsersList: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
   const [roleFilter, setRoleFilter] = useState<string>(searchParams.get('role') || 'ALL');
+  const [areaFilter, setAreaFilter] = useState<string>('ALL');
+
+  const { data: areas = [] } = useAreas();
 
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<SelectedUser | null>(null);
   const [enrolledCourseIds, setEnrolledCourseIds] = useState<string[]>([]);
-
-  useEffect(() => {
-    loadUsers();
-  }, []);
 
   const loadUsers = async () => {
     try {
@@ -47,6 +116,16 @@ export const UsersList: React.FC = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadUsers();
+  }, []);
+
+  useEffect(() => {
+    const handler = () => loadUsers();
+    window.addEventListener('users-reload', handler);
+    return () => window.removeEventListener('users-reload', handler);
+  }, []);
 
   const handleDeleteUser = async (userId: string) => {
     if (!confirm('Eliminar este usuario? Esta accion no se puede deshacer.')) return;
@@ -89,10 +168,9 @@ export const UsersList: React.FC = () => {
     const matchesSearch =
       (user.name || '').toLowerCase().includes(term) ||
       (user.email || '').toLowerCase().includes(term);
-
     const matchesRole = roleFilter === 'ALL' || user.role === roleFilter;
-
-    return matchesSearch && matchesRole;
+    const matchesArea = areaFilter === 'ALL' || user.areaId === areaFilter;
+    return matchesSearch && matchesRole && matchesArea;
   });
 
   return (
@@ -137,6 +215,22 @@ export const UsersList: React.FC = () => {
               <option value="ADMIN">Administradores</option>
             </select>
           </div>
+
+          {/* Area Filter */}
+          <div>
+            <select
+              value={areaFilter}
+              onChange={(e) => setAreaFilter(e.target.value)}
+              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+            >
+              <option value="ALL">Todas las areas</option>
+              {areas.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
@@ -155,6 +249,9 @@ export const UsersList: React.FC = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Rol
                 </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  Area
+                </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Acciones
                 </th>
@@ -163,14 +260,14 @@ export const UsersList: React.FC = () => {
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {loading ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-12 text-center">
+                  <td colSpan={5} className="px-6 py-12 text-center">
                     <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
                   </td>
                 </tr>
               ) : filteredUsers.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={4}
+                    colSpan={5}
                     className="px-6 py-12 text-center text-gray-500 dark:text-gray-400"
                   >
                     No se encontraron usuarios
@@ -198,6 +295,9 @@ export const UsersList: React.FC = () => {
                       <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
                         {ROLE_LABELS[user.role]}
                       </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <AreaChip user={user} />
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       {user.role === 'STUDENT' && (

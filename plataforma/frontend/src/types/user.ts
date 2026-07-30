@@ -3,6 +3,14 @@
  * Adapted for FastAPI backend (returns `name` instead of firstName/lastName)
  */
 
+export interface Area {
+  id: string;
+  name: string;
+  description?: string | null;
+  color?: string | null;
+  createdAt: string;
+}
+
 export enum UserRole {
   STUDENT = 'STUDENT',
   INSTRUCTOR = 'INSTRUCTOR',
@@ -27,6 +35,8 @@ export interface User {
   firstName?: string;
   lastName?: string;
   isActive?: boolean;
+  areaId?: string | null;
+  area?: Area | null;
 }
 
 export interface UserProfile extends User {
