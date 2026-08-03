@@ -17,7 +17,8 @@ test.describe('HU-004: Middleware JWT - Acceso sin autenticacion', () => {
     // Sin autenticacion, acceder a rutas protegidas redirige a /login
     const protectedRoutes = [
       '/profile',
-      '/courses/enrolled',
+      '/notifications',
+      '/learning-paths',
     ];
 
     for (const route of protectedRoutes) {
