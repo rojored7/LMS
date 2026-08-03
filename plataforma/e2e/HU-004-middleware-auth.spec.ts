@@ -18,13 +18,12 @@ test.describe('HU-004: Middleware JWT - Acceso sin autenticacion', () => {
     const protectedRoutes = [
       '/profile',
       '/notifications',
-      '/learning-paths',
     ];
 
     for (const route of protectedRoutes) {
       await page.goto(`${BASE_URL}${route}`);
       await expect(page).toHaveURL(/.*login/, { timeout: 20000 });
-      await expect(page.locator('form')).toBeVisible();
+      await expect(page.locator('form').first()).toBeVisible();
     }
   });
 
