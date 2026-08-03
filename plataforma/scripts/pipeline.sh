@@ -37,6 +37,7 @@ PASS_SSH="${PASS_SSH:?ERROR: PASS_SSH es requerido. Crear plataforma/.env.pipeli
 REMOTE_DIR="/home/${SSH_USER}/LMS/plataforma"
 SKIP_PROD="${SKIP_PROD:-false}"
 SKIP_BUILD="${SKIP_BUILD:-false}"
+SKIP_E2E="${SKIP_E2E:-false}"
 
 GIT_SHA=$(git rev-parse --short HEAD 2>/dev/null || echo "local")
 IMAGES_TAR="${IMAGES_TAR:-/tmp/ciber-images-${GIT_SHA}.tar.gz}"
@@ -332,23 +333,27 @@ info "Ejecutando tests E2E contra QA..."
 info "BASE_URL=$QA_URL"
 echo ""
 
-E2E_EXIT=0
-BASE_URL="$QA_URL" npx playwright test --retries=2 --workers=2 --reporter=list 2>&1 || E2E_EXIT=$?
+if [ "$SKIP_E2E" = "true" ]; then
+    warn "SKIP_E2E=true — saltando tests E2E"
+else
+    E2E_EXIT=0
+    BASE_URL="$QA_URL" npx playwright test --retries=2 --workers=2 --reporter=list 2>&1 || E2E_EXIT=$?
 
-echo ""
-if [ $E2E_EXIT -ne 0 ]; then
-    echo -e "${RED}══════════════════════════════════════════${NC}"
-    echo -e "${RED}  E2E TESTS FALLARON - PROD CANCELADO${NC}"
-    echo -e "${RED}══════════════════════════════════════════${NC}"
     echo ""
-    warn "Reporte HTML: npx playwright show-report"
-    warn "Deploy a PROD fue CANCELADO porque los tests fallaron"
-    echo ""
-    warn "Tiempo total: $(elapsed)"
-    exit 1
+    if [ $E2E_EXIT -ne 0 ]; then
+        echo -e "${RED}══════════════════════════════════════════${NC}"
+        echo -e "${RED}  E2E TESTS FALLARON - PROD CANCELADO${NC}"
+        echo -e "${RED}══════════════════════════════════════════${NC}"
+        echo ""
+        warn "Reporte HTML: npx playwright show-report"
+        warn "Deploy a PROD fue CANCELADO porque los tests fallaron"
+        echo ""
+        warn "Tiempo total: $(elapsed)"
+        exit 1
+    fi
+
+    log "Todos los E2E tests pasaron"
 fi
-
-log "Todos los E2E tests pasaron"
 
 # ─────────────────────────────────────────────────────────
 # FASE 4: DEPLOY PROD

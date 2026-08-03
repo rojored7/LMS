@@ -12,9 +12,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.middleware.error_handler import ConflictError, NotFoundError, ValidationError
 from app.models.course import Course
-from app.models.gamification import Certificate
+from app.models.gamification import Certificate, Notification, NotificationType
 from app.models.progress import Enrollment
-from app.models.user import User
+from app.models.user import User, UserRole
 
 logger = structlog.get_logger()
 
@@ -160,6 +160,21 @@ class CertificateService:
                 await self.db.flush()
             except Exception:
                 logger.exception("certificate_pdf_generation_failed", cert_id=cert.id)
+
+        user_display = (user.name or user.email) if user else user_id
+        course_display = course.title if course else course_id
+        admin_result = await self.db.execute(select(User).where(User.role == UserRole.ADMIN))
+        admins = list(admin_result.scalars().all())
+        for admin in admins:
+            self.db.add(Notification(
+                user_id=admin.id,
+                title="Nuevo certificado generado",
+                message=f"{user_display} completo el curso '{course_display}' y obtuvo su certificado",
+                type=NotificationType.CERTIFICATE_ISSUED,
+                data={"userId": user_id, "courseId": course_id, "certificateId": cert.id},
+            ))
+        if admins:
+            await self.db.flush()
 
         logger.info("certificate_generated", user_id=user_id, course_id=course_id, code=verification_code)
         return cert

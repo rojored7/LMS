@@ -50,8 +50,12 @@ describe('TrainingProfileForm', () => {
   it('llama onSubmit con icon y color', async () => {
     render(<TrainingProfileForm {...defaultProps} />);
 
-    fireEvent.change(screen.getByLabelText(/Nombre del Perfil/), { target: { value: 'Mi Perfil', name: 'name' } });
-    fireEvent.change(screen.getByLabelText(/Descripcion/), { target: { value: 'Una descripcion', name: 'description' } });
+    fireEvent.change(screen.getByLabelText(/Nombre del Perfil/), {
+      target: { value: 'Mi Perfil', name: 'name' },
+    });
+    fireEvent.change(screen.getByLabelText(/Descripcion/), {
+      target: { value: 'Una descripcion', name: 'description' },
+    });
     fireEvent.change(screen.getByLabelText(/Icono/), { target: { value: 'lock', name: 'icon' } });
 
     fireEvent.click(screen.getByRole('button', { name: /Crear/i }));

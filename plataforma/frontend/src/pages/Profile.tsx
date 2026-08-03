@@ -16,9 +16,11 @@ import { ROLE_LABELS } from '../utils/constants';
 import { formatDate } from '../utils/formatters';
 import api from '../services/api';
 import authService, { type Session } from '../services/auth.service';
+import { useProfile } from '../hooks/useTrainingProfiles';
 
 export const Profile: React.FC = () => {
   const { user, refreshUser } = useAuth();
+  const { data: ruta } = useProfile(user?.trainingProfileId ?? undefined);
   const navigate = useNavigate();
   const toast = useToast();
 
@@ -352,6 +354,48 @@ export const Profile: React.FC = () => {
               </CardBody>
             </Card>
           </div>
+
+          {/* Ruta de Aprendizaje */}
+          {ruta && (
+            <div className="md:col-span-3 mt-6">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    {ruta.icon && <span className="text-2xl">{ruta.icon}</span>}
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        Mi Ruta de Aprendizaje
+                      </h3>
+                      <p className="text-sm text-gray-500">{ruta.name}</p>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardBody>
+                  {ruta.description && (
+                    <p className="text-sm text-gray-600 mb-4">{ruta.description}</p>
+                  )}
+                  <ol className="space-y-2">
+                    {(ruta.courses ?? []).map((c: any, idx: number) => (
+                      <li
+                        key={c.id}
+                        className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 border border-gray-100"
+                      >
+                        <span className="w-6 h-6 flex items-center justify-center rounded-full bg-blue-100 text-blue-700 text-xs font-bold shrink-0">
+                          {idx + 1}
+                        </span>
+                        <span className="flex-1 text-sm font-medium text-gray-800">{c.title}</span>
+                        {c.required && (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 font-medium">
+                            Requerido
+                          </span>
+                        )}
+                      </li>
+                    ))}
+                  </ol>
+                </CardBody>
+              </Card>
+            </div>
+          )}
 
           {/* Gamification Section */}
           {user.role === 'STUDENT' && (

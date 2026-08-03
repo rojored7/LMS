@@ -50,7 +50,13 @@ describe('trainingProfile service', () => {
   describe('createProfile', () => {
     it('llama POST /training-profiles con icon y color', async () => {
       vi.mocked(api.post).mockResolvedValueOnce({ data: { id: 'p1' } });
-      await createProfile({ name: 'T', slug: 't', description: 'd', icon: 'shield', color: '#ff0' });
+      await createProfile({
+        name: 'T',
+        slug: 't',
+        description: 'd',
+        icon: 'shield',
+        color: '#ff0',
+      });
       expect(api.post).toHaveBeenCalledWith(
         '/training-profiles',
         expect.objectContaining({ icon: 'shield', color: '#ff0' })

@@ -56,6 +56,18 @@ class UserService:
         await self.db.refresh(user, ["area"])
         return user
 
+    async def assign_user_training_profile(self, user_id: str, profile_id: str | None) -> User:
+        from app.models.user import TrainingProfile
+        user = await self.get_user_by_id(user_id)
+        if profile_id is not None:
+            profile_result = await self.db.execute(select(TrainingProfile).where(TrainingProfile.id == profile_id))
+            if profile_result.scalar_one_or_none() is None:
+                raise NotFoundError(f"Perfil '{profile_id}' no encontrado")
+        user.training_profile_id = profile_id
+        await self.db.commit()
+        await self.db.refresh(user)
+        return user
+
     async def update_profile(self, user_id: str, **kwargs: object) -> User:
         user = await self.get_user_by_id(user_id)
         for key, value in kwargs.items():

@@ -37,6 +37,7 @@ export interface User {
   isActive?: boolean;
   areaId?: string | null;
   area?: Area | null;
+  trainingProfileId?: string | null;
 }
 
 export interface UserProfile extends User {

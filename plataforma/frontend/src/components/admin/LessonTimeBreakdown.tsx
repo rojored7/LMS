@@ -59,9 +59,7 @@ export const LessonTimeBreakdown: React.FC<LessonTimeBreakdownProps> = ({ userId
         ) : (
           <ChevronRight className="w-4 h-4 flex-shrink-0" />
         )}
-        <span>
-          {isExpanded ? 'Ocultar lecciones' : `Ver ${lessons.length} lecciones`}
-        </span>
+        <span>{isExpanded ? 'Ocultar lecciones' : `Ver ${lessons.length} lecciones`}</span>
         <span className="text-gray-400 text-xs">|</span>
         <span className="text-xs text-gray-500">Total: {formatSeconds(totalSeconds)}</span>
       </button>
@@ -114,12 +112,17 @@ export const LessonTimeBreakdown: React.FC<LessonTimeBreakdownProps> = ({ userId
                             style={{ width: `${Math.min(barWidth / 2, 100)}%` }}
                           />
                         </div>
-                        <span className="text-xs text-gray-600 w-10 text-right">{ratioPercent}%</span>
+                        <span className="text-xs text-gray-600 w-10 text-right">
+                          {ratioPercent}%
+                        </span>
                       </div>
                     </td>
                     <td className="py-1">
                       <span
-                        className={cn('px-2 py-0.5 rounded-full text-xs font-medium', config.className)}
+                        className={cn(
+                          'px-2 py-0.5 rounded-full text-xs font-medium',
+                          config.className
+                        )}
                       >
                         {config.label}
                       </span>

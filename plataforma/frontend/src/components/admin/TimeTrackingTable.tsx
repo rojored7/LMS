@@ -23,8 +23,12 @@ interface ExpandedState {
   courseId: string;
 }
 
-export const TimeTrackingTable: React.FC = () => {
-  const { usersTime, isLoading } = useTimeTracking();
+interface TimeTrackingTableProps {
+  areaId?: string;
+}
+
+export const TimeTrackingTable: React.FC<TimeTrackingTableProps> = ({ areaId }) => {
+  const { usersTime, isLoading } = useTimeTracking({ areaId });
   const [expanded, setExpanded] = useState<ExpandedState | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>('totalTimeSeconds');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');

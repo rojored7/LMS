@@ -135,6 +135,7 @@ class UserResponse(CamelModel):
     last_login_at: datetime | None = None
     area_id: str | None = None
     area: AreaResponse | None = None
+    training_profile_id: str | None = None
 
 
 class BadgeResponse(CamelModel):

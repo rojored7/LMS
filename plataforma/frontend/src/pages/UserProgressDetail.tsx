@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Award, BookOpen, TrendingUp } from 'lucide-react';
+import { ArrowLeft, Award, BookOpen, Download, TrendingUp } from 'lucide-react';
 import { Button } from '../components/common/Button';
 import { XPProgress } from '../components/gamification/XPProgress';
 import { BadgesShowcase } from '../components/gamification/BadgesShowcase';
@@ -157,6 +157,44 @@ export const UserProgressDetail: React.FC = () => {
         <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Logros y Badges</h2>
         <BadgesShowcase userBadges={userBadges} allBadges={allBadges} />
       </div>
+
+      {/* Certificados Externos */}
+      {userBadges.filter((ub) => ub.certificateUrl).length > 0 && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-8">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+            Certificados Externos
+          </h2>
+          <div className="divide-y divide-gray-100 dark:divide-gray-700">
+            {userBadges
+              .filter((ub) => ub.certificateUrl)
+              .map((ub) => (
+                <div key={ub.id} className="flex items-center justify-between py-3">
+                  <div>
+                    <p className="font-medium text-gray-900 dark:text-white">
+                      {ub.badge?.name ?? ub.badgeId}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {ub.completedAt
+                        ? new Date(ub.completedAt).toLocaleDateString('es-ES')
+                        : ub.earnedAt
+                          ? new Date(ub.earnedAt).toLocaleDateString('es-ES')
+                          : ''}
+                    </p>
+                  </div>
+                  <a
+                    href={`${window.location.origin}${ub.certificateUrl}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-blue-600 border border-blue-300 rounded-lg hover:bg-blue-50 dark:text-blue-400 dark:border-blue-700 dark:hover:bg-blue-900/20 transition-colors"
+                  >
+                    <Download className="w-4 h-4" />
+                    Ver certificado
+                  </a>
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
 
       {/* Course Progress */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">

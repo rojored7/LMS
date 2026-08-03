@@ -1,11 +1,5 @@
 import { useState, useMemo } from 'react';
-import {
-  DndContext,
-  closestCenter,
-  PointerSensor,
-  useSensor,
-  useSensors,
-} from '@dnd-kit/core';
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import type { DragEndEvent } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -125,7 +119,12 @@ function SortableCourseItem({ course, profileId }: SortableCourseItemProps) {
         className="text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M6 18L18 6M6 6l12 12"
+          />
         </svg>
       </button>
     </div>
@@ -151,10 +150,7 @@ export function ProfileCoursesPanel({ profile, availableCourses }: ProfileCourse
     return [...courses].sort((a, b) => a.order - b.order);
   }, [profile.courses]);
 
-  const assignedIds = useMemo(
-    () => new Set(assignedCourses.map((c) => c.id)),
-    [assignedCourses]
-  );
+  const assignedIds = useMemo(() => new Set(assignedCourses.map((c) => c.id)), [assignedCourses]);
 
   const filteredAvailable = useMemo(() => {
     const q = search.toLowerCase();
@@ -196,7 +192,11 @@ export function ProfileCoursesPanel({ profile, availableCourses }: ProfileCourse
             No hay cursos asignados
           </p>
         ) : (
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
             <SortableContext
               items={assignedCourses.map((c) => c.id)}
               strategy={verticalListSortingStrategy}

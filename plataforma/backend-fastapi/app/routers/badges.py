@@ -10,8 +10,8 @@ from app.database import get_db
 from app.middleware.auth import get_current_user
 from app.middleware.rate_limit import limiter
 from app.permissions import Permission, require_permission
-from app.models.gamification import UserBadge
-from app.models.user import User
+from app.models.gamification import Badge, Notification, NotificationType, UserBadge
+from app.models.user import User, UserRole
 from app.schemas.common import ApiResponse
 from app.schemas.user import BadgeCreate, BadgeResponse, ExternalBadgeImport, UserBadgeResponse
 from app.services.badge_service import BadgeService
@@ -197,6 +197,22 @@ async def upload_certificate(
 
     ub.certificate_url = f"/api/uploads/certificates/{safe_name}"
     await db.flush()
+
+    badge = await db.get(Badge, ub.badge_id)
+    badge_name = badge.name if badge else ub.badge_id
+    user_display = current_user.name or current_user.email
+    admin_result = await db.execute(select(User).where(User.role == UserRole.ADMIN))
+    admins = list(admin_result.scalars().all())
+    for admin in admins:
+        db.add(Notification(
+            user_id=admin.id,
+            title="Certificado externo cargado",
+            message=f"{user_display} cargo un certificado externo para '{badge_name}'",
+            type=NotificationType.CERTIFICATE_ISSUED,
+            data={"userId": current_user.id, "userBadgeId": user_badge_id, "badgeName": badge_name},
+        ))
+    if admins:
+        await db.flush()
 
     return ApiResponse(success=True, data={"certificateUrl": ub.certificate_url}).model_dump()
 

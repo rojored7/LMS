@@ -30,6 +30,7 @@ export interface UserBadge {
   enrolledAt?: string;
   completedAt?: string;
   courseId?: string;
+  certificateUrl?: string;
 }
 
 export interface XPLevel {

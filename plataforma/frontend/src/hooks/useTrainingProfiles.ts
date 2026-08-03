@@ -1,6 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import trainingProfileService from '../services/api/trainingProfile.service';
-import type { TrainingProfile, CreateTrainingProfileRequest, UpdateTrainingProfileRequest, CourseOrderItem } from '../services/api/trainingProfile.service';
+import type {
+  TrainingProfile,
+  CreateTrainingProfileRequest,
+  UpdateTrainingProfileRequest,
+  CourseOrderItem,
+} from '../services/api/trainingProfile.service';
 import { useToast } from './useToast';
 
 const profileKeys = {
@@ -16,10 +21,10 @@ export function useProfiles() {
   });
 }
 
-export function useProfile(profileId: string) {
+export function useProfile(profileId: string | undefined) {
   return useQuery({
-    queryKey: profileKeys.detail(profileId),
-    queryFn: () => trainingProfileService.getProfileById(profileId),
+    queryKey: profileKeys.detail(profileId ?? ''),
+    queryFn: () => trainingProfileService.getProfileById(profileId!),
     enabled: !!profileId,
   });
 }
@@ -79,8 +84,15 @@ export function useAddCourseToProfile() {
   const toast = useToast();
 
   return useMutation({
-    mutationFn: ({ profileId, courseId, order }: { profileId: string; courseId: string; order: number }) =>
-      trainingProfileService.addCourseToProfile(profileId, courseId, order),
+    mutationFn: ({
+      profileId,
+      courseId,
+      order,
+    }: {
+      profileId: string;
+      courseId: string;
+      order: number;
+    }) => trainingProfileService.addCourseToProfile(profileId, courseId, order),
     onSuccess: (_, { profileId }) => {
       queryClient.invalidateQueries({ queryKey: profileKeys.lists() });
       queryClient.invalidateQueries({ queryKey: profileKeys.detail(profileId) });

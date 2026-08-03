@@ -33,6 +33,10 @@ class BulkRoleRequest(BaseModel):
     role: UserRole
 
 
+class AssignTrainingProfileRequest(BaseModel):
+    training_profile_id: str | None = None
+
+
 class AssignCourseRequest(BaseModel):
     userId: str = Field(min_length=1, max_length=36)
     courseId: str = Field(min_length=1, max_length=36)
@@ -253,6 +257,19 @@ async def assign_user_area(
     user_service = UserService(db)
     updated = await user_service.assign_user_area(user_id, body.area_id)
     logger.info("admin_area_assigned", target_user_id=user_id, area_id=body.area_id, admin_id=admin.id)
+    return ApiResponse(success=True, data=_serialize_user(updated)).model_dump()
+
+
+@router.put("/users/{user_id}/training-profile")
+async def assign_user_training_profile(
+    user_id: str,
+    body: AssignTrainingProfileRequest,
+    admin: User = Depends(require_permission(Permission.ADMIN_PANEL)),
+    db: AsyncSession = Depends(get_db),
+):
+    user_service = UserService(db)
+    updated = await user_service.assign_user_training_profile(user_id, body.training_profile_id)
+    logger.info("admin_training_profile_assigned", target_user_id=user_id, profile_id=body.training_profile_id, admin_id=admin.id)
     return ApiResponse(success=True, data=_serialize_user(updated)).model_dump()
 
 
