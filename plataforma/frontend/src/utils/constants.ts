@@ -48,6 +48,7 @@ export const ROUTES = {
   PROFILE: '/profile',
   COURSES: '/courses',
   COURSE_DETAIL: '/courses/:id',
+  LEARNING_PATHS: '/learning-paths',
   ADMIN: '/admin',
   ADMIN_LDAP: '/admin/ldap',
   INSTRUCTOR: '/instructor',

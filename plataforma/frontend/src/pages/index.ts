@@ -30,3 +30,6 @@ export { PublicProfile } from './PublicProfile';
 
 // Notification Pages
 export { NotificationsPage } from './NotificationsPage';
+
+// Student Pages
+export { LearningPaths } from './LearningPaths';

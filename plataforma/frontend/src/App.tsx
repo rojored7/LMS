@@ -32,6 +32,7 @@ import {
   SubmissionsReview,
   PublicProfile,
   NotificationsPage,
+  LearningPaths,
 } from './pages';
 import { ForgotPassword } from './pages/ForgotPassword';
 import { ResetPassword } from './pages/ResetPassword';
@@ -446,6 +447,18 @@ function App() {
                     <ProtectedRoute>
                       <DashboardLayout>
                         <NotificationsPage />
+                      </DashboardLayout>
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* Rutas de Aprendizaje */}
+                <Route
+                  path={ROUTES.LEARNING_PATHS}
+                  element={
+                    <ProtectedRoute>
+                      <DashboardLayout>
+                        <LearningPaths />
                       </DashboardLayout>
                     </ProtectedRoute>
                   }
