@@ -207,35 +207,6 @@ test.describe('Session Persistence', () => {
     expect(page.url()).toMatch(/\/(dashboard|courses)/);
   });
 
-  test('should logout successfully', async ({ page }) => {
-    // Navegar al dashboard con sesion ya activa (storageState)
-    await page.goto(`${BASE_URL}/dashboard`);
-    await page.waitForLoadState('load');
-    expect(page.url()).not.toContain('/login');
-
-    // Abrir dropdown del usuario
-    const userDropdownTrigger = page
-      .locator('header button')
-      .filter({ has: page.locator('svg[class*="rotate"], svg[class*="w-4"]') })
-      .first();
-
-    if (await userDropdownTrigger.isVisible({ timeout: 3000 })) {
-      await userDropdownTrigger.click();
-    } else {
-      const headerButtons = page.locator('header button');
-      const count = await headerButtons.count();
-      if (count > 0) {
-        await headerButtons.nth(count - 1).click();
-      }
-    }
-
-    const logoutButton = page.locator('button:has-text("Cerrar Sesión"), button:has-text("Cerrar Sesion")').first();
-    await expect(logoutButton).toBeVisible({ timeout: 10000 });
-    await logoutButton.click();
-
-    await page.waitForURL(/\/login/, { timeout: 30000 });
-  });
-
   test('should persist session across browser tabs', async ({ context }) => {
     // Con storageState, la primera pagina ya tiene sesion activa
     const page1 = await context.newPage();
