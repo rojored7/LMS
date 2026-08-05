@@ -42,8 +42,7 @@
       "enabled": true,
       "framework": "playwright",
       "path": "e2e/",
-      "testCommand": "npm run test:e2e",
-      "visualRegressionPath": "e2e/visual-regression/baselines/"
+      "testCommand": "npm run test:e2e"
     },
 
     "executor": {
@@ -101,7 +100,7 @@
     "visual": {
       "enabled": true,
       "description": "Visual validation with Playwright MCP",
-      "baselinesPath": "e2e/visual-regression/baselines/",
+      "baselinesPath": null,
       "threshold": 0.01,
       "blockOnFailure": false,
       "criticalPages": [
@@ -199,7 +198,7 @@
     "baselines": ".baselines/",
     "checkpoints": ".checkpoints/",
     "reports": "reports/",
-    "visualBaselines": "e2e/visual-regression/baselines/",
+    "visualBaselines": null,
     "coverage": "reports/coverage/",
     "logs": "logs/",
     "temp": "temp/"

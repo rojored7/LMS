@@ -82,7 +82,8 @@ test.describe('Time Tracking - Estudiante', () => {
     const courseRes = await page.request.get(`${API_URL}/courses/${courseId}`);
     if (!courseRes.ok()) return;
 
-    const course = (await courseRes.json()).data ?? (await courseRes.json());
+    const courseBody = await courseRes.json();
+    const course = courseBody.data ?? courseBody;
     const lessons = (course.modules?.[0]?.lessons) ?? [];
     if (lessons.length === 0) return;
 
