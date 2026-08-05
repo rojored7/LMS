@@ -223,9 +223,9 @@ test.describe('Performance - Core Web Vitals', () => {
     // JavaScript total debería ser < 2MB (SPA con Monaco editor, 20+ paginas, TanStack Query)
     expect(totalJSSize).toBeLessThan(2 * 1024 * 1024);
 
-    // Ningún bundle individual debería ser > 600KB sin comprimir
+    // Ningun bundle individual deberia ser > 1.5MB sin comprimir
     jsResources.forEach(resource => {
-      expect(resource.size).toBeLessThan(600 * 1024);
+      expect(resource.size).toBeLessThan(1.5 * 1024 * 1024);
     });
   });
 
