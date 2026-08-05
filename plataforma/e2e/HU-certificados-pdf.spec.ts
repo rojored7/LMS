@@ -58,8 +58,7 @@ test.describe('Certificados PDF - Estudiante', () => {
     const certs = body.data ?? [];
 
     if (certs.length === 0) {
-      // Sin certificados aun - el test pasa como N/A
-      expect(certs.length).toBeGreaterThanOrEqual(0);
+      // Sin certificados aun - test no aplicable en este entorno
       return;
     }
 
@@ -77,8 +76,7 @@ test.describe('Certificados PDF - Estudiante', () => {
     const certs = body.data ?? [];
 
     if (certs.length === 0) {
-      // Sin certificados para descargar
-      expect(certs.length).toBeGreaterThanOrEqual(0);
+      // Sin certificados para descargar en este entorno
       return;
     }
 

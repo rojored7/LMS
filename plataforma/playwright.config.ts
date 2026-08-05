@@ -5,6 +5,7 @@ const AUTH_DIR = path.join(__dirname, 'e2e/.auth');
 
 export default defineConfig({
   testDir: './e2e',
+  testIgnore: ['**/diagnostic-*'],
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 1,

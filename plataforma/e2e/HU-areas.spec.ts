@@ -376,7 +376,10 @@ test.describe('HU-Areas: Gestion de Areas por el Administrador', () => {
     }
 
     await searchField.fill('test');
-    await page.waitForTimeout(500);
+    await page.waitForResponse(
+      resp => resp.url().includes('/api/admin/areas'),
+      { timeout: 5000 }
+    ).catch(() => {});
 
     const areaItems = page.locator(
       '[data-testid="area-item"], [data-testid="area-row"], .area-item, tbody tr, .area-card'
@@ -399,6 +402,9 @@ test.describe('HU-Areas: Gestion de Areas por el Administrador', () => {
 
     // Limpiar busqueda
     await searchField.clear();
-    await page.waitForTimeout(500);
+    await page.waitForResponse(
+      resp => resp.url().includes('/api/admin/areas'),
+      { timeout: 5000 }
+    ).catch(() => {});
   });
 });
