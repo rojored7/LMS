@@ -94,15 +94,18 @@ test.describe('Certificados PDF - Estudiante', () => {
   });
 });
 
-test.describe('Certificados PDF - Verificacion publica', () => {
-  test('AC4: Endpoint de verificacion devuelve datos con codigo valido', async ({ page }) => {
-    // Obtener un codigo de verificacion real via API autenticada
-    await page.goto(`${BASE_URL}/login`);
-    await page.fill('input[name="email"]', 'student@ciber.com');
-    await page.fill('input[name="password"]', 'Student123!');
-    await page.locator('button:has-text("Iniciar Sesion")').click();
-    await page.waitForURL(/\/(dashboard|courses)/, { timeout: 30000 });
+test.describe('Certificados PDF - Verificacion publica (sin auth)', () => {
+  test('Codigo de verificacion invalido retorna error', async ({ page }) => {
+    const res = await page.request.get(`${API_URL}/certificates/verify/codigo-invalido-xyz-123`);
+    expect([404, 400]).toContain(res.status());
+  });
+});
 
+test.describe('Certificados PDF - Verificacion con codigo real', () => {
+  test.use({ storageState: AUTH_FILES.student });
+
+  test('AC4: Endpoint de verificacion devuelve datos con codigo valido', async ({ page }) => {
+    // Obtener un codigo de verificacion real de los certificados del estudiante
     const certRes = await page.request.get(`${API_URL}/certificates`);
     if (!certRes.ok()) return;
 
@@ -110,7 +113,7 @@ test.describe('Certificados PDF - Verificacion publica', () => {
     const certs = body.data ?? [];
 
     if (certs.length === 0) {
-      expect(certs.length).toBeGreaterThanOrEqual(0);
+      // Estudiante sin certificados aun — test no aplicable en este entorno
       return;
     }
 
@@ -122,11 +125,6 @@ test.describe('Certificados PDF - Verificacion publica', () => {
       const verifyBody = await verifyRes.json();
       expect(verifyBody.success).toBeTruthy();
     }
-  });
-
-  test('Codigo de verificacion invalido retorna error', async ({ page }) => {
-    const res = await page.request.get(`${API_URL}/certificates/verify/codigo-invalido-xyz-123`);
-    expect([404, 400]).toContain(res.status());
   });
 });
 

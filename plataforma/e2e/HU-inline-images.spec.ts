@@ -14,7 +14,7 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { AUTH_FILES } from './helpers/auth';
+import { AUTH_FILES, TEST_CREDENTIALS } from './helpers/auth';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 const API_URL = process.env.API_URL || `${BASE_URL}/api`;
@@ -31,7 +31,7 @@ test.describe('HU-Inline-Images: Imagenes inline en lecciones', () => {
   test('T1: Admin sube imagen y obtiene downloadUrl', async ({ request }) => {
     // Login como admin
     const loginRes = await request.post(`${API_URL}/auth/login`, {
-      data: { email: 'admin@ciber.com', password: 'Admin123!' },
+      data: TEST_CREDENTIALS.admin,
     });
     expect(loginRes.ok(), `Login admin fallo: ${loginRes.status()}`).toBeTruthy();
 

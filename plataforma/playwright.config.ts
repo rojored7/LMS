@@ -25,7 +25,7 @@ export default defineConfig({
     navigationTimeout: 45000,
     ignoreHTTPSErrors: true,
     launchOptions: {
-      args: ['--disable-web-security', '--no-sandbox'],
+      args: ['--no-sandbox'],
     },
   },
 

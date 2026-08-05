@@ -30,9 +30,8 @@ test.describe('LDAP Config - Estudiante no autorizado', () => {
 
   test('AC6: Estudiante no puede acceder a config LDAP', async ({ page }) => {
     await page.goto(`${BASE_URL}/admin/ldap`);
-    await page.waitForTimeout(3000);
-    const url = page.url();
-    expect(url).toMatch(/login|403|forbidden/i);
+    await page.waitForURL(/login|403|forbidden/i, { timeout: 10000 }).catch(() => {});
+    expect(page.url()).toMatch(/login|403|forbidden/i);
   });
 });
 
