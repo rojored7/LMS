@@ -180,6 +180,7 @@ print(f'Conectando a QA {SERVER}...')
 ssh = paramiko.SSHClient()
 ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 ssh.connect(SERVER, username=USER, password=PASS, timeout=15)
+ssh.get_transport().set_keepalive(10)
 sftp = ssh.open_sftp()
 
 def run(cmd, timeout=180, check=False):
@@ -401,6 +402,7 @@ print(f'Conectando a PROD {SERVER}...')
 ssh = paramiko.SSHClient()
 ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 ssh.connect(SERVER, username=USER, password=PASS, timeout=15)
+ssh.get_transport().set_keepalive(10)
 
 def run(cmd, timeout=180):
     stdin, stdout, stderr = ssh.exec_command(cmd, timeout=timeout)
