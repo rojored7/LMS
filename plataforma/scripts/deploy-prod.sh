@@ -26,6 +26,11 @@ err()  { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
 info() { echo -e "${CYAN}[>>]${NC} $1"; }
 
 # --- Config ---
+ENV_PIPELINE="$(cd "$(dirname "$0")/.." && pwd)/.env.pipeline"
+if [ -f "$ENV_PIPELINE" ]; then
+    set -o allexport; source "$ENV_PIPELINE"; set +o allexport
+fi
+
 SERVER="${SERVER:-192.168.200.98}"
 USER_SSH="${USER_SSH:-itac}"
 PASS_SSH="${PASS_SSH:?ERROR: PASS_SSH es requerido. Uso: PASS_SSH=xxx ./scripts/deploy-prod.sh}"
@@ -142,6 +147,40 @@ for local in glob.glob('backend-fastapi/app/**/*.py', recursive=True):
 
 sftp.close()
 print('Files synced')
+
+# Merge SMTP vars en .env del servidor
+_smtp_keys = ['SMTP_HOST', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASS', 'SMTP_FROM']
+_smtp_updates = {k: os.environ.get(k, '') for k in _smtp_keys}
+_smtp_updates = {k: v for k, v in _smtp_updates.items() if v}
+if _smtp_updates:
+    sftp3 = ssh.open_sftp()
+    _stdin, _stdout, _stderr = ssh.exec_command(f'test -f {REMOTE_DIR}/.env && echo exists || echo missing')
+    _env_check = _stdout.read().decode('utf-8')
+    if 'missing' in _env_check:
+        env_example = os.path.join(os.getcwd(), '.env.example')
+        if os.path.exists(env_example):
+            sftp3.put(env_example, f'{REMOTE_DIR}/.env')
+    try:
+        with sftp3.open(f'{REMOTE_DIR}/.env', 'r') as _fh:
+            _lines = _fh.read().decode('utf-8').splitlines(keepends=True)
+        _updated = set()
+        _new_lines = []
+        for _line in _lines:
+            _key = _line.split('=')[0].strip()
+            if _key in _smtp_updates:
+                _new_lines.append(f"{_key}={_smtp_updates[_key]}\n")
+                _updated.add(_key)
+            else:
+                _new_lines.append(_line)
+        for _key in _smtp_updates:
+            if _key not in _updated:
+                _new_lines.append(f"{_key}={_smtp_updates[_key]}\n")
+        with sftp3.open(f'{REMOTE_DIR}/.env', 'w') as _fh:
+            _fh.write(''.join(_new_lines))
+        print(f'SMTP vars sincronizadas en PROD: {list(_smtp_updates.keys())}')
+    except Exception as e:
+        print(f'Aviso: no se pudieron sincronizar SMTP vars: {e}')
+    sftp3.close()
 
 def run(cmd, timeout=120):
     stdin, stdout, stderr = ssh.exec_command(cmd, timeout=timeout)
