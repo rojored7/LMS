@@ -248,3 +248,39 @@ async def test_change_password_without_token_skips_blacklist(db_session: AsyncSe
 
     ts.blacklist_token.assert_not_awaited()
     ts.invalidate_all_user_tokens.assert_awaited_once_with(user.id)
+
+
+@pytest.mark.asyncio
+async def test_forgot_password_returns_generic_message_when_email_fails(db_session: AsyncSession) -> None:
+    """Cuando SMTP falla, forgot_password NO debe lanzar — siempre devuelve el mensaje generico."""
+    from app.middleware.error_handler import ExternalServiceError
+
+    ts = _make_token_service()
+    svc = AuthService(db_session, ts)
+
+    user = User(email="smtpfail@test.com", password_hash=hash_password("x"), name="SF", role=UserRole.STUDENT)
+    db_session.add(user)
+    await db_session.flush()
+
+    with patch("app.services.email_service.send_password_reset_email", new_callable=AsyncMock) as mock_email:
+        mock_email.side_effect = ExternalServiceError("SMTP caido")
+        result = await svc.forgot_password("smtpfail@test.com")
+
+    assert "enlace de restablecimiento" in result["message"]
+
+
+@pytest.mark.asyncio
+async def test_change_password_succeeds_when_email_fails(db_session: AsyncSession) -> None:
+    """change_password debe completarse aunque el email de notificacion falle."""
+    ts = _make_token_service()
+    svc = AuthService(db_session, ts)
+
+    user = User(email="chgemailfail@test.com", password_hash=hash_password("Old3!"), name="CEF", role=UserRole.STUDENT)
+    db_session.add(user)
+    await db_session.flush()
+
+    with patch("app.services.email_service.send_password_changed_email", new_callable=AsyncMock) as mock_email:
+        mock_email.side_effect = Exception("SMTP timeout")
+        await svc.change_password(user, "Old3!", "NewSecure77!")
+
+    ts.invalidate_all_user_tokens.assert_awaited_once_with(user.id)

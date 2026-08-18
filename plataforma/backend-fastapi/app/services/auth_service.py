@@ -122,7 +122,11 @@ class AuthService:
 
         reset_url = f"{settings.FRONTEND_URL}/reset-password?token={token_value}"
         from app.services.email_service import send_password_reset_email
-        await send_password_reset_email(user.email, reset_url)
+        from app.middleware.error_handler import ExternalServiceError
+        try:
+            await send_password_reset_email(user.email, reset_url)
+        except ExternalServiceError:
+            logger.error("forgot_password_email_failed", user_id=user.id)
 
         logger.info("password_reset_requested", user_id=user.id)
         return {"message": "Si el email existe, se enviara un enlace de restablecimiento"}
@@ -165,8 +169,8 @@ class AuthService:
         try:
             from app.services.email_service import send_password_changed_email
             await send_password_changed_email(user.email, user.name)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("password_changed_email_failed", user_id=user.id, error=str(e))
 
     async def get_active_sessions(self, user_id: str) -> list[dict]:
         result = await self.db.execute(

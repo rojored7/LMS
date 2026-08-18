@@ -7,6 +7,7 @@ from email.mime.text import MIMEText
 import structlog
 
 from app.config import get_settings
+from app.middleware.error_handler import ExternalServiceError
 
 logger = structlog.get_logger()
 settings = get_settings()
@@ -36,6 +37,7 @@ async def send_password_reset_email(to_email: str, reset_url: str) -> None:
         logger.info("password_reset_email_sent")
     except Exception as e:
         logger.error("password_reset_email_failed", error=str(e))
+        raise ExternalServiceError("No se pudo enviar el email de restablecimiento") from e
 
 
 async def send_password_changed_email(to_email: str, name: str) -> None:
@@ -61,6 +63,7 @@ async def send_password_changed_email(to_email: str, name: str) -> None:
         logger.info("password_changed_email_sent", email=to_email)
     except Exception as e:
         logger.error("password_changed_email_failed", error=str(e))
+        raise ExternalServiceError("No se pudo enviar el email de confirmacion") from e
 
 
 def _send_smtp(msg: MIMEMultipart) -> None:

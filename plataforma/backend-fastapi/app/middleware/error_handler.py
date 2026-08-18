@@ -38,6 +38,11 @@ class ValidationError(AppError):
         super().__init__(message=message, code="VALIDATION_ERROR", status_code=422)
 
 
+class ExternalServiceError(AppError):
+    def __init__(self, message: str = "Servicio externo no disponible"):
+        super().__init__(message=message, code="SERVICE_UNAVAILABLE", status_code=503)
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(AppError)
     async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
