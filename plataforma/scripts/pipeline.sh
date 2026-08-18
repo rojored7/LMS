@@ -211,13 +211,38 @@ for f in config_files:
         except Exception as e:
             print(f'  Aviso: no se pudo subir {f}: {e}')
 
-# Subir y verificar .env en QA (solo si no existe)
+# Crear .env desde .env.example en QA si no existe
 env_out, _ = run(f'test -f {RDIR}/.env && echo exists || echo missing')
 if 'missing' in env_out:
     env_example = os.path.join(os.getcwd(), '.env.example')
     if os.path.exists(env_example):
         sftp.put(env_example, f'{RDIR}/.env')
-        print('  .env creado desde .env.example (editar credenciales en QA si es necesario)')
+        print('  .env creado desde .env.example en QA')
+
+# Merge SMTP vars desde entorno del operador (.env.pipeline ya fue cargado por bash)
+_smtp_keys = ['SMTP_HOST', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASS', 'SMTP_FROM']
+_smtp_updates = {k: os.environ.get(k, '') for k in _smtp_keys}
+_smtp_updates = {k: v for k, v in _smtp_updates.items() if v}
+if _smtp_updates:
+    with sftp.open(f'{RDIR}/.env', 'r') as _fh:
+        _lines = _fh.read().decode('utf-8').splitlines(keepends=True)
+    _updated = set()
+    _new_lines = []
+    for _line in _lines:
+        _key = _line.split('=')[0].strip()
+        if _key in _smtp_updates:
+            _new_lines.append(f"{_key}={_smtp_updates[_key]}\n")
+            _updated.add(_key)
+        else:
+            _new_lines.append(_line)
+    for _key in _smtp_updates:
+        if _key not in _updated:
+            _new_lines.append(f"{_key}={_smtp_updates[_key]}\n")
+    with sftp.open(f'{RDIR}/.env', 'w') as _fh:
+        _fh.write(''.join(_new_lines))
+    print(f'  SMTP vars sincronizadas en QA: {list(_smtp_updates.keys())}')
+else:
+    print('  Aviso: SMTP vars no definidas en entorno — email no funcionara en QA')
 
 sftp.close()
 print('Archivos de configuracion sincronizados')
@@ -423,13 +448,38 @@ if os.path.exists(cert_src) and os.path.exists(key_src):
 else:
     print(f'Aviso: certificados SSL no encontrados en Downloads - subir manualmente a {RDIR}/nginx/ssl/')
 
-# Verificar .env en PROD
+# Crear .env desde .env.example en PROD si no existe
 env_out, _ = run(f'test -f {RDIR}/.env && echo exists || echo missing')
 if 'missing' in env_out:
     env_example = os.path.join(os.getcwd(), '.env.example')
     if os.path.exists(env_example):
         sftp.put(env_example, f'{RDIR}/.env')
-        print('  .env creado desde .env.example en PROD (revisar credenciales)')
+        print('  .env creado desde .env.example en PROD')
+
+# Merge SMTP vars desde entorno del operador (.env.pipeline ya fue cargado por bash)
+_smtp_keys = ['SMTP_HOST', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASS', 'SMTP_FROM']
+_smtp_updates = {k: os.environ.get(k, '') for k in _smtp_keys}
+_smtp_updates = {k: v for k, v in _smtp_updates.items() if v}
+if _smtp_updates:
+    with sftp.open(f'{RDIR}/.env', 'r') as _fh:
+        _lines = _fh.read().decode('utf-8').splitlines(keepends=True)
+    _updated = set()
+    _new_lines = []
+    for _line in _lines:
+        _key = _line.split('=')[0].strip()
+        if _key in _smtp_updates:
+            _new_lines.append(f"{_key}={_smtp_updates[_key]}\n")
+            _updated.add(_key)
+        else:
+            _new_lines.append(_line)
+    for _key in _smtp_updates:
+        if _key not in _updated:
+            _new_lines.append(f"{_key}={_smtp_updates[_key]}\n")
+    with sftp.open(f'{RDIR}/.env', 'w') as _fh:
+        _fh.write(''.join(_new_lines))
+    print(f'  SMTP vars sincronizadas en PROD: {list(_smtp_updates.keys())}')
+else:
+    print('  Aviso: SMTP vars no definidas en entorno — email no funcionara en PROD')
 
 sftp.close()
 
