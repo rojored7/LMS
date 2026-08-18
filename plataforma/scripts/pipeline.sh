@@ -231,16 +231,16 @@ if _smtp_updates:
     for _line in _lines:
         _key = _line.split('=')[0].strip()
         if _key in _smtp_updates:
-            _new_lines.append(f"{_key}={_smtp_updates[_key]}\n")
+            _new_lines.append(_key + '=' + _smtp_updates[_key] + '\n')
             _updated.add(_key)
         else:
             _new_lines.append(_line)
     for _key in _smtp_updates:
         if _key not in _updated:
-            _new_lines.append(f"{_key}={_smtp_updates[_key]}\n")
+            _new_lines.append(_key + '=' + _smtp_updates[_key] + '\n')
     with sftp.open(f'{RDIR}/.env', 'w') as _fh:
         _fh.write(''.join(_new_lines))
-    print(f'  SMTP vars sincronizadas en QA: {list(_smtp_updates.keys())}')
+    print('  SMTP vars sincronizadas en QA: ' + str(list(_smtp_updates.keys())))
 else:
     print('  Aviso: SMTP vars no definidas en entorno — email no funcionara en QA')
 
@@ -468,16 +468,16 @@ if _smtp_updates:
     for _line in _lines:
         _key = _line.split('=')[0].strip()
         if _key in _smtp_updates:
-            _new_lines.append(f"{_key}={_smtp_updates[_key]}\n")
+            _new_lines.append(_key + '=' + _smtp_updates[_key] + '\n')
             _updated.add(_key)
         else:
             _new_lines.append(_line)
     for _key in _smtp_updates:
         if _key not in _updated:
-            _new_lines.append(f"{_key}={_smtp_updates[_key]}\n")
+            _new_lines.append(_key + '=' + _smtp_updates[_key] + '\n')
     with sftp.open(f'{RDIR}/.env', 'w') as _fh:
         _fh.write(''.join(_new_lines))
-    print(f'  SMTP vars sincronizadas en PROD: {list(_smtp_updates.keys())}')
+    print('  SMTP vars sincronizadas en PROD: ' + str(list(_smtp_updates.keys())))
 else:
     print('  Aviso: SMTP vars no definidas en entorno — email no funcionara en PROD')
 
