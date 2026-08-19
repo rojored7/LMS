@@ -170,11 +170,12 @@ fi
 python3 -c "
 import paramiko, os, sys, time
 
-SERVER = '${QA_SERVER}'
-USER   = '${SSH_USER}'
-PASS   = '${PASS_SSH}'
-RDIR   = '${REMOTE_DIR}'
-IMAGES = r'${IMAGES_TAR_ABS}'
+SERVER  = '${QA_SERVER}'
+USER    = '${SSH_USER}'
+PASS    = '${PASS_SSH}'
+RDIR    = '${REMOTE_DIR}'
+IMAGES  = r'${IMAGES_TAR_ABS}'
+GIT_SHA = '${GIT_SHA}'
 
 print(f'Conectando a QA {SERVER}...')
 ssh = paramiko.SSHClient()
@@ -260,6 +261,11 @@ print('Subida completada')
 print('Cargando imagenes Docker...')
 out, _ = run('gunzip -c /tmp/ciber-images-pipeline.tar.gz | docker load', timeout=300)
 print(f'  {out.strip()[-300:]}')
+
+# Tagear como :latest para que docker-compose las use
+for svc in ['backend', 'frontend', 'executor', 'nginx']:
+    run('docker tag plataforma-' + svc + ':sha-' + GIT_SHA + ' plataforma-' + svc + ':latest 2>/dev/null || true')
+print('  Imagenes taggeadas como :latest')
 
 # Bajar servicios anteriores
 print('Reiniciando servicios QA...')
@@ -392,11 +398,12 @@ else
     python3 -c "
 import paramiko, os, sys, time, platform
 
-SERVER = '${PROD_SERVER}'
-USER   = '${SSH_USER}'
-PASS   = '${PASS_SSH}'
-RDIR   = '${REMOTE_DIR}'
-IMAGES = r'${IMAGES_TAR_ABS}'
+SERVER  = '${PROD_SERVER}'
+USER    = '${SSH_USER}'
+PASS    = '${PASS_SSH}'
+RDIR    = '${REMOTE_DIR}'
+IMAGES  = r'${IMAGES_TAR_ABS}'
+GIT_SHA = '${GIT_SHA}'
 
 print(f'Conectando a PROD {SERVER}...')
 ssh = paramiko.SSHClient()
@@ -497,6 +504,11 @@ print('Subida completada')
 print('Cargando imagenes Docker...')
 out, _ = run('gunzip -c /tmp/ciber-images-pipeline.tar.gz | docker load', timeout=300)
 print(f'  {out.strip()[-200:]}')
+
+# Tagear como :latest para que docker-compose las use
+for svc in ['backend', 'frontend', 'executor', 'nginx']:
+    run('docker tag plataforma-' + svc + ':sha-' + GIT_SHA + ' plataforma-' + svc + ':latest 2>/dev/null || true')
+print('  Imagenes taggeadas como :latest')
 
 # Reiniciar servicios
 print('Reiniciando servicios PROD...')
