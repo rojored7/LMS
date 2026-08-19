@@ -41,6 +41,13 @@ SKIP_E2E="${SKIP_E2E:-false}"
 
 GIT_SHA=$(git rev-parse --short HEAD 2>/dev/null || echo "local")
 IMAGES_TAR="${IMAGES_TAR:-/tmp/ciber-images-${GIT_SHA}.tar.gz}"
+# Si SKIP_BUILD=true y se paso un tar externo, extraer el SHA del nombre del tar
+if [ "$SKIP_BUILD" = "true" ] && [ -n "${IMAGES_TAR+x}" ]; then
+    _tar_sha=$(basename "$IMAGES_TAR" | sed 's/ciber-images-//;s/\.tar\.gz//')
+    if [ -n "$_tar_sha" ] && [ "$_tar_sha" != "$GIT_SHA" ]; then
+        GIT_SHA="$_tar_sha"
+    fi
+fi
 
 if [ -n "$TEMP" ]; then
     TMP_DIR="$TEMP"
