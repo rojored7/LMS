@@ -29,17 +29,13 @@ function ProfileCard({
     <div
       data-testid="profile-card"
       className={`bg-white dark:bg-gray-800 rounded-xl shadow p-6 flex flex-col gap-4 border-2 transition-colors ${
-        isAssigned
-          ? 'border-blue-500 dark:border-blue-400'
-          : 'border-transparent'
+        isAssigned ? 'border-blue-500 dark:border-blue-400' : 'border-transparent'
       }`}
     >
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
-          {profile.icon && (
-            <span className="text-3xl leading-none">{profile.icon}</span>
-          )}
+          {profile.icon && <span className="text-3xl leading-none">{profile.icon}</span>}
           <div>
             <h2 className="text-lg font-bold text-gray-900 dark:text-white leading-tight">
               {profile.name}
@@ -83,8 +79,11 @@ function ProfileCard({
           {courses.map((course, idx) => {
             const enrollment = enrollmentMap.get(course.id);
             const progress = enrollment?.progress ?? null;
-            const levelColor = COURSE_LEVEL_COLORS[course.level as keyof typeof COURSE_LEVEL_COLORS] ?? 'bg-gray-100 text-gray-700';
-            const levelLabel = COURSE_LEVEL_LABELS[course.level as keyof typeof COURSE_LEVEL_LABELS] ?? course.level;
+            const levelColor =
+              COURSE_LEVEL_COLORS[course.level as keyof typeof COURSE_LEVEL_COLORS] ??
+              'bg-gray-100 text-gray-700';
+            const levelLabel =
+              COURSE_LEVEL_LABELS[course.level as keyof typeof COURSE_LEVEL_LABELS] ?? course.level;
 
             return (
               <li
@@ -183,9 +182,7 @@ export function LearningPaths() {
     <div className="container mx-auto px-4 py-8" data-testid="learning-paths-page">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-          Rutas de Aprendizaje
-        </h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Rutas de Aprendizaje</h1>
         <p className="text-gray-500 dark:text-gray-400 mt-1">
           Explora las rutas disponibles y sigue tu progreso en cada una.
         </p>

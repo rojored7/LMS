@@ -16,21 +16,69 @@ class AnalyticsService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def get_platform_stats(self) -> dict:
-        total_users = (await self.db.execute(select(func.count()).select_from(User))).scalar() or 0
-        total_courses = (await self.db.execute(select(func.count()).select_from(Course))).scalar() or 0
-        total_enrollments = (await self.db.execute(select(func.count()).select_from(Enrollment))).scalar() or 0
-        total_certificates = (await self.db.execute(select(func.count()).select_from(Certificate))).scalar() or 0
-        total_badges_awarded = (await self.db.execute(select(func.count()).select_from(UserBadge))).scalar() or 0
+    async def get_platform_stats(self, area_id: str | None = None) -> dict:
+        def _user_filter(q):
+            if area_id:
+                return q.where(User.area_id == area_id)
+            return q
 
-        avg_progress_result = await self.db.execute(select(func.avg(Enrollment.progress)))
-        avg_progress = avg_progress_result.scalar() or 0.0
+        def _enrollment_filter(q):
+            if area_id:
+                return q.join(User, Enrollment.user_id == User.id).where(User.area_id == area_id)
+            return q
 
-        completed_result = await self.db.execute(
-            select(func.count()).select_from(Enrollment).where(Enrollment.completed_at.isnot(None))
+        def _certificate_filter(q):
+            if area_id:
+                return q.join(User, Certificate.user_id == User.id).where(
+                    User.area_id == area_id
+                )
+            return q
+
+        def _badge_filter(q):
+            if area_id:
+                return q.join(User, UserBadge.user_id == User.id).where(User.area_id == area_id)
+            return q
+
+        total_users = (
+            await self.db.execute(_user_filter(select(func.count()).select_from(User)))
+        ).scalar() or 0
+        total_courses = (
+            await self.db.execute(select(func.count()).select_from(Course))
+        ).scalar() or 0
+        total_enrollments = (
+            await self.db.execute(
+                _enrollment_filter(select(func.count()).select_from(Enrollment))
+            )
+        ).scalar() or 0
+        total_certificates = (
+            await self.db.execute(
+                _certificate_filter(select(func.count()).select_from(Certificate))
+            )
+        ).scalar() or 0
+        total_badges_awarded = (
+            await self.db.execute(_badge_filter(select(func.count()).select_from(UserBadge)))
+        ).scalar() or 0
+
+        avg_progress_q = select(func.avg(Enrollment.progress))
+        if area_id:
+            avg_progress_q = avg_progress_q.join(User, Enrollment.user_id == User.id).where(
+                User.area_id == area_id
+            )
+        avg_progress = (await self.db.execute(avg_progress_q)).scalar() or 0.0
+
+        completed_q = select(func.count()).select_from(Enrollment).where(
+            Enrollment.completed_at.isnot(None)
         )
-        completed_enrollments = completed_result.scalar() or 0
-        completion_rate = round((completed_enrollments / total_enrollments) * 100, 2) if total_enrollments > 0 else 0.0
+        if area_id:
+            completed_q = completed_q.join(User, Enrollment.user_id == User.id).where(
+                User.area_id == area_id
+            )
+        completed_enrollments = (await self.db.execute(completed_q)).scalar() or 0
+        completion_rate = (
+            round((completed_enrollments / total_enrollments) * 100, 2)
+            if total_enrollments > 0
+            else 0.0
+        )
 
         return {
             "totalUsers": total_users,
@@ -43,42 +91,80 @@ class AnalyticsService:
             "completedEnrollments": completed_enrollments,
         }
 
-    async def get_enrollment_trends(self, days: int = 30) -> list[dict]:
+    async def get_enrollment_trends(
+        self, days: int = 30, area_id: str | None = None
+    ) -> list[dict]:
         cutoff = datetime.now(timezone.utc) - timedelta(days=days)
-        result = await self.db.execute(
+        q = (
             select(
                 cast(Enrollment.enrolled_at, Date).label("date"),
                 func.count().label("count"),
             )
             .where(Enrollment.enrolled_at >= cutoff)
-            .group_by(cast(Enrollment.enrolled_at, Date))
-            .order_by(cast(Enrollment.enrolled_at, Date))
         )
-        rows = result.all()
-        return [{"date": str(r.date), "count": r.count} for r in rows]
+        if area_id:
+            q = q.join(User, Enrollment.user_id == User.id).where(User.area_id == area_id)
+        q = q.group_by(cast(Enrollment.enrolled_at, Date)).order_by(
+            cast(Enrollment.enrolled_at, Date)
+        )
+        result = await self.db.execute(q)
+        return [{"date": str(r.date), "count": r.count} for r in result.all()]
 
-    async def get_course_stats(self) -> list[dict]:
-        enroll_count_q = (
-            select(func.count(Enrollment.id))
-            .where(Enrollment.course_id == Course.id)
-            .correlate(Course)
-            .scalar_subquery()
-        )
-        avg_progress_q = (
-            select(func.coalesce(func.avg(Enrollment.progress), 0))
-            .where(Enrollment.course_id == Course.id)
-            .correlate(Course)
-            .scalar_subquery()
-        )
-        completed_q = (
-            select(func.count(Enrollment.id))
-            .where(Enrollment.course_id == Course.id, Enrollment.completed_at.isnot(None))
-            .correlate(Course)
-            .scalar_subquery()
-        )
+    async def get_course_stats(self, area_id: str | None = None) -> list[dict]:
+        if area_id:
+            enroll_count_q = (
+                select(func.count(Enrollment.id))
+                .join(User, Enrollment.user_id == User.id)
+                .where(Enrollment.course_id == Course.id, User.area_id == area_id)
+                .correlate(Course)
+                .scalar_subquery()
+            )
+            avg_progress_q = (
+                select(func.coalesce(func.avg(Enrollment.progress), 0))
+                .join(User, Enrollment.user_id == User.id)
+                .where(Enrollment.course_id == Course.id, User.area_id == area_id)
+                .correlate(Course)
+                .scalar_subquery()
+            )
+            completed_q = (
+                select(func.count(Enrollment.id))
+                .join(User, Enrollment.user_id == User.id)
+                .where(
+                    Enrollment.course_id == Course.id,
+                    Enrollment.completed_at.isnot(None),
+                    User.area_id == area_id,
+                )
+                .correlate(Course)
+                .scalar_subquery()
+            )
+        else:
+            enroll_count_q = (
+                select(func.count(Enrollment.id))
+                .where(Enrollment.course_id == Course.id)
+                .correlate(Course)
+                .scalar_subquery()
+            )
+            avg_progress_q = (
+                select(func.coalesce(func.avg(Enrollment.progress), 0))
+                .where(Enrollment.course_id == Course.id)
+                .correlate(Course)
+                .scalar_subquery()
+            )
+            completed_q = (
+                select(func.count(Enrollment.id))
+                .where(
+                    Enrollment.course_id == Course.id,
+                    Enrollment.completed_at.isnot(None),
+                )
+                .correlate(Course)
+                .scalar_subquery()
+            )
+
         result = await self.db.execute(
             select(
-                Course.id, Course.title, Course.score,
+                Course.id,
+                Course.title,
+                Course.score,
                 enroll_count_q.label("enroll_count"),
                 avg_progress_q.label("avg_progress"),
                 completed_q.label("completed"),
@@ -99,23 +185,31 @@ class AnalyticsService:
             })
         return stats
 
-    async def get_user_activity(self, days: int = 7) -> dict:
+    async def get_user_activity(
+        self, days: int = 7, area_id: str | None = None
+    ) -> dict:
         cutoff = datetime.now(timezone.utc) - timedelta(days=days)
-        new_users = (
-            await self.db.execute(
-                select(func.count()).select_from(User).where(User.created_at >= cutoff)
-            )
-        ).scalar() or 0
-        new_enrollments = (
-            await self.db.execute(
-                select(func.count()).select_from(Enrollment).where(Enrollment.enrolled_at >= cutoff)
-            )
-        ).scalar() or 0
-        active_users = (
-            await self.db.execute(
-                select(func.count()).select_from(User).where(User.last_login_at >= cutoff)
-            )
-        ).scalar() or 0
+
+        new_users_q = select(func.count()).select_from(User).where(User.created_at >= cutoff)
+        if area_id:
+            new_users_q = new_users_q.where(User.area_id == area_id)
+        new_users = (await self.db.execute(new_users_q)).scalar() or 0
+
+        new_enrollments_q = select(func.count()).select_from(Enrollment).where(
+            Enrollment.enrolled_at >= cutoff
+        )
+        if area_id:
+            new_enrollments_q = new_enrollments_q.join(
+                User, Enrollment.user_id == User.id
+            ).where(User.area_id == area_id)
+        new_enrollments = (await self.db.execute(new_enrollments_q)).scalar() or 0
+
+        active_users_q = select(func.count()).select_from(User).where(
+            User.last_login_at >= cutoff
+        )
+        if area_id:
+            active_users_q = active_users_q.where(User.area_id == area_id)
+        active_users = (await self.db.execute(active_users_q)).scalar() or 0
 
         return {
             "period": f"last_{days}_days",
@@ -124,25 +218,38 @@ class AnalyticsService:
             "activeUsers": active_users,
         }
 
-    async def get_user_distribution(self) -> list[dict]:
-        result = await self.db.execute(
-            select(User.role, func.count().label("count")).group_by(User.role)
-        )
-        return [{"role": str(r.role.value) if hasattr(r.role, 'value') else str(r.role), "count": r.count} for r in result.all()]
+    async def get_user_distribution(self, area_id: str | None = None) -> list[dict]:
+        q = select(User.role, func.count().label("count")).group_by(User.role)
+        if area_id:
+            q = q.where(User.area_id == area_id)
+        result = await self.db.execute(q)
+        return [
+            {
+                "role": str(r.role.value) if hasattr(r.role, "value") else str(r.role),
+                "count": r.count,
+            }
+            for r in result.all()
+        ]
 
-    async def get_recent_activity(self, limit: int = 10) -> list[dict]:
-        result = await self.db.execute(
+    async def get_recent_activity(
+        self, limit: int = 10, area_id: str | None = None
+    ) -> list[dict]:
+        q = (
             select(Enrollment, User, Course)
             .join(User, Enrollment.user_id == User.id)
             .join(Course, Enrollment.course_id == Course.id)
             .order_by(Enrollment.enrolled_at.desc())
             .limit(limit)
         )
-        rows = result.all()
+        if area_id:
+            q = q.where(User.area_id == area_id)
+        result = await self.db.execute(q)
         data = []
-        for enrollment, user, course in rows:
+        for enrollment, user, course in result.all():
             activity_type = "completion" if enrollment.completed_at else "enrollment"
-            timestamp = enrollment.completed_at if enrollment.completed_at else enrollment.enrolled_at
+            timestamp = (
+                enrollment.completed_at if enrollment.completed_at else enrollment.enrolled_at
+            )
             data.append({
                 "user_name": user.name or user.email,
                 "user_email": user.email,
@@ -164,7 +271,11 @@ class AnalyticsService:
         return "on_track"
 
     async def get_users_time_summary(
-        self, course_id: str | None = None, limit: int = 50, offset: int = 0
+        self,
+        course_id: str | None = None,
+        area_id: str | None = None,
+        limit: int = 50,
+        offset: int = 0,
     ) -> list[dict]:
         q = (
             select(
@@ -188,12 +299,12 @@ class AnalyticsService:
         )
         if course_id:
             q = q.where(Course.id == course_id)
+        if area_id:
+            q = q.where(User.area_id == area_id)
 
         result = await self.db.execute(q.offset(offset).limit(limit))
-        rows = result.all()
-
         users: dict[str, dict] = {}
-        for row in rows:
+        for row in result.all():
             uid = row.user_id
             if uid not in users:
                 users[uid] = {
@@ -235,9 +346,8 @@ class AnalyticsService:
             .group_by(Lesson.id, Lesson.title, Lesson.estimated_time)
             .order_by(Lesson.id)
         )
-        rows = result.all()
         stats = []
-        for row in rows:
+        for row in result.all():
             avg_real = round(float(row.avg_time or 0))
             estimated_s = int(row.estimated_time or 0) * self._ESTIMATED_TIME_TO_SECONDS
             ratio = round(avg_real / estimated_s, 2) if estimated_s > 0 else 0.0
@@ -270,9 +380,8 @@ class AnalyticsService:
             )
             .order_by(Module.order, Lesson.order)
         )
-        rows = result.all()
         items = []
-        for row in rows:
+        for row in result.all():
             real_s = int(row.real_time or 0)
             estimated_s = int(row.estimated_time or 0) * self._ESTIMATED_TIME_TO_SECONDS
             ratio = round(real_s / estimated_s, 2) if estimated_s > 0 else 0.0
@@ -287,7 +396,7 @@ class AnalyticsService:
             })
         return items
 
-    async def get_comparative_stats(self) -> dict:
+    async def get_comparative_stats(self, area_id: str | None = None) -> dict:
         now = datetime.now(timezone.utc)
         current_start = now - timedelta(days=30)
         previous_start = now - timedelta(days=60)
@@ -297,37 +406,71 @@ class AnalyticsService:
                 return 100.0 if current > 0 else 0.0
             return round((current - previous) / previous * 100, 1)
 
-        cur_users = (await self.db.execute(
-            select(func.count()).select_from(User).where(User.created_at >= current_start)
-        )).scalar() or 0
-        prev_users = (await self.db.execute(
-            select(func.count()).select_from(User).where(User.created_at >= previous_start, User.created_at < current_start)
-        )).scalar() or 0
+        def _user_q(date_field, start, end=None):
+            q = select(func.count()).select_from(User).where(date_field >= start)
+            if end:
+                q = q.where(date_field < end)
+            if area_id:
+                q = q.where(User.area_id == area_id)
+            return q
 
-        cur_enrollments = (await self.db.execute(
-            select(func.count()).select_from(Enrollment).where(Enrollment.enrolled_at >= current_start)
-        )).scalar() or 0
-        prev_enrollments = (await self.db.execute(
-            select(func.count()).select_from(Enrollment).where(Enrollment.enrolled_at >= previous_start, Enrollment.enrolled_at < current_start)
-        )).scalar() or 0
+        def _enrollment_q(date_field, start, end=None):
+            q = select(func.count()).select_from(Enrollment).where(date_field >= start)
+            if end:
+                q = q.where(date_field < end)
+            if area_id:
+                q = q.join(User, Enrollment.user_id == User.id).where(User.area_id == area_id)
+            return q
 
-        cur_completions = (await self.db.execute(
-            select(func.count()).select_from(Enrollment).where(Enrollment.completed_at >= current_start)
-        )).scalar() or 0
-        prev_completions = (await self.db.execute(
-            select(func.count()).select_from(Enrollment).where(Enrollment.completed_at >= previous_start, Enrollment.completed_at < current_start)
-        )).scalar() or 0
+        cur_users = (await self.db.execute(_user_q(User.created_at, current_start))).scalar() or 0
+        prev_users = (
+            await self.db.execute(_user_q(User.created_at, previous_start, current_start))
+        ).scalar() or 0
 
-        cur_active = (await self.db.execute(
-            select(func.count()).select_from(User).where(User.last_login_at >= current_start)
-        )).scalar() or 0
-        prev_active = (await self.db.execute(
-            select(func.count()).select_from(User).where(User.last_login_at >= previous_start, User.last_login_at < current_start)
-        )).scalar() or 0
+        cur_enrollments = (
+            await self.db.execute(_enrollment_q(Enrollment.enrolled_at, current_start))
+        ).scalar() or 0
+        prev_enrollments = (
+            await self.db.execute(
+                _enrollment_q(Enrollment.enrolled_at, previous_start, current_start)
+            )
+        ).scalar() or 0
+
+        cur_completions = (
+            await self.db.execute(_enrollment_q(Enrollment.completed_at, current_start))
+        ).scalar() or 0
+        prev_completions = (
+            await self.db.execute(
+                _enrollment_q(Enrollment.completed_at, previous_start, current_start)
+            )
+        ).scalar() or 0
+
+        cur_active = (
+            await self.db.execute(_user_q(User.last_login_at, current_start))
+        ).scalar() or 0
+        prev_active = (
+            await self.db.execute(_user_q(User.last_login_at, previous_start, current_start))
+        ).scalar() or 0
 
         return {
-            "users": {"current": cur_users, "previous": prev_users, "changePercent": _pct(cur_users, prev_users)},
-            "enrollments": {"current": cur_enrollments, "previous": prev_enrollments, "changePercent": _pct(cur_enrollments, prev_enrollments)},
-            "completions": {"current": cur_completions, "previous": prev_completions, "changePercent": _pct(cur_completions, prev_completions)},
-            "activeStudents": {"current": cur_active, "previous": prev_active, "changePercent": _pct(cur_active, prev_active)},
+            "users": {
+                "current": cur_users,
+                "previous": prev_users,
+                "changePercent": _pct(cur_users, prev_users),
+            },
+            "enrollments": {
+                "current": cur_enrollments,
+                "previous": prev_enrollments,
+                "changePercent": _pct(cur_enrollments, prev_enrollments),
+            },
+            "completions": {
+                "current": cur_completions,
+                "previous": prev_completions,
+                "changePercent": _pct(cur_completions, prev_completions),
+            },
+            "activeStudents": {
+                "current": cur_active,
+                "previous": prev_active,
+                "changePercent": _pct(cur_active, prev_active),
+            },
         }

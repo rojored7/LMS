@@ -5,7 +5,7 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { AUTH_FILES } from './helpers/auth';
+import { AUTH_FILES, TEST_CREDENTIALS } from './helpers/auth';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 
@@ -16,6 +16,16 @@ test.describe('HU-013: Catálogo de Cursos Filtrado', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto(`${BASE_URL}/courses`);
     await page.waitForLoadState('load');
+    // Si la sesion expiro y redireccionamos a login, re-autenticar
+    if (page.url().includes('/login')) {
+      await page.waitForSelector('input[name="email"]', { timeout: 10000 });
+      await page.fill('input[name="email"]', TEST_CREDENTIALS.student.email);
+      await page.fill('input[name="password"]', TEST_CREDENTIALS.student.password);
+      await page.click('button[type="submit"]');
+      await page.waitForURL(/\/(dashboard|courses)/, { timeout: 30000 });
+      await page.goto(`${BASE_URL}/courses`);
+      await page.waitForLoadState('load');
+    }
   });
 
   test('AC1: Se muestran cursos disponibles en formato grid', async ({ page }) => {

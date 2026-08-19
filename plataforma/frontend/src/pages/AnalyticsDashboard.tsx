@@ -22,6 +22,7 @@ import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
 import { useAnalytics } from '../hooks/useAnalytics';
+import { useAreas } from '../hooks/useAreas';
 import { exportEnrollments, exportCourseStats } from '../services/api/export.service';
 import { cn } from '../utils/cn';
 import { TimeTrackingTable } from '../components/admin/TimeTrackingTable';
@@ -58,8 +59,11 @@ const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'
 export const AnalyticsDashboard: React.FC = () => {
   const { t } = useTranslation();
   const [days, setDays] = useState(30);
+  const [areaId, setAreaId] = useState<string | undefined>(undefined);
   const [isExporting, setIsExporting] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'time'>('overview');
+
+  const { data: areas = [] } = useAreas();
 
   const {
     stats,
@@ -71,7 +75,7 @@ export const AnalyticsDashboard: React.FC = () => {
     comparativeStats,
     isLoading,
     refetch,
-  } = useAnalytics(days);
+  } = useAnalytics(days, areaId);
 
   const metrics: MetricCard[] = [
     {
@@ -178,6 +182,20 @@ export const AnalyticsDashboard: React.FC = () => {
 
         {activeTab === 'overview' && (
           <div className="flex flex-wrap items-center gap-3">
+            {/* Area Filter */}
+            <select
+              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
+              value={areaId ?? ''}
+              onChange={(e) => setAreaId(e.target.value || undefined)}
+            >
+              <option value="">Todas las areas</option>
+              {areas.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name}
+                </option>
+              ))}
+            </select>
+
             {/* Date Range Selector */}
             <select
               className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
@@ -248,7 +266,25 @@ export const AnalyticsDashboard: React.FC = () => {
       </div>
 
       {/* Time tracking tab */}
-      {activeTab === 'time' && <TimeTrackingTable />}
+      {activeTab === 'time' && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <select
+              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
+              value={areaId ?? ''}
+              onChange={(e) => setAreaId(e.target.value || undefined)}
+            >
+              <option value="">Todas las areas</option>
+              {areas.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <TimeTrackingTable areaId={areaId} />
+        </div>
+      )}
 
       {/* Overview tab */}
       {activeTab === 'overview' && isLoading && (

@@ -104,47 +104,69 @@ export interface UserCourseLessonTime {
 }
 
 class AnalyticsService {
-  async getStats(): Promise<AnalyticsStats> {
-    const envelope = await api.get('/analytics/stats');
+  async getStats(areaId?: string): Promise<AnalyticsStats> {
+    const envelope = await api.get('/analytics/stats', {
+      params: areaId ? { area_id: areaId } : undefined,
+    });
     return (envelope as any).data;
   }
 
-  async getEnrollmentTrends(days = 30): Promise<EnrollmentTrendPoint[]> {
-    const envelope = await api.get('/analytics/enrollment-trends', { params: { days } });
+  async getEnrollmentTrends(days = 30, areaId?: string): Promise<EnrollmentTrendPoint[]> {
+    const envelope = await api.get('/analytics/enrollment-trends', {
+      params: { days, ...(areaId ? { area_id: areaId } : {}) },
+    });
     return (envelope as any).data;
   }
 
-  async getCourseStats(): Promise<CourseStatItem[]> {
-    const envelope = await api.get('/analytics/courses');
+  async getCourseStats(areaId?: string): Promise<CourseStatItem[]> {
+    const envelope = await api.get('/analytics/courses', {
+      params: areaId ? { area_id: areaId } : undefined,
+    });
     return (envelope as any).data;
   }
 
-  async getUserActivity(days = 30): Promise<UserActivityPoint[]> {
-    const envelope = await api.get('/analytics/user-activity', { params: { days } });
+  async getUserActivity(days = 30, areaId?: string): Promise<UserActivityPoint[]> {
+    const envelope = await api.get('/analytics/user-activity', {
+      params: { days, ...(areaId ? { area_id: areaId } : {}) },
+    });
     return (envelope as any).data;
   }
 
-  async getUserDistribution(): Promise<UserDistributionItem[]> {
-    const envelope = await api.get('/analytics/user-distribution');
+  async getUserDistribution(areaId?: string): Promise<UserDistributionItem[]> {
+    const envelope = await api.get('/analytics/user-distribution', {
+      params: areaId ? { area_id: areaId } : undefined,
+    });
     return (envelope as any).data;
   }
 
-  async getRecentActivity(limit = 20): Promise<RecentActivityItem[]> {
-    const envelope = await api.get('/analytics/recent-activity', { params: { limit } });
+  async getRecentActivity(limit = 20, areaId?: string): Promise<RecentActivityItem[]> {
+    const envelope = await api.get('/analytics/recent-activity', {
+      params: { limit, ...(areaId ? { area_id: areaId } : {}) },
+    });
     return (envelope as any).data;
   }
 
-  async getComparativeStats(days = 30): Promise<ComparativeStats> {
-    const envelope = await api.get('/analytics/comparative-stats', { params: { days } });
+  async getComparativeStats(days = 30, areaId?: string): Promise<ComparativeStats> {
+    const envelope = await api.get('/analytics/comparative-stats', {
+      params: { days, ...(areaId ? { area_id: areaId } : {}) },
+    });
     return (envelope as any).data;
   }
 
   async getUsersTimeSummary(params?: {
     courseId?: string;
+    areaId?: string;
     limit?: number;
     offset?: number;
   }): Promise<UserTimeSummary[]> {
-    const envelope = await api.get('/analytics/time-tracking/users', { params });
+    const { courseId, areaId, ...rest } = params ?? {};
+    const envelope = await api.get('/analytics/time-tracking/users', {
+      params: {
+        ...rest,
+        ...(courseId ? { course_id: courseId } : {}),
+        ...(areaId ? { area_id: areaId } : {}),
+      },
+    });
     return (envelope as any).data;
   }
 

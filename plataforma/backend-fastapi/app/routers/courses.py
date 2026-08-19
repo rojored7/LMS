@@ -34,7 +34,7 @@ async def get_my_enrollments(user: User = Depends(get_current_user), db: AsyncSe
 @router.get("/search")
 async def search_courses(q: str = "", db: AsyncSession = Depends(get_db)) -> dict:
     service = CourseService(db)
-    courses, total = await service.get_published_courses(search=q)
+    courses, total = await service.get_published_courses(search=q, limit=100)
     return {"success": True, "data": [CourseListResponse.model_validate(c).model_dump() for c in courses]}
 
 

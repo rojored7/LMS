@@ -6,50 +6,50 @@
 import { useQuery } from '@tanstack/react-query';
 import analyticsService from '../services/api/analytics.service';
 
-export function useAnalytics(days = 30) {
+export function useAnalytics(days = 30, areaId?: string) {
   const {
     data: stats,
     isLoading: statsLoading,
     refetch: refetchStats,
   } = useQuery({
-    queryKey: ['analytics', 'stats'],
-    queryFn: () => analyticsService.getStats(),
+    queryKey: ['analytics', 'stats', areaId],
+    queryFn: () => analyticsService.getStats(areaId),
     staleTime: 5 * 60 * 1000,
   });
 
   const { data: enrollmentTrends, isLoading: trendsLoading } = useQuery({
-    queryKey: ['analytics', 'enrollment-trends', days],
-    queryFn: () => analyticsService.getEnrollmentTrends(days),
+    queryKey: ['analytics', 'enrollment-trends', days, areaId],
+    queryFn: () => analyticsService.getEnrollmentTrends(days, areaId),
     staleTime: 5 * 60 * 1000,
   });
 
   const { data: courseStats, isLoading: courseStatsLoading } = useQuery({
-    queryKey: ['analytics', 'courses'],
-    queryFn: () => analyticsService.getCourseStats(),
+    queryKey: ['analytics', 'courses', areaId],
+    queryFn: () => analyticsService.getCourseStats(areaId),
     staleTime: 5 * 60 * 1000,
   });
 
   const { data: userActivity, isLoading: activityLoading } = useQuery({
-    queryKey: ['analytics', 'user-activity', days],
-    queryFn: () => analyticsService.getUserActivity(days),
+    queryKey: ['analytics', 'user-activity', days, areaId],
+    queryFn: () => analyticsService.getUserActivity(days, areaId),
     staleTime: 5 * 60 * 1000,
   });
 
   const { data: userDistribution, isLoading: distributionLoading } = useQuery({
-    queryKey: ['analytics', 'user-distribution'],
-    queryFn: () => analyticsService.getUserDistribution(),
+    queryKey: ['analytics', 'user-distribution', areaId],
+    queryFn: () => analyticsService.getUserDistribution(areaId),
     staleTime: 5 * 60 * 1000,
   });
 
   const { data: recentActivity, isLoading: recentLoading } = useQuery({
-    queryKey: ['analytics', 'recent-activity'],
-    queryFn: () => analyticsService.getRecentActivity(20),
+    queryKey: ['analytics', 'recent-activity', areaId],
+    queryFn: () => analyticsService.getRecentActivity(20, areaId),
     staleTime: 2 * 60 * 1000,
   });
 
   const { data: comparativeStats, isLoading: comparativeLoading } = useQuery({
-    queryKey: ['analytics', 'comparative-stats', days],
-    queryFn: () => analyticsService.getComparativeStats(days),
+    queryKey: ['analytics', 'comparative-stats', days, areaId],
+    queryFn: () => analyticsService.getComparativeStats(days, areaId),
     staleTime: 5 * 60 * 1000,
   });
 
@@ -75,7 +75,7 @@ export function useAnalytics(days = 30) {
   };
 }
 
-export function useTimeTracking(params?: { courseId?: string; limit?: number }) {
+export function useTimeTracking(params?: { courseId?: string; areaId?: string; limit?: number }) {
   const {
     data: usersTime,
     isLoading,

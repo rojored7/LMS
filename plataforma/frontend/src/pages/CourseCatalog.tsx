@@ -25,7 +25,7 @@ export const CourseCatalog: React.FC = () => {
     error,
   } = useCourses({
     page: 1,
-    limit: 12,
+    limit: 100,
   });
 
   const courses = coursesData?.data || [];
@@ -100,7 +100,10 @@ export const CourseCatalog: React.FC = () => {
           </CardBody>
         </Card>
       ) : filteredCourses.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" data-testid="course-grid">
+        <div
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+          data-testid="course-grid"
+        >
           {filteredCourses.map((course) => (
             <Card
               key={course.id}
@@ -121,7 +124,12 @@ export const CourseCatalog: React.FC = () => {
 
                 {/* Course Info */}
                 <div className="mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2" data-testid="course-title">{course.title}</h3>
+                  <h3
+                    className="text-lg font-semibold text-gray-900 mb-2"
+                    data-testid="course-title"
+                  >
+                    {course.title}
+                  </h3>
                   <p className="text-sm text-gray-600 line-clamp-2 mb-3">{course.description}</p>
 
                   {/* Metadata */}

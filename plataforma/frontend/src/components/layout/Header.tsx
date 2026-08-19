@@ -51,15 +51,8 @@ export const Header: React.FC = () => {
           )}
 
           {/* Logo */}
-          <Link
-            to={ROUTES.HOME}
-            className="flex items-center gap-2"
-          >
-            <img
-              src="/assets/itac-logo.png"
-              alt="ITAC"
-              className="h-8 w-auto object-contain"
-            />
+          <Link to={ROUTES.HOME} className="flex items-center gap-2">
+            <img src="/assets/itac-logo.png" alt="ITAC" className="h-8 w-auto object-contain" />
             <span
               className="text-white font-semibold text-lg hidden sm:block"
               style={{ fontFamily: "'Syne', sans-serif" }}

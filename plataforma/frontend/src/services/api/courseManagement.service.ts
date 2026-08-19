@@ -185,7 +185,7 @@ class CourseManagementService {
    * Delete course
    */
   async deleteCourse(id: string): Promise<void> {
-    await api.delete(`${this.baseURL}/${id}`);
+    await api.delete(`/courses/${id}`);
   }
 
   /**
